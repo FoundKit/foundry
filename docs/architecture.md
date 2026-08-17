@@ -49,17 +49,17 @@ Unlike single-project BaaS solutions (such as Strapi, Directus, PocketBase, or S
 ```
 
 ### 1.2 Core Value Propositions
-1. **Multi-Tenant System Engine ("一平台管多系统")**:
+1. **Multi-Tenant System Engine**:
    Run and manage $N$ independent sub-systems (App backends, mini-programs, marketing campaign sites) within a single deployed Foundry instance with strict tenant isolation.
-2. **Visual One-Click System & Model Generation (后台建系统 + 自动 CRUD)**:
+2. **Visual One-Click System & Model Generation (Admin UI + Auto-CRUD)**:
    A modern Web Admin Panel allowing users to graphically construct sub-systems, define dynamic data schemas, and automatically expose high-performance RESTful APIs with fine-grained access control toggles.
-3. **Code-First Custom Endpoint & Logic Extensibility ("专题自定义代码与业务扩展")**:
+3. **Code-First Custom Endpoint & Logic Extensibility**:
    First-class support for creating dedicated sub-system code packages with distinct unique identifiers (`system_slug`), custom controller directories (`controllers/`), business logic services (`logic/`), and DTO validation layers (`dto/`), seamlessly integrated with shared infrastructure and Axum routing.
-4. **Pure Infrastructure Foundation & Sub-System Domain Autonomy ("纯净基建底座与子系统业务自治")**:
+4. **Pure Infrastructure Foundation & Sub-System Domain Autonomy**:
    Foundry is strictly positioned as a generic, unopinionated infrastructure platform. In the foundational phase, the platform does not bundle redundant public business modules (no platform-wide points tables, no form tables, and no unified end-user authentication center). Each sub-system possesses complete autonomy to design its own user authentication, domain entities, and business logic.
-5. **Hierarchical Admin IAM & Topic-Scoped RBAC ("分级管理员与专题授权")**:
+5. **Hierarchical Admin IAM & Topic-Scoped RBAC**:
    Built-in administrator authorization model. System initialization provisions a Super Admin (`super_admin`) with omnipotent privileges across all sub-systems (`["*"]`). The Super Admin can create normal administrators (`admin`) and delegate management rights to specific topics (`allowed_systems: ["carnival_2026"]`).
-6. **Comprehensive Non-GET Operation Audit Trail ("全量管理员写操作与状态审计")**:
+6. **Comprehensive Non-GET Operation Audit Trail**:
    Security-first auditing middleware that automatically captures every non-GET request (POST, PUT, PATCH, DELETE, login) executed by administrators, recording the operator, target sub-system, path, dynamic operation name, full request payload/parameters, IP, status code, and latency.
 7. **Hybrid Extension Engine (Rust Traits + Wasmtime Sandbox)**:
    Extend any sub-system using native **Rust traits** for maximum performance or sandboxed **Wasm plugins** for runtime hot-reloading without server restarts.
@@ -91,7 +91,7 @@ foundry/                         # Monorepo Root
 │   │   ├── package.json         # Frontend dependencies & scripts
 │   │   └── vite.config.ts       # Vite build configuration
 │   └── cli/                     # Developer CLI Tool (System scaffolding, code generation, migration)
-├── systems/                     # Sub-System Custom Code Workspace (专题自定义代码模块目录)
+├── systems/                     # Sub-System Custom Code Workspace
 │   ├── Cargo.toml               # Systems Workspace / Crate Definition
 │   ├── src/
 │   │   ├── lib.rs               # Sub-system registry & static router auto-mount loader
@@ -122,7 +122,7 @@ foundry/                         # Monorepo Root
 ## 3. Key Architecture & System Design
 
 ### 3.1 Multi-Tenant Sub-System Architecture & Unique Identifiers
-Every project or application managed inside Foundry is defined as a **Sub-System** (专题 / 子系统).
+Every project or application managed inside Foundry is defined as a **Sub-System**.
 
 #### 3.1.1 Sub-System Unique Identifier Standards (`system_slug` & `system_id`)
 To ensure reliable multi-tenant isolation, automated route mounting, code organization, and cache scoping, each Sub-System is identified by two canonical keys:
@@ -183,10 +183,10 @@ In enterprise production environments, applications operate under strict DBA gov
 +───────────────────────────────────────────────────────────────────────────────────────────+
 |                           FOUNDRY ZERO-DDL STORAGE RUNTIME                                |
 |                                                                                           |
-|  [ 1. System Configs (专题专属配置项) ]                                                    |
+|  [ 1. System Configs (Lightweight System Properties) ]                                    |
 |    └── `system_configs`: Key-Value config properties (banner, rules, times, toggles)      |
 |                                                                                           |
-|  [ 2. Business Data Models (海量业务数据模型) ]                                            |
+|  [ 2. Business Data Models (Multi-Record Structured Data) ]                               |
 |    ├── `models` & `model_fields`: Schema metadata & form widget specifications            |
 |    └── `model_records`: Multi-tenant JSONB record storage + GIN Inverted Indexing         |
 |                                                                                           |
@@ -208,21 +208,21 @@ Foundry completely separates lightweight topic configurations from multi-record 
                                              │
                    ┌─────────────────────────┴─────────────────────────┐
                    ▼                                                   ▼
-     [ 1. 专题专属配置 (System Configs) ]                [ 2. 业务数据模型 (Data Models) ]
-     - 归属于系统自身的全局轻量配置项                     - 独立的业务数据实体 (商品、文章、日志、自定义数据)
-     - 整个专题仅有几个到十几个配置项                     - 存储成千上万条结构化数据行
-     - 物理底层：`system_configs` 表                     - 物理底层：`models` + `model_fields` + `model_records`
-     - API: 聚合为单一 JSON 对象                         - API: 标准 Auto-CRUD (分页/过滤/排序)
-       `GET/PUT /api/v1/s/{slug}/configs`                 `GET/POST/PUT/DELETE /api/v1/s/{slug}/{model}`
+     [ 1. System Configs ]                               [ 2. Business Data Models ]
+     - Global lightweight config properties              - Independent multi-record business entities
+     - A handful of keys per sub-system                  - Stores thousands of structured rows
+     - Physical table: `system_configs`                  - Physical tables: `models` + `model_fields` + `model_records`
+     - API: Aggregated into single JSON object           - API: Standard Auto-CRUD (pagination/filters/sorting)
+       `GET/PUT /api/v1/s/{slug}/configs`                  `GET/POST/PUT/DELETE /api/v1/s/{slug}/{model}`
 ```
 
-##### 1. System Configs (专题专属配置)
+##### 1. System Configs
 - **Use Case**: Global parameters for a campaign/sub-system (e.g. Campaign Title, Banner Image URL, Event Time Range, Share Text, RichText Rules, Switch Flags).
 - **Physical Storage**: Stored in `system_configs` (`system_id`, `key`, `label`, `value_type`, `value: JSONB`, `options`, `sort_order`).
 - **Clean Aggregation**: The backend aggregates all configs into a single key-value JSON response on `GET /api/v1/s/{slug}/configs`.
-- **Visual Form UI (严禁裸 JSON 编辑器)**: The Admin UI renders dedicated visual widgets according to `value_type` and `options` (Image Uploader, DatePicker, Switch, RichText, Array Repeater).
+- **Visual Form UI (No Raw JSON Editors)**: The Admin UI renders dedicated visual widgets according to `value_type` and `options` (Image Uploader, DatePicker, Switch, RichText, Array Repeater).
 
-##### 2. Business Data Models (业务数据模型)
+##### 2. Business Data Models
 - **Use Case**: Entities requiring multiple structured records (e.g., Product Catalog, Article List, Custom Submissions, Operation Logs).
 - **Physical Storage**:
   - `models`: Model registry & permissions.
@@ -238,16 +238,16 @@ Both System Configs and Data Models support a rich set of first-class field type
 
 | Field Type | Storage Representation | Visual Form Widget in Admin UI | Validation & Features |
 | :--- | :--- | :--- | :--- |
-| **`string`** (单行文本) | JSON string (`"title"`) | Standard `<Input />` box | Min/max length, regex pattern, trim |
-| **`richtext`** (富文本/HTML)| JSON string (`"<p>...</p>"`) | WYSIWYG Editor (TipTap / Quill) | Sanitization, embedded image upload |
-| **`image`** (单图片) | CDN URL string (`"https://..."`) | Image Uploader with preview & crop | Direct Qiniu/OSS/S3/Local upload |
-| **`file`** (媒体附件) | Asset URL / Object | File Dropzone & Progress bar | MIME type filter, size limit |
-| **`integer`** (整型) | JSON integer (`42`) | Stepper `<InputNumber />` | Range constraints (`min`, `max`), step |
+| **`string`** (Single-line text) | JSON string (`"title"`) | Standard `<Input />` box | Min/max length, regex pattern, trim |
+| **`richtext`** (Rich Text / HTML)| JSON string (`"<p>...</p>"`) | WYSIWYG Editor (TipTap / Quill) | Sanitization, embedded image upload |
+| **`image`** (Single image) | CDN URL string (`"https://..."`) | Image Uploader with preview & crop | Direct Qiniu/OSS/S3/Local upload |
+| **`file`** (Media attachment) | Asset URL / Object | File Dropzone & Progress bar | MIME type filter, size limit |
+| **`integer`** (Integer) | JSON integer (`42`) | Stepper `<InputNumber />` | Range constraints (`min`, `max`), step |
 | **`number`** / **`float`** | JSON number (`99.50`) | Decimal Precision Input | Float precision, currency format |
-| **`boolean`** (布尔开关) | JSON boolean (`true`/`false`)| Toggle `<Switch />` | Default state, active/inactive labels |
+| **`boolean`** (Boolean toggle) | JSON boolean (`true`/`false`)| Toggle `<Switch />` | Default state, active/inactive labels |
 | **`datetime`** / **`date`** | ISO-8601 string / Timestamp | Calendar & Time Picker | Timezone formatting, future/past rules |
-| **`array`** (动态数组/列表) | JSON array (`[...]`) | **Dynamic Visual Repeater List** | Array of strings, images, or sub-objects with `+ Add Item` & drag-and-drop sorting |
-| **`relation`** (关联关系) | Foreign ID / Array of IDs | Searchable Select / Modal picker | 1:1, 1:N relations to Data models |
+| **`array`** (Dynamic list/array) | JSON array (`[...]`) | **Dynamic Visual Repeater List** | Array of strings, images, or sub-objects with `+ Add Item` & drag-and-drop sorting |
+| **`relation`** (Model relationship) | Foreign ID / Array of IDs | Searchable Select / Modal picker | 1:1, 1:N relations to Data models |
 
 > [!IMPORTANT]
 > **No Raw JSON UX Rule**: Operators and content managers NEVER edit raw JSON strings. Every field—even complex arrays or image galleries—is managed via purpose-built visual components. The system handles the serialization to/from JSON transparently.
@@ -299,7 +299,7 @@ let banner = ctx.configs().get_string("banner_image").await?;
 
 ---
 
-### 3.3 Admin IAM, Topic-Scoped RBAC & Non-GET Audit Logging (管理员权限与审计系统)
+### 3.3 Admin IAM, Topic-Scoped RBAC & Non-GET Audit Logging
 
 Foundry implements an enterprise-grade administrative identity and audit system focused on security, tenant boundary enforcement, and complete state mutation tracking.
 
@@ -319,7 +319,7 @@ Foundry implements an enterprise-grade administrative identity and audit system 
 |    ├── Captures: admin_id, username, system_slug, method, path, action_name,             |
 |    │             headers, query_params, body_params, ip_address, ua, status, duration    |
 |    └── Dynamic Action Mapping: Flexible code-level route-to-action dictionary             |
-|        (e.g., `/admin/auth/login` -> "登录", `/admin/s/:slug/configs` -> "修改专题配置")  |
+|        (e.g., `/admin/auth/login` -> "Login", `/admin/s/:slug/configs` -> "Edit Configs") |
 +───────────────────────────────────────────────────────────────────────────────────────────+
 ```
 
@@ -378,13 +378,13 @@ To guarantee strict compliance, security forensics, and operational traceability
    [ Incoming Admin Non-GET Request ]
    e.g. POST /admin/s/carnival_2026/users?page=1&limit=10
         -H 'Content-Type: application/json' -H 'X-Request-ID: req_123'
-        -d '{"name": "张三", "age": 30, "email": "zhangsan@example.com"}'
+        -d '{"name": "Alice", "age": 30, "email": "alice@example.com"}'
                     │
                     ▼
    [ audit_logs Table Record ]
    ├── `headers`      : {"Content-Type": "application/json", "X-Request-ID": "req_123", ...} (JSONB)
    ├── `query_params` : "page=1&limit=10" (VARCHAR(2048))
-   └── `body_params`  : "{\"name\": \"张三\", \"age\": 30, \"email\": \"zhangsan@example.com\"}" (Raw TEXT)
+   └── `body_params`  : "{\"name\": \"Alice\", \"age\": 30, \"email\": \"alice@example.com\"}" (Raw TEXT)
    ```
 
    - `admin_id`: UUID of the acting administrator (nullable for login attempts prior to authentication).
@@ -404,15 +404,15 @@ To guarantee strict compliance, security forensics, and operational traceability
    ```rust
    pub fn resolve_action_name(method: &Method, path: &str) -> &'static str {
        match (method.as_str(), path) {
-           ("POST", p) if p.ends_with("/auth/login") => "管理员登录",
-           ("POST", p) if p.ends_with("/auth/logout") => "管理员登出",
-           ("POST", "/admin/admins") => "新增管理员",
-           ("PUT", p) if p.starts_with("/admin/admins/") => "修改管理员信息",
-           ("POST", "/admin/systems") => "创建子系统",
-           ("PUT", p) if p.contains("/configs") => "修改专题配置",
-           ("POST", p) if p.contains("/models") => "创建数据模型",
-           ("DELETE", p) if p.contains("/records/") => "删除数据记录",
-           _ => "业务写操作",
+           ("POST", p) if p.ends_with("/auth/login") => "Admin Login",
+           ("POST", p) if p.ends_with("/auth/logout") => "Admin Logout",
+           ("POST", "/admin/admins") => "Create Admin",
+           ("PUT", p) if p.starts_with("/admin/admins/") => "Update Admin",
+           ("POST", "/admin/systems") => "Create Sub-System",
+           ("PUT", p) if p.contains("/configs") => "Update System Configs",
+           ("POST", p) if p.contains("/models") => "Create Data Model",
+           ("DELETE", p) if p.contains("/records/") => "Delete Record",
+           _ => "Business Write Operation",
        }
    }
    ```
@@ -428,7 +428,7 @@ A core architectural principle of Foundry in the infrastructure phase is **Sub-S
 
 ---
 
-### 3.4 Sub-System Code-First Custom Extensibility Architecture (专题自定义代码与接口扩展架构)
+### 3.4 Sub-System Code-First Custom Extensibility Architecture
 
 In addition to dynamic Low-Code models (Auto-CRUD), Foundry provides first-class support for **Code-First Sub-System Extension**. Developers can write custom controllers and domain business logic in native Rust under a dedicated sub-system directory.
 
@@ -653,7 +653,7 @@ Foundry adopts a **Synchronous Core Release Train** for all first-party componen
 +───────────────────────────────────────────────────────────────────────────────────────────+
 ```
 
-1. **Version Parity (严格版本对齐)**:
+1. **Version Parity**:
    - All core applications (`apps/server`, `apps/admin`, `apps/cli`) share identical version tags `vX.Y.Z`.
    - The OpenAPI specification version strictly reflects the corresponding server version.
 2. **Semantic Versioning Specification (SemVer 2.0.0)**:

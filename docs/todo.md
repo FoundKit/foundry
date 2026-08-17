@@ -82,8 +82,8 @@
 
 - [x] **2.2 System Management & Zero-DDL Schema Builder**
   - [x] **System Manager**: Visual UI for Super Admin to create, configure, and manage sub-systems with unique `system_slug` validation.
-  - [x] **System Configs Editor (专题配置)**: Visual page to configure system-level properties (Banner, rules, times, toggles) with rich widgets (No raw JSON).
-  - [x] **Data Model Builder (数据模型)**: Form UI to dynamically create multi-record business models, add/edit fields (`string`, `richtext`, `image`, `file`, `integer`, `number`, `boolean`, `datetime`, `array`), and configure widget options.
+  - [x] **System Configs Editor**: Visual page to configure system-level properties (Banner, rules, times, toggles) with rich widgets (No raw JSON).
+  - [x] **Data Model Builder**: Form UI to dynamically create multi-record business models, add/edit fields (`string`, `richtext`, `image`, `file`, `integer`, `number`, `boolean`, `datetime`, `array`), and configure widget options.
 
 - [x] **2.3 Data Explorer & Custom API Directory**
   - [x] **Data Model Explorer**: Generic Data Table supporting dynamic columns, sorting, searching, and pagination for any multi-record business model.
@@ -104,7 +104,7 @@
   - [x] Asynchronous non-blocking log write pipeline to PostgreSQL `audit_logs` table.
 
 - [x] **3.2 Dynamic Action Name Mapping Registry**
-  - [x] Implement flexible route-to-action-name resolver in application code (e.g., `/admin/auth/login` -> "管理员登录", `/admin/s/:slug/configs` -> "修改专题配置", `/admin/s/:slug/models` -> "创建数据模型").
+  - [x] Implement flexible route-to-action-name resolver in application code (e.g., `/admin/auth/login` -> "Admin Login", `/admin/s/:slug/configs` -> "Update System Configs", `/admin/s/:slug/models` -> "Create Data Model").
   - [x] Provide simple programmatic registration API allowing custom sub-systems to register action names for their own non-GET endpoints.
 
 - [x] **3.3 Sub-System Domain Autonomy Guidelines & Templates**
