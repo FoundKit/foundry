@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    container_name: foundry-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: foundry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ../migrations/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8.0-alpine
+    container_name: foundry-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  foundry-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: foundry-server
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/foundry
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: foundry_dev_jwt_secret_key_change_me_in_prod
+      PORT: 8080
+      HOST: 0.0.0.0
+      RUST_LOG: info,foundry_server=debug,foundry_engine=debug
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  redis_data:

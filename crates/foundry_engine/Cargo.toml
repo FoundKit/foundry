@@ -1,0 +1,31 @@
+[package]
+name = "foundry_engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+foundry_core = { workspace = true }
+foundry_storage = { workspace = true }
+foundry_auth = { workspace = true }
+foundry_extension = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+validator = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+http-body-util = "0.1"
+bytes = "1.10"
+
+[dev-dependencies]
+systems = { workspace = true }
+sqlx = { workspace = true }

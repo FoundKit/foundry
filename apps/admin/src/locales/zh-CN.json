@@ -1,0 +1,104 @@
+{
+  "app": {
+    "title": "Foundry",
+    "subtitle": "多系统多专题统一管理平台",
+    "all_systems": "全部子系统",
+    "logout": "退出登录"
+  },
+  "nav": {
+    "dashboard": "平台概览",
+    "systems": "专题/子系统",
+    "configs": "专题专属配置",
+    "models": "数据模型定义",
+    "data_explorer": "数据记录浏览器",
+    "admins": "分级管理员授权",
+    "audit_logs": "写操作审计日志",
+    "api_docs": "API 接口文档"
+  },
+  "auth": {
+    "login_title": "登录 Foundry 平台",
+    "login_subtitle": "一平台管多系统 · Zero-DDL 动态模型 · 专题权限隔离",
+    "username": "管理员账号",
+    "password": "密码",
+    "sign_in": "立即登录",
+    "login_failed": "登录失败，请检查账号密码"
+  },
+  "systems": {
+    "title": "专题/子系统管理",
+    "desc": "统一注册与管理独立运行的专题业务子系统与租户标识",
+    "create": "创建新子系统",
+    "slug": "系统标识 (Slug)",
+    "name": "显示名称",
+    "description": "描述",
+    "status": "状态",
+    "active": "运行中",
+    "disabled": "已禁用",
+    "actions": "操作"
+  },
+  "configs": {
+    "title": "专题专属配置 (System Configs)",
+    "desc": "可视化单例配置项（头图、规则说明、活动时间、功能开关），拒绝裸 JSON 编辑",
+    "add_field": "添加配置属性项",
+    "save_all": "保存所有配置",
+    "saved_success": "专题配置保存成功！",
+    "empty": "当前子系统暂未定义任何配置项。"
+  },
+  "models": {
+    "title": "业务数据模型 (Data Models)",
+    "desc": "Zero-DDL 动态数据建模器，免数据库 DDL 即可构建海量业务数据表",
+    "create_model": "创建业务模型",
+    "add_field": "添加字段",
+    "model_slug": "模型标识 (Slug)",
+    "model_name": "模型名称",
+    "fields_count": "字段数",
+    "field_name": "字段键名",
+    "field_label": "显示标签",
+    "field_type": "字段类型",
+    "required": "必填"
+  },
+  "explorer": {
+    "title": "数据记录浏览器 (Data Explorer)",
+    "desc": "查看、筛选、检索并维护动态业务模型中的海量数据记录",
+    "create_record": "新增数据记录",
+    "edit_record": "编辑记录",
+    "delete_confirm": "确定要删除该条数据记录吗？",
+    "no_records": "该模型暂无数据记录。"
+  },
+  "admins": {
+    "title": "分级管理员与专题 RBAC",
+    "desc": "超级管理员管理普通管理员，并精确指派特定专题子系统的管理权限",
+    "create_admin": "创建管理员",
+    "role": "角色权限",
+    "super_admin": "超级管理员 (全平台)",
+    "normal_admin": "普通管理员 (指定专题)",
+    "allowed_systems": "授权专题列表",
+    "all_topics_wildcard": "全量专题 (*)"
+  },
+  "audit": {
+    "title": "全量写操作审计日志",
+    "desc": "全面拦截记录所有非 GET 变动请求 (POST, PUT, PATCH, DELETE, 登录)，分字段原始留存",
+    "operator": "操作人",
+    "action": "操作名称",
+    "method": "请求方法",
+    "path": "请求路径",
+    "system": "关联专题",
+    "status": "状态码",
+    "duration": "执行耗时",
+    "time": "操作时间",
+    "inspector": "请求全量探测器",
+    "tab_headers": "请求头 (Headers JSON)",
+    "tab_query": "原始 Query 参数",
+    "tab_body": "原始 Body 请求体"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "loading": "加载中...",
+    "confirm": "确定",
+    "search": "关键词搜索...",
+    "actions": "操作",
+    "success": "操作成功"
+  }
+}

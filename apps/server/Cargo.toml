@@ -1,0 +1,24 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "foundry-server"
+path = "src/main.rs"
+
+[dependencies]
+foundry_core = { workspace = true }
+foundry_storage = { workspace = true }
+foundry_auth = { workspace = true }
+foundry_engine = { workspace = true }
+foundry_extension = { workspace = true }
+systems = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dotenvy = { workspace = true }

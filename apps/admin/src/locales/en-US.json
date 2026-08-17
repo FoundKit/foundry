@@ -1,0 +1,104 @@
+{
+  "app": {
+    "title": "Foundry",
+    "subtitle": "Multi-System Backend Platform",
+    "all_systems": "All Systems",
+    "logout": "Log Out"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Sub-Systems",
+    "configs": "System Configs",
+    "models": "Data Models",
+    "data_explorer": "Data Explorer",
+    "admins": "Admin & RBAC",
+    "audit_logs": "Audit Logs",
+    "api_docs": "API Docs"
+  },
+  "auth": {
+    "login_title": "Sign In to Foundry",
+    "login_subtitle": "Manage multi-tenant systems, zero-DDL models, and topic configurations",
+    "username": "Username",
+    "password": "Password",
+    "sign_in": "Sign In",
+    "login_failed": "Login failed. Please check your credentials."
+  },
+  "systems": {
+    "title": "Sub-Systems Management",
+    "desc": "Manage independent backend sub-systems and topics",
+    "create": "New Sub-System",
+    "slug": "System Slug",
+    "name": "Display Name",
+    "description": "Description",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Disabled",
+    "actions": "Actions"
+  },
+  "configs": {
+    "title": "Topic Configuration",
+    "desc": "Visual single-row settings (banner, rules, event dates, toggles). No raw JSON required.",
+    "add_field": "Add Config Property",
+    "save_all": "Save Settings",
+    "saved_success": "Configuration settings saved successfully!",
+    "empty": "No configuration properties defined for this sub-system yet."
+  },
+  "models": {
+    "title": "Dynamic Data Models",
+    "desc": "Zero-DDL schema builder for multi-record business collections",
+    "create_model": "New Data Model",
+    "add_field": "Add Field",
+    "model_slug": "Model Slug",
+    "model_name": "Model Name",
+    "fields_count": "Fields",
+    "field_name": "Field Key",
+    "field_label": "Field Label",
+    "field_type": "Field Type",
+    "required": "Required"
+  },
+  "explorer": {
+    "title": "Data Model Explorer",
+    "desc": "Browse, filter, and manage records across dynamic business models",
+    "create_record": "Add New Record",
+    "edit_record": "Edit Record",
+    "delete_confirm": "Are you sure you want to delete this record?",
+    "no_records": "No records found in this model."
+  },
+  "admins": {
+    "title": "Administrators & Topic RBAC",
+    "desc": "Manage platform administrators and delegate topic-scoped access permissions",
+    "create_admin": "New Administrator",
+    "role": "Role",
+    "super_admin": "Super Admin",
+    "normal_admin": "Topic Admin",
+    "allowed_systems": "Allowed Topics",
+    "all_topics_wildcard": "Full Platform (*)"
+  },
+  "audit": {
+    "title": "Non-GET Operation Audit Trail",
+    "desc": "Comprehensive security log tracking all state mutations (POST, PUT, PATCH, DELETE, login)",
+    "operator": "Operator",
+    "action": "Action Name",
+    "method": "Method",
+    "path": "Path",
+    "system": "Target System",
+    "status": "Status",
+    "duration": "Latency",
+    "time": "Timestamp",
+    "inspector": "Request Inspector",
+    "tab_headers": "Headers (JSON)",
+    "tab_query": "Raw Query String",
+    "tab_body": "Raw Body Payload"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "confirm": "Confirm",
+    "search": "Search...",
+    "actions": "Actions",
+    "success": "Operation successful"
+  }
+}

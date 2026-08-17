@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/server",
+    "apps/cli",
+    "systems",
+    "crates/foundry_core",
+    "crates/foundry_storage",
+    "crates/foundry_auth",
+    "crates/foundry_engine",
+    "crates/foundry_extension",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["FoundKit Team <dev@foundkit.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/foundkit/foundry"
+
+[workspace.dependencies]
+# Internal workspace crates
+foundry_core = { path = "crates/foundry_core" }
+foundry_storage = { path = "crates/foundry_storage" }
+foundry_auth = { path = "crates/foundry_auth" }
+foundry_engine = { path = "crates/foundry_engine" }
+foundry_extension = { path = "crates/foundry_extension" }
+systems = { path = "systems" }
+
+# Async & HTTP
+tokio = { version = "1.44", features = ["full"] }
+axum = { version = "0.8", features = ["macros", "multipart"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "fs", "timeout"] }
+
+# Serialization & Validation
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+validator = { version = "0.20", features = ["derive"] }
+
+# Database & Caching
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+redis = { version = "0.29", features = ["tokio-comp", "aio", "connection-manager"] }
+
+# Primitives & Utilities
+uuid = { version = "1.15", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+argon2 = "0.5"
+jsonwebtoken = "9.3"
+thiserror = "2.0"
+anyhow = "1.0"
+async-trait = "0.1"
+
+# Logging & Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# CLI & Docs
+clap = { version = "4.5", features = ["derive", "env"] }
+utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "7.1", features = ["axum"] }
+dotenvy = "0.15"
