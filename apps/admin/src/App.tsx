@@ -12,11 +12,13 @@ import { ModelsPage } from './pages/ModelsPage';
 import { DataExplorerPage } from './pages/DataExplorerPage';
 import { AdminsPage } from './pages/AdminsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { CustomAdminPageViewer } from './pages/CustomAdminPageViewer';
 import { api } from './services/api';
 import { AdminProfile, SystemItem } from './types';
 import { useAppRouter } from './utils/router';
 
 export function App() {
+
   const [token, setToken] = useState<string | null>(localStorage.getItem('foundry_token'));
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [systems, setSystems] = useState<SystemItem[]>([]);
@@ -194,8 +196,16 @@ export function App() {
               onRefresh={fetchProfileAndSystems}
             />
           )}
+          {route.subsystemTab === 'custom' && route.customPageKey && (
+            <CustomAdminPageViewer
+              currentSystem={currentSystem}
+              pageKey={route.customPageKey}
+              admin={admin}
+            />
+          )}
         </>
       )}
+
 
       {/* 2. Platform Mode */}
       {route.mode === 'platform' && (

@@ -91,27 +91,25 @@ foundry/                         # Monorepo Root
 │   │   ├── package.json         # Frontend dependencies & scripts
 │   │   └── vite.config.ts       # Vite build configuration
 │   └── cli/                     # Developer CLI Tool (System scaffolding, code generation, migration)
-├── systems/                     # Sub-System Custom Code Workspace
+├── systems/                     # Sub-System Custom Code Workspace (Compiled modules)
 │   ├── Cargo.toml               # Systems Workspace / Crate Definition
 │   ├── src/
-│   │   ├── lib.rs               # Sub-system registry & static router auto-mount loader
-│   │   └── <system_slug>/       # Dedicated sub-system directory (e.g., carnival_2026, vip_mall)
+│   │   ├── lib.rs               # Sub-system registry & static/external router loader
+│   │   └── <system_slug>/       # Dedicated sub-system directory (e.g., carnival_demo)
 │   │       ├── mod.rs           # Subsystem registration & SubsystemModule trait implementation
-│   │       ├── controllers/     # Custom HTTP Controllers (Axum Handlers + Utoipa OpenAPI annotations)
-│   │       │   ├── mod.rs       # Controller route registration & router export
-│   │       │   └── custom_controller.rs
-│   │       ├── logic/           # Custom Business Logic & Service Layer (Domain rules & transactions)
-│   │       │   ├── mod.rs
-│   │       │   └── custom_service.rs
+│   │       ├── controllers/     # Custom HTTP Controllers (Axum Handlers)
+│   │       ├── logic/           # Custom Business Logic & Service Layer
 │   │       └── dto/             # Request/Response DTOs & Validation schemas
-│   │           ├── mod.rs
-│   │           └── custom_dto.rs
+├── external_systems/            # Standalone Sub-System Repositories (Decoupled hosting)
+│   └── <system_slug>/           # Standalone sub-system folder
+│       ├── subsystem.json       # Subsystem manifest & custom admin page specifications
+│       └── custom_pages/        # Custom admin UI pages & static HTML/React bundles
 ├── crates/                      # Modular Backend Core Crates (Rust Workspace)
-│   ├── foundry_core/            # SystemContext, SubsystemModule trait, primitives & error definitions
-│   ├── foundry_storage/         # Dynamic schema engine, ORM abstraction (SeaORM / SQLx)
-│   ├── foundry_auth/            # Admin IAM, JWT/Argon2id, Super Admin & Topic-Scoped RBAC
-│   ├── foundry_engine/          # Multi-system router, Auto-CRUD API generator, Non-GET Audit Middleware
-│   └── foundry_extension/       # Wasmtime runtime sandbox & Rust hook pipeline
+│   ├── foundry_core/            # SystemContext, SubsystemModule, CustomAdminPageSpec
+│   ├── foundry_storage/         # Dynamic schema engine, ORM abstraction (SQLx)
+│   ├── foundry_auth/            # Admin IAM, Argon2id, JWT & Topic RBAC
+│   ├── foundry_engine/          # Multi-system router, Auto-CRUD API generator, Audit Interceptor
+│   └── foundry_extension/       # Mutation hooks & WASM extension pipeline
 └── docker/                      # Containerization & Deployment
     ├── Dockerfile               # Production multi-stage build (Server + Admin UI bundle)
     └── docker-compose.yml       # Local dev setup (Foundry + PostgreSQL 18.6+ + Redis 8+)
@@ -131,15 +129,20 @@ To ensure reliable multi-tenant isolation, automated route mounting, code organi
    - Type: `UUIDv7` or `UUID` (e.g., `018f3a8b-7c9d-7a2e-b14e-6e82c5d12345`).
    - Purpose: Primary key in the database metadata table (`systems`), immutable database foreign keys, and internal tenant scoping.
 2. **`system_slug` (Human-Readable Code & URL Identifier)**:
-   - Format & Validation: Lowercase alphanumeric string with underscores or hyphens (`^[a-z0-9_-]{2,32}$`, e.g., `carnival_2026`, `vip_mall`, `alpha`).
+   - Format & Validation: Lowercase alphanumeric string with underscores or hyphens (`^[a-z0-9_-]{2,32}$`, e.g., `carnival_demo`, `vip_mall`).
    - Global Uniqueness: Unique across the entire platform instance; once created, it cannot be modified to avoid breaking code references and URLs.
    - **Unified Scoping Rules Across Layers**:
-     - **Code Directory Binding**: Dedicated code module in `systems/src/<system_slug>/`.
-     - **RESTful API Routing Prefix**: Directly mapped to `/api/v1/s/{system_slug}/...`.
+     - **Code Directory Binding**: Dedicated compiled module in `systems/src/<system_slug>/` or standalone directory in `external_systems/<system_slug>/`.
+     - **RESTful API Routing Structure**:
+       - Admin Management: `/api/v1/admin/*`
+       - Auto-CRUD API: `/api/v1/s/{system_slug}/{model_slug}` and `/api/v1/s/{system_slug}/configs`
+       - Custom Extension API: `/api/v1/s/{system_slug}/ext/*`
+       - Admin UI Frontend: `/admin/*`
      - **PostgreSQL Isolation**: Dynamic storage scoped by `system_id` (or `system_slug`) in `system_configs` and `model_records`.
-     - **Redis Cache Namespace**: Strict key prefixing `foundry:{system_slug}:*` (e.g., `foundry:carnival_2026:session:1001`).
+     - **Redis Cache Namespace**: Strict key prefixing `foundry:{system_slug}:*` (e.g., `foundry:vip_mall:session:1001`).
      - **OpenAPI / Swagger Grouping**: Automatically aggregated under OpenAPI tag `System: {system_slug}`.
      - **Observability / Tracing**: Structured logging, audit trails, and OpenTelemetry traces automatically attach `system_slug`.
+
 
 ```
                         [ Incoming Request ]

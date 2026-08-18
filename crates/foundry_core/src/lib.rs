@@ -7,5 +7,6 @@ pub mod types;
 pub use context::SystemContext;
 pub use error::{AppError, AppResult, ErrorEnvelope};
 pub use response::{ApiResponse, PageMeta, PaginatedData};
-pub use subsystem::SubsystemModule;
+pub use subsystem::{CustomAdminPageSpec, SubsystemModule};
+
 pub use types::{FieldType, SystemStatus, is_valid_slug};

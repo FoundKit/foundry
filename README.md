@@ -2,9 +2,9 @@
 
 <div align="center">
 
-**Build complete systems from a common foundation.**
+**Build complete multi-tenant systems from a shared foundation.**
 
-*Foundry is an open-source platform for building and running multiple independent backend systems from a shared foundation.*
+*Foundry is an open-source platform for building, isolating, and extending independent backend systems and admin panels.*
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
@@ -19,13 +19,14 @@
 
 ## 🌟 Key Capabilities
 
-1. **Multi-Tenant Sub-System Engine**: Run and manage $N$ independent sub-systems (apps, mini-programs, campaign backends) within a single Foundry instance with strict tenant isolation.
-2. **Zero-DDL Dynamic Storage**: Administrators can visually define system configs and dynamic data models without running database DDL or altering production tables.
-3. **Automatic RESTful CRUD**: Instant REST APIs generated for all dynamic models with filtering, sorting, and pagination.
-4. **Code-First Sub-System Extensibility**: Dedicated 3-layer architecture (`controllers/`, `logic/`, `dto/`) in `systems/src/<slug>/` for autonomous sub-system code.
-5. **Admin IAM & Topic-Scoped RBAC**: Super Admin (`super_admin`) and scoped Topic Admins (`allowed_systems: ["carnival_2026"]`).
-6. **Non-GET Operation Audit Trail**: Full recording of all state-mutating HTTP requests (POST, PUT, PATCH, DELETE, login) with headers, query parameters, body payloads, and dynamic action names.
-7. **REST-First & OpenAPI-Native**: Native OpenAPI 3.0 generation at `/api/v1/openapi.json` with Swagger UI at `/api/v1/docs`.
+1. **Multi-Tenant Sub-System Engine**: Run $N$ independent sub-systems (apps, mini-programs, campaign backends) within a single Foundry instance with strict tenant isolation.
+2. **Zero-DDL Dynamic Storage Engine**: Visually define system configs and dynamic data models without database DDL migrations or metadata locks.
+3. **Automatic RESTful CRUD**: Instant REST APIs generated for all dynamic models (`/api/v1/s/{system_slug}/{model_slug}`).
+4. **Decoupled RESTful Route Architecture**: Standardized REST paths separating Admin API (`/api/v1/admin/*`), Auto-CRUD (`/api/v1/s/{slug}/*`), and Custom Extension APIs (`/api/v1/s/{slug}/ext/*`).
+5. **Standalone External Subsystem Hosting**: Subsystem code and static UI assets can be hosted in separate Git repositories, dynamically discovered via `FOUNDRY_SYSTEMS_DIR` or `./external_systems`.
+6. **Subsystem Custom Admin UI Pages & SDK Bridge**: Register custom admin pages seamlessly integrated into the Foundry Admin UI shell with automatic JWT token and theme injection via `FoundryBridge`.
+7. **Hierarchical Admin IAM & Topic-Scoped RBAC**: Super Admin (`super_admin`) and scoped Topic Admins (`allowed_systems: ["vip_mall"]`).
+8. **Non-GET Operation Audit Trail**: Asynchronous logging of all state-mutating requests (POST, PUT, PATCH, DELETE, login).
 
 ---
 
@@ -36,63 +37,33 @@ foundry/
 ├── apps/
 │   ├── server/           # Foundry Core Server (Axum binary)
 │   ├── admin/            # Visual Admin Dashboard SPA (React + TypeScript + Tailwind)
-│   └── cli/              # Developer CLI Tool (System scaffolding & migrations)
+│   └── cli/              # Developer CLI Tool (Subsystem scaffolding & admin utility)
 ├── crates/
-│   ├── foundry_core/     # SystemContext, SubsystemModule trait, error envelopes
+│   ├── foundry_core/     # SystemContext, SubsystemModule, CustomAdminPageSpec
 │   ├── foundry_storage/  # PostgreSQL Zero-DDL storage & dynamic model ORM
 │   ├── foundry_auth/     # Admin IAM, Argon2id, JWT & Topic RBAC
 │   ├── foundry_engine/   # Multi-system router, Auto-CRUD, Audit middleware
 │   └── foundry_extension/# Mutation hooks & WASM extension pipeline
-├── systems/              # Sub-System custom code workspace
-│   ├── src/lib.rs        # Subsystem registry loader
-│   └── src/carnival_demo/# Sample built-in 3-layer sub-system
-├── migrations/           # Zero-DDL database schema (`init.sql`)
-└── docker/               # Dockerfile & Docker Compose
+├── systems/              # Sub-System compiled code workspace
+├── external_systems/     # Standalone external subsystem repositories
+├── migrations/           # Baseline database initialization (`init.sql`)
+└── docker/               # Docker container configurations
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Scaffolding Commands
 
-### 1. Local Infrastructure with Docker Compose
+### 1. Scaffold a Compiled Subsystem (Monorepo)
 
 ```bash
-cd docker
-docker compose up -d postgres redis
+cargo run --bin foundry-cli -- system new carnival_demo --name "Carnival Demo"
 ```
 
-### 2. Run Database Migrations & Seed Default Super Admin
+### 2. Scaffold a Standalone External Subsystem (Decoupled Repository)
 
 ```bash
-cargo run --bin foundry-cli -- migrate
-```
-
-Default credentials:
-- **Username**: `admin`
-- **Password**: `admin123456`
-
-### 3. Start Foundry Server
-
-```bash
-cargo run --bin foundry-server
-```
-
-Server will be running at `http://localhost:8080`.
-
-### 4. Start Admin Dashboard (Frontend SPA)
-
-```bash
-cd apps/admin
-pnpm install
-pnpm dev
-```
-
-Dashboard will be running at `http://localhost:3000` (see [`apps/admin/README.md`](apps/admin/README.md) for quality checks and details).
-
-### 5. Scaffold a New Sub-System
-
-```bash
-cargo run --bin foundry-cli -- system new vip_mall --name "VIP Mall 2026"
+cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Standalone"
 ```
 
 ---
@@ -100,6 +71,7 @@ cargo run --bin foundry-cli -- system new vip_mall --name "VIP Mall 2026"
 ## 📖 Documentation
 
 - [Architecture Blueprint](docs/architecture.md)
+- [Subsystem Extensions & Admin UI Guide](docs/extensions.md)
 - [Development Roadmap & TODO](docs/todo.md)
 
 ---

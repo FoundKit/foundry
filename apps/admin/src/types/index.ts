@@ -58,13 +58,24 @@ export interface PlatformSummary {
   total_audit_logs: number;
 }
 
+export interface CustomAdminPageItem {
+  key: string;
+  title: string;
+  icon: string;
+  type: 'iframe' | 'remote_component' | 'native_react' | 'custom_html';
+  entry: string;
+  required_role?: string;
+}
+
 export interface RouteState {
   mode: 'platform' | 'subsystem';
   platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs';
   subsystemSlug: string | null;
-  subsystemTab: 'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings';
+  subsystemTab: 'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings' | 'custom';
+  customPageKey?: string | null;
   params: Record<string, string>;
 }
+
 
 export interface SystemConfigItem {
   id: number;

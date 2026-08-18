@@ -20,7 +20,12 @@ export function parseRoute(pathname: string, search: string): RouteState {
     const subPath = subsystemMatch[2] || 'overview';
 
     let subsystemTab: RouteState['subsystemTab'];
-    if (subPath === 'configs') subsystemTab = 'configs';
+    let customPageKey: string | null = null;
+
+    if (subPath.startsWith('custom/')) {
+      subsystemTab = 'custom';
+      customPageKey = subPath.replace(/^custom\//, '');
+    } else if (subPath === 'configs') subsystemTab = 'configs';
     else if (subPath === 'models') subsystemTab = 'models';
     else if (subPath === 'data' || subPath === 'data_explorer') subsystemTab = 'data';
     else if (subPath === 'apis') subsystemTab = 'apis';
@@ -33,6 +38,7 @@ export function parseRoute(pathname: string, search: string): RouteState {
       platformTab: 'systems',
       subsystemSlug: slug,
       subsystemTab,
+      customPageKey,
       params,
     };
   }
@@ -67,11 +73,14 @@ export function buildRouteUrl(state: {
   platformTab?: RouteState['platformTab'];
   subsystemSlug?: string | null;
   subsystemTab?: RouteState['subsystemTab'];
+  customPageKey?: string | null;
   params?: Record<string, any>;
 }): string {
   const path =
     state.mode === 'subsystem' && state.subsystemSlug
-      ? `/admin/s/${state.subsystemSlug}/${state.subsystemTab || 'overview'}`
+      ? state.subsystemTab === 'custom' && state.customPageKey
+        ? `/admin/s/${state.subsystemSlug}/custom/${state.customPageKey}`
+        : `/admin/s/${state.subsystemSlug}/${state.subsystemTab || 'overview'}`
       : `/admin/${state.platformTab || 'dashboard'}`;
 
   const queryParams = new URLSearchParams();
@@ -125,11 +134,13 @@ export function useAppRouter() {
       tab: RouteState['subsystemTab'] = 'overview',
       params?: Record<string, any>,
       replace = false,
+      customPageKey?: string,
     ) => {
       const newUrl = buildRouteUrl({
         mode: 'subsystem',
         subsystemSlug: slug,
         subsystemTab: tab,
+        customPageKey: customPageKey || null,
         params,
       });
       if (replace) {
@@ -141,6 +152,7 @@ export function useAppRouter() {
     },
     [],
   );
+
 
   const updateParams = useCallback((newParams: Record<string, any>, replace = true) => {
     setRoute((prev) => {

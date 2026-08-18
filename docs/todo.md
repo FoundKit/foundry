@@ -136,3 +136,25 @@
   - [x] Multi-stage Dockerfile bundling server binary and Admin UI SPA assets into a single lightweight container.
   - [x] Production docker-compose environment with PostgreSQL 18.6+ and Redis 8+.
   - [x] Comprehensive documentation in `README.md` and `docs/`.
+
+---
+
+## Milestone 5: RESTful Route Decoupling, Standalone Subsystem Hosting & Custom Admin UI
+
+- [x] **5.1 RESTful Route Architecture (`crates/foundry_engine`)**
+  - [x] Standardize RESTful routes: `/api/v1/admin/*` (Admin IAM & Control Plane), `/api/v1/s/{system_slug}/*` (Auto-CRUD), `/api/v1/s/{system_slug}/ext/*` (Subsystem Custom Extension APIs), `/admin/*` (Web Admin SPA).
+  - [x] Eliminate route collisions between custom extension APIs and dynamic Auto-CRUD models.
+
+- [x] **5.2 Standalone External Subsystem Hosting Engine (`systems/src/external.rs`)**
+  - [x] Support hosting subsystem code and static UI assets in external Git repositories/directories.
+  - [x] Dynamic discovery via `FOUNDRY_SYSTEMS_DIR` environment variable and `./external_systems` directory scanner.
+  - [x] Manifest schema parser (`subsystem.json`) declaring slug, display_name, version, and custom_pages.
+
+- [x] **5.3 Subsystem Custom Admin UI Pages & SDK Bridge (`apps/admin` & `crates/foundry_core`)**
+  - [x] Define `CustomAdminPageSpec` struct and `SubsystemModule::custom_admin_pages()` trait method.
+  - [x] Build `/api/v1/admin/s/{system_slug}/custom-pages` registry endpoint.
+  - [x] Extend Admin UI sidebar navigation shell with dynamic custom pages section.
+  - [x] Create `CustomAdminPageViewer.tsx` supporting iframe embeds, postMessage SDK bridge (`window.FoundryBridge`), automatic JWT token & theme injection, toast notifications, and role permission gating (`required_role`).
+  - [x] Upgrade CLI (`foundry-cli system new-external`) for scaffolding standalone external subsystem repositories.
+
+

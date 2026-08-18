@@ -34,9 +34,17 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum SystemCommands {
-    /// Scaffold a brand new sub-system module
+    /// Scaffold a brand new compiled sub-system module in `systems/src/`
     New {
         /// Unique sub-system slug (e.g., carnival_2026, vip_mall)
+        slug: String,
+        /// Display name for the sub-system
+        #[arg(short, long)]
+        name: Option<String>,
+    },
+    /// Scaffold a standalone external sub-system repository directory in `external_systems/`
+    NewExternal {
+        /// Unique sub-system slug
         slug: String,
         /// Display name for the sub-system
         #[arg(short, long)]
@@ -45,6 +53,7 @@ enum SystemCommands {
     /// List all registered sub-systems
     List,
 }
+
 
 #[derive(Subcommand)]
 enum AdminCommands {
@@ -78,11 +87,16 @@ async fn main() -> anyhow::Result<()> {
             SystemCommands::New { slug, name } => {
                 scaffold_subsystem(&slug, name.as_deref())?;
             }
+            SystemCommands::NewExternal { slug, name } => {
+                scaffold_external_subsystem(&slug, name.as_deref())?;
+            }
             SystemCommands::List => {
-                println!("📦 Registered Sub-Systems in Foundry Monorepo:");
-                println!("- carnival_demo (Carnival 2026 Demo Subsystem)");
+                println!("📦 Registered Sub-Systems in Foundry:");
+                println!("- carnival_demo (Carnival 2026 Demo Subsystem - Compiled)");
+                println!("- vip_mall (VIP Mall Subsystem - Standalone External)");
             }
         },
+
         Commands::Migrate { database_url } => {
             let db_url = database_url.unwrap_or_else(|| {
                 std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -311,3 +325,72 @@ impl SubsystemModule for {struct_name} {{
 
     Ok(())
 }
+
+fn scaffold_external_subsystem(slug: &str, name: Option<&str>) -> anyhow::Result<()> {
+    if !is_valid_slug(slug, 32) {
+        anyhow::bail!(
+            "Invalid system slug: '{}'. Must be 2-32 lowercase alphanumeric characters or underscore/hyphen.",
+            slug
+        );
+    }
+
+    let display_name = name.unwrap_or(slug);
+    let base_dir = Path::new("external_systems").join(slug);
+
+    if base_dir.exists() {
+        anyhow::bail!("External sub-system directory already exists at {:?}", base_dir);
+    }
+
+    println!(
+        "🚀 Scaffolding standalone external sub-system repo '{}' ({}) at {:?}...",
+        slug, display_name, base_dir
+    );
+
+    fs::create_dir_all(base_dir.join("custom_pages"))?;
+
+    let manifest_content = serde_json::json!({
+        "slug": slug,
+        "display_name": display_name,
+        "description": format!("Standalone external subsystem {}", display_name),
+        "version": "1.0.0",
+        "custom_pages": [
+            {
+                "key": format!("{}_dashboard", slug),
+                "title": format!("{} 运营大屏", display_name),
+                "icon": "Sparkles",
+                "type": "iframe",
+                "entry": format!("/custom-pages/{}/index.html", slug)
+            }
+        ]
+    });
+
+    fs::write(
+        base_dir.join("subsystem.json"),
+        serde_json::to_string_pretty(&manifest_content)?,
+    )?;
+
+    let html_content = format!(
+        r#"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>{display_name} 自定义后台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6 bg-slate-900 text-slate-100">
+  <h1 class="text-xl font-bold text-emerald-400">{display_name} 独立托管后台</h1>
+  <p class="text-xs text-slate-400 mt-2">Slug: {slug} | 已连接 Foundry SDK Bridge</p>
+</body>
+</html>"#,
+        display_name = display_name,
+        slug = slug
+    );
+
+    fs::write(base_dir.join("custom_pages/index.html"), html_content)?;
+
+    println!("✅ External sub-system '{}' created successfully at {:?}!", slug, base_dir);
+    println!("👉 Core Foundry system will automatically discover and load this subsystem from `./external_systems/` or `FOUNDRY_SYSTEMS_DIR`!");
+
+    Ok(())
+}
+

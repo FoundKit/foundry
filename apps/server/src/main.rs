@@ -66,14 +66,15 @@ async fn main() -> anyhow::Result<()> {
     let jwt_service = JwtService::new(jwt_secret, 24 * 7); // 7 days token expiry
     let hook_pipeline = HookPipeline::new();
 
-    let state = AppState::new(db_pool, redis_pool, jwt_service, hook_pipeline);
-
-    // 7. Load Subsystems from `systems/` registry
+    // 7. Load Subsystems from `systems/` registry (both compiled and external)
     let subsystems = systems::register_subsystems();
     info!("Loaded {} custom sub-systems", subsystems.len());
 
+    let state = AppState::new(db_pool, redis_pool, jwt_service, hook_pipeline, subsystems);
+
     // 8. Build Router
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
+
 
     // 9. Bind and Serve
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;

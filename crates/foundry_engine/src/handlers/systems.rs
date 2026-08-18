@@ -150,3 +150,19 @@ pub async fn update_system_handler(
 
     Ok(Json(ApiResponse::success(system)))
 }
+
+/// GET /admin-api/v1/s/{system_slug}/custom-pages (List custom admin pages registered for a sub-system)
+pub async fn list_subsystem_custom_pages_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+) -> AppResult<Json<ApiResponse<Vec<foundry_core::CustomAdminPageSpec>>>> {
+    let pages = state
+        .subsystems
+        .iter()
+        .find(|s| s.slug() == system_slug)
+        .map(|s| s.custom_admin_pages())
+        .unwrap_or_default();
+
+    Ok(Json(ApiResponse::success(pages)))
+}
+

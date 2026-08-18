@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP 运营概览大屏</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: transparent; }
+  </style>
+</head>
+<body class="p-6 text-slate-800 dark:text-slate-100 transition-colors duration-200">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center font-bold text-xl">
+          👑
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">VIP 尊享商城 - 独立扩展运营大屏</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            独立托管子系统页面 · 已通过 Foundry SDK Bridge 注入主系统能力
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span id="system-badge" class="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-xs font-semibold rounded-full border border-indigo-500/20">
+          Subsystem: vip_mall
+        </span>
+        <button onclick="refreshData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors">
+          刷新数据
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">VIP 会员总量</div>
+        <div class="text-2xl font-bold mt-2 text-indigo-600 dark:text-indigo-400">12,840</div>
+        <div class="text-xs text-emerald-500 mt-1">↑ 14% 较上周</div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">今日发放积分</div>
+        <div class="text-2xl font-bold mt-2 text-amber-500">350,000</div>
+        <div class="text-xs text-emerald-500 mt-1">↑ 8.2% 较昨日</div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">已核销兑换券</div>
+        <div class="text-2xl font-bold mt-2 text-blue-500">1,942</div>
+        <div class="text-xs text-slate-400 mt-1">实时兑换中</div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">核心平台 Auth JWT</div>
+        <div id="auth-status" class="text-xs font-mono text-emerald-500 mt-3 truncate">
+          Checking Token...
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Operations Panel -->
+    <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200">调用 Foundry 主系统 API 功能</h2>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="testFetchConfigs()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium rounded-lg transition-colors">
+          ⚙️ 获取系统 Aggregated Configs (/api/v1/s/vip_mall/configs)
+        </button>
+        <button onclick="triggerToast()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium rounded-lg transition-colors">
+          🔔 触发主系统 Toast 通知
+        </button>
+      </div>
+      <pre id="api-output" class="p-4 bg-slate-950 text-emerald-400 font-mono text-xs rounded-xl overflow-x-auto min-h-[120px]">Waiting for interaction...</pre>
+    </div>
+  </div>
+
+  <script>
+    // Listen for messages from parent Foundry Admin UI shell
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'FOUNDRY_INIT') {
+        const { token, subsystemSlug, admin, theme } = event.data.payload;
+        document.getElementById('auth-status').innerText = token ? '✅ Verified Valid Token' : '❌ No Token';
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    });
+
+    function refreshData() {
+      document.getElementById('api-output').innerText = 'Data refreshed at ' + new Date().toLocaleTimeString();
+    }
+
+    async function testFetchConfigs() {
+      const output = document.getElementById('api-output');
+      output.innerText = 'Requesting /api/v1/s/vip_mall/configs ...';
+      try {
+        const res = await fetch('/api/v1/s/vip_mall/configs');
+        const data = await res.json();
+        output.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.innerText = 'Error: ' + err.message;
+      }
+    }
+
+
+    function triggerToast() {
+      window.parent.postMessage({
+        type: 'FOUNDRY_TOAST',
+        payload: { message: 'Hello from VIP Mall standalone custom admin page!', level: 'success' }
+      }, '*');
+      document.getElementById('api-output').innerText = 'Triggered parent toast message!';
+    }
+  </script>
+</body>
+</html>
