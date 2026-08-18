@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Layers, AlertCircle } from 'lucide-react';
+import { Plus, Layers, AlertCircle, PlusCircle } from 'lucide-react';
 import { Card, Button, Input, Textarea, Badge, Modal } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { AdminProfile, SystemItem } from '../types';
@@ -48,8 +48,8 @@ export function SystemsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{t('systems.title')}</h1>
-          <p className="text-xs text-slate-400 mt-1">{t('systems.desc')}</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('systems.title')}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('systems.desc')}</p>
         </div>
         {admin.role === 'super_admin' && (
           <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
@@ -62,8 +62,8 @@ export function SystemsPage({
       {/* Systems Table */}
       <Card className="p-0 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-950/60 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
+          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4">{t('systems.name')}</th>
                 <th className="px-6 py-4">{t('systems.slug')}</th>
@@ -72,17 +72,17 @@ export function SystemsPage({
                 <th className="px-6 py-4 text-right">{t('systems.actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
               {systems.map((sys) => (
-                <tr key={sys.id} className="hover:bg-slate-800/30 transition">
-                  <td className="px-6 py-4 font-semibold text-slate-100 flex items-center gap-2.5">
-                    <Layers className="w-4 h-4 text-emerald-400" />
+                <tr key={sys.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                  <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+                    <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{sys.name}</span>
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs text-emerald-400">
+                  <td className="px-6 py-4 font-mono text-xs text-emerald-600 dark:text-emerald-400">
                     /{sys.slug}
                   </td>
-                  <td className="px-6 py-4 text-xs text-slate-400 max-w-md truncate">
+                  <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 max-w-md truncate">
                     {sys.description || '-'}
                   </td>
                   <td className="px-6 py-4">
@@ -101,6 +101,25 @@ export function SystemsPage({
                   </td>
                 </tr>
               ))}
+              {systems.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-16 px-4">
+                    <Layers className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600 mb-3" />
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                      {t('systems.empty_title')}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
+                      {t('systems.empty_desc')}
+                    </p>
+                    {admin.role === 'super_admin' && (
+                      <Button onClick={() => setIsCreateOpen(true)} className="gap-2 mx-auto">
+                        <PlusCircle className="w-4 h-4" />
+                        <span>{t('systems.create')}</span>
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -113,14 +132,14 @@ export function SystemsPage({
         title={t('systems.create')}
       >
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-rose-950/60 border border-rose-800/60 text-xs text-rose-300 flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('systems.slug')} (Immutable identifier)
             </label>
             <Input
@@ -129,13 +148,13 @@ export function SystemsPage({
               value={slug}
               onChange={(e) => setSlug(e.target.value.toLowerCase())}
             />
-            <span className="text-[10px] text-slate-500 mt-1 block">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
               Alphanumeric with underscores/hyphens (e.g. carnival_2026, vip_mall)
             </span>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('systems.name')}
             </label>
             <Input
@@ -147,7 +166,7 @@ export function SystemsPage({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('systems.description')}
             </label>
             <Textarea

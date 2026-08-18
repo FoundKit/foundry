@@ -3,7 +3,15 @@
     "title": "Foundry",
     "subtitle": "多系统多专题统一管理平台",
     "all_systems": "全部子系统",
+    "no_systems": "暂无子系统",
+    "manage_systems": "管理所有子系统",
     "logout": "退出登录"
+  },
+  "theme": {
+    "theme": "主题切换",
+    "auto": "跟随系统",
+    "light": "亮色主题",
+    "dark": "暗色主题"
   },
   "nav": {
     "dashboard": "平台概览",
@@ -33,7 +41,9 @@
     "status": "状态",
     "active": "运行中",
     "disabled": "已禁用",
-    "actions": "操作"
+    "actions": "操作",
+    "empty_title": "暂未创建任何子系统",
+    "empty_desc": "Foundry 支持多业务子系统与租户隔离。点击下方按钮创建您的第一个业务子系统。"
   },
   "configs": {
     "title": "专题专属配置 (System Configs)",
@@ -41,7 +51,10 @@
     "add_field": "添加配置属性项",
     "save_all": "保存所有配置",
     "saved_success": "专题配置保存成功！",
-    "empty": "当前子系统暂未定义任何配置项。"
+    "empty": "当前子系统暂未定义任何配置项。",
+    "no_system_title": "暂无可用子系统",
+    "no_system_desc": "专题专属配置从属于特定的子系统。系统初始化后暂无子系统，请先创建子系统后再进行配置。",
+    "go_to_systems": "前往创建子系统"
   },
   "models": {
     "title": "业务数据模型 (Data Models)",
@@ -54,7 +67,11 @@
     "field_name": "字段键名",
     "field_label": "显示标签",
     "field_type": "字段类型",
-    "required": "必填"
+    "required": "必填",
+    "no_system_title": "暂无可用子系统",
+    "no_system_desc": "业务数据模型从属于特定的子系统。系统初始化后暂无子系统，请先创建子系统后再定义模型。",
+    "go_to_systems": "前往创建子系统",
+    "empty_models": "当前子系统暂无数据模型。点击“创建业务模型”创建第一个模型。"
   },
   "explorer": {
     "title": "数据记录浏览器 (Data Explorer)",
@@ -62,7 +79,13 @@
     "create_record": "新增数据记录",
     "edit_record": "编辑记录",
     "delete_confirm": "确定要删除该条数据记录吗？",
-    "no_records": "该模型暂无数据记录。"
+    "no_records": "该模型暂无数据记录。",
+    "no_system_title": "暂无可用子系统",
+    "no_system_desc": "数据记录从属于子系统的数据模型。请先创建子系统并定义数据模型。",
+    "go_to_systems": "前往创建子系统",
+    "no_models_title": "当前子系统暂无数据模型",
+    "no_models_desc": "请先在数据模型定义中创建业务模型和字段，然后再浏览或录入数据记录。",
+    "go_to_models": "前往定义数据模型"
   },
   "admins": {
     "title": "分级管理员与专题 RBAC",
@@ -72,7 +95,8 @@
     "super_admin": "超级管理员 (全平台)",
     "normal_admin": "普通管理员 (指定专题)",
     "allowed_systems": "授权专题列表",
-    "all_topics_wildcard": "全量专题 (*)"
+    "all_topics_wildcard": "全量专题 (*)",
+    "no_systems_warning": "当前系统暂无子系统，无法分配特定专题权限。请先创建子系统或分配超级管理员角色。"
   },
   "audit": {
     "title": "全量写操作审计日志",

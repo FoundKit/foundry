@@ -3,7 +3,15 @@
     "title": "Foundry",
     "subtitle": "Multi-System Backend Platform",
     "all_systems": "All Systems",
+    "no_systems": "No Sub-Systems",
+    "manage_systems": "Manage All Sub-Systems",
     "logout": "Log Out"
+  },
+  "theme": {
+    "theme": "Theme",
+    "auto": "System Auto",
+    "light": "Light Theme",
+    "dark": "Dark Theme"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -33,7 +41,9 @@
     "status": "Status",
     "active": "Active",
     "disabled": "Disabled",
-    "actions": "Actions"
+    "actions": "Actions",
+    "empty_title": "No Sub-Systems Created Yet",
+    "empty_desc": "Foundry supports multi-system tenancy and topic isolation. Click below to create your first sub-system."
   },
   "configs": {
     "title": "Topic Configuration",
@@ -41,7 +51,10 @@
     "add_field": "Add Config Property",
     "save_all": "Save Settings",
     "saved_success": "Configuration settings saved successfully!",
-    "empty": "No configuration properties defined for this sub-system yet."
+    "empty": "No configuration properties defined for this sub-system yet.",
+    "no_system_title": "No Sub-System Available",
+    "no_system_desc": "Topic configs belong to a specific sub-system. Since the system was just initialized, please create a sub-system first before configuring properties.",
+    "go_to_systems": "Go to Sub-Systems"
   },
   "models": {
     "title": "Dynamic Data Models",
@@ -54,7 +67,11 @@
     "field_name": "Field Key",
     "field_label": "Field Label",
     "field_type": "Field Type",
-    "required": "Required"
+    "required": "Required",
+    "no_system_title": "No Sub-System Available",
+    "no_system_desc": "Data models must belong to a specific sub-system. Since the system was just initialized, please create a sub-system first before creating models.",
+    "go_to_systems": "Go to Sub-Systems",
+    "empty_models": "No models in this sub-system yet. Click 'New Data Model' to create one."
   },
   "explorer": {
     "title": "Data Model Explorer",
@@ -62,7 +79,13 @@
     "create_record": "Add New Record",
     "edit_record": "Edit Record",
     "delete_confirm": "Are you sure you want to delete this record?",
-    "no_records": "No records found in this model."
+    "no_records": "No records found in this model.",
+    "no_system_title": "No Sub-System Available",
+    "no_system_desc": "Records belong to a sub-system data model. Please create a sub-system and define models first.",
+    "go_to_systems": "Go to Sub-Systems",
+    "no_models_title": "No Data Models in Sub-System",
+    "no_models_desc": "Please define a data model and fields first before managing records.",
+    "go_to_models": "Go to Data Models"
   },
   "admins": {
     "title": "Administrators & Topic RBAC",
@@ -72,7 +95,8 @@
     "super_admin": "Super Admin",
     "normal_admin": "Topic Admin",
     "allowed_systems": "Allowed Topics",
-    "all_topics_wildcard": "Full Platform (*)"
+    "all_topics_wildcard": "Full Platform (*)",
+    "no_systems_warning": "No sub-systems available to assign. Please create a sub-system first or assign Super Admin role."
   },
   "audit": {
     "title": "Non-GET Operation Audit Trail",

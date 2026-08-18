@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, UserPlus } from 'lucide-react';
+import { ShieldCheck, UserPlus, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { AdminProfile, SystemItem } from '../types';
@@ -21,6 +21,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'super_admin' | 'admin'>('admin');
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const loadAdmins = async () => {
     setLoading(true);
@@ -40,6 +41,11 @@ export function AdminsPage({ systems }: AdminsPageProps) {
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (role === 'admin' && systems.length === 0) {
+      setError(t('admins.no_systems_warning'));
+      return;
+    }
     try {
       const allowed = role === 'super_admin' ? ['*'] : selectedSystems;
       await api.createAdmin({
@@ -56,7 +62,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
       setSelectedSystems([]);
       loadAdmins();
     } catch (err: any) {
-      alert(err.message || 'Failed to create admin');
+      setError(err.message || 'Failed to create admin');
     }
   };
 
@@ -70,18 +76,21 @@ export function AdminsPage({ systems }: AdminsPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-100">{t('admins.title')}</h1>
-          <p className="text-xs text-slate-400 mt-1">{t('admins.desc')}</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('admins.title')}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('admins.desc')}</p>
         </div>
-        <Button onClick={() => setIsOpen(true)}>
+        <Button onClick={() => {
+          setError(null);
+          setIsOpen(true);
+        }}>
           <UserPlus className="w-4 h-4" />
           <span>{t('admins.create_admin')}</span>
         </Button>
       </div>
 
       <Card className="p-0 overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="bg-slate-950/60 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
+        <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+          <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th className="px-6 py-4">{t('auth.username')}</th>
               <th className="px-6 py-4">Email</th>
@@ -89,14 +98,14 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               <th className="px-6 py-4">{t('admins.allowed_systems')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 text-xs">
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs">
             {admins.map((adm) => (
-              <tr key={adm.id} className="hover:bg-slate-800/30 transition">
-                <td className="px-6 py-4 font-semibold text-slate-100 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <tr key={adm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{adm.username}</span>
                 </td>
-                <td className="px-6 py-4 text-slate-400">{adm.email || '-'}</td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{adm.email || '-'}</td>
                 <td className="px-6 py-4">
                   <Badge variant={adm.role === 'super_admin' ? 'purple' : 'info'}>
                     {adm.role === 'super_admin' ? t('admins.super_admin') : t('admins.normal_admin')}
@@ -110,7 +119,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
                       {adm.allowed_systems.map((s, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-mono border border-slate-700"
+                          className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-mono border border-slate-200 dark:border-slate-700"
                         >
                           /{s}
                         </span>
@@ -122,7 +131,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
             ))}
             {admins.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-slate-500">
+                <td colSpan={4} className="text-center py-8 text-slate-500 dark:text-slate-400">
                   {loading ? t('common.loading') : 'No administrators registered.'}
                 </td>
               </tr>
@@ -137,9 +146,15 @@ export function AdminsPage({ systems }: AdminsPageProps) {
         onClose={() => setIsOpen(false)}
         title={t('admins.create_admin')}
       >
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         <form onSubmit={handleCreateAdmin} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('auth.username')}
             </label>
             <Input
@@ -151,7 +166,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Email (Optional)
             </label>
             <Input
@@ -163,7 +178,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('auth.password')}
             </label>
             <Input
@@ -176,11 +191,11 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               {t('admins.role')}
             </label>
             <select
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               value={role}
               onChange={(e) => setRole(e.target.value as any)}
             >
@@ -191,29 +206,35 @@ export function AdminsPage({ systems }: AdminsPageProps) {
 
           {role === 'admin' && (
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Assign Allowed Sub-Systems
               </label>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto p-2 bg-slate-950 rounded-lg border border-slate-800">
-                {systems.map((s) => {
-                  const isChecked = selectedSystems.includes(s.slug);
-                  return (
-                    <label
-                      key={s.id}
-                      className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:bg-slate-900 p-1.5 rounded transition"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleSystemSelection(s.slug)}
-                        className="rounded bg-slate-950 border-slate-800 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span>{s.name}</span>
-                      <span className="font-mono text-slate-500 text-[10px]">/{s.slug}</span>
-                    </label>
-                  );
-                })}
-              </div>
+              {systems.length > 0 ? (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                  {systems.map((s) => {
+                    const isChecked = selectedSystems.includes(s.slug);
+                    return (
+                      <label
+                        key={s.id}
+                        className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 p-1.5 rounded transition"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSystemSelection(s.slug)}
+                          className="rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span>{s.name}</span>
+                        <span className="font-mono text-slate-400 dark:text-slate-500 text-[10px]">/{s.slug}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                  {t('admins.no_systems_warning')}
+                </div>
+              )}
             </div>
           )}
 

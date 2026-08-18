@@ -36,8 +36,16 @@ export function App() {
       ]);
       setAdmin(profile);
       setSystems(sysList);
-      if (sysList.length > 0 && !currentSystem) {
-        setCurrentSystem(sysList[0]);
+      if (sysList.length > 0) {
+        // If no system selected or selected system not in list, pick the first one
+        setCurrentSystem((prev) => {
+          if (!prev || !sysList.some((s) => s.id === prev.id)) {
+            return sysList[0];
+          }
+          return prev;
+        });
+      } else {
+        setCurrentSystem(null);
       }
     } catch (err) {
       console.error(err);
@@ -64,7 +72,7 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm">
         Initializing Foundry Control Plane...
       </div>
     );
@@ -103,9 +111,24 @@ export function App() {
           }}
         />
       )}
-      {currentTab === 'configs' && <ConfigsPage currentSystem={currentSystem} />}
-      {currentTab === 'models' && <ModelsPage currentSystem={currentSystem} />}
-      {currentTab === 'data_explorer' && <DataExplorerPage currentSystem={currentSystem} />}
+      {currentTab === 'configs' && (
+        <ConfigsPage
+          currentSystem={currentSystem}
+          onNavigate={setCurrentTab}
+        />
+      )}
+      {currentTab === 'models' && (
+        <ModelsPage
+          currentSystem={currentSystem}
+          onNavigate={setCurrentTab}
+        />
+      )}
+      {currentTab === 'data_explorer' && (
+        <DataExplorerPage
+          currentSystem={currentSystem}
+          onNavigate={setCurrentTab}
+        />
+      )}
       {currentTab === 'admins' && <AdminsPage systems={systems} />}
       {currentTab === 'audit_logs' && <AuditLogsPage currentSystem={currentSystem} />}
     </Layout>
