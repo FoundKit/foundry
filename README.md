@@ -86,7 +86,7 @@ pnpm install
 pnpm dev
 ```
 
-Dashboard will be running at `http://localhost:5173`.
+Dashboard will be running at `http://localhost:3000` (see [`apps/admin/README.md`](apps/admin/README.md) for quality checks and details).
 
 ### 5. Scaffold a New Sub-System
 

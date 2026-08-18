@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.vite
+*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json

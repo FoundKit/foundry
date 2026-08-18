@@ -28,7 +28,16 @@ export interface SystemConfigItem {
   system_id: string;
   key: string;
   label: string;
-  value_type: 'string' | 'richtext' | 'image' | 'file' | 'integer' | 'number' | 'boolean' | 'datetime' | 'array';
+  value_type:
+    | 'string'
+    | 'richtext'
+    | 'image'
+    | 'file'
+    | 'integer'
+    | 'number'
+    | 'boolean'
+    | 'datetime'
+    | 'array';
   value: any;
   options: Record<string, any>;
   sort_order: number;

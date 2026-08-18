@@ -55,10 +55,18 @@ jobs:
         working-directory: apps/admin
         run: pnpm install --frozen-lockfile
 
-      - name: ESLint & Code Standards
+      - name: Prettier Format Check
+        working-directory: apps/admin
+        run: pnpm format:check
+
+      - name: ESLint Check
         working-directory: apps/admin
         run: pnpm lint
 
-      - name: TypeScript & Build Check
+      - name: TypeScript Type Check
+        working-directory: apps/admin
+        run: pnpm typecheck
+
+      - name: Production Build Check
         working-directory: apps/admin
         run: pnpm build

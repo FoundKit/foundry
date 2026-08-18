@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sliders, Plus, Save, CheckCircle2, Image as ImageIcon, Calendar, Hash, Layers, AlertTriangle } from 'lucide-react';
+import {
+  Sliders,
+  Plus,
+  Save,
+  CheckCircle2,
+  Image as ImageIcon,
+  Calendar,
+  Hash,
+  Layers,
+  AlertTriangle,
+} from 'lucide-react';
 import { Card, Button, Input, Textarea, Badge, Modal } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { SystemConfigItem, SystemItem } from '../types';
@@ -97,7 +107,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
         return (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <ImageIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <Input
                 placeholder="https://example.com/banner.jpg"
                 value={val || ''}
@@ -105,8 +115,8 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
               />
             </div>
             {val && (
-              <div className="mt-2 w-48 h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
-                <img src={val} alt="Preview" className="w-full h-full object-cover" />
+              <div className="mt-2 flex h-24 w-48 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950">
+                <img src={val} alt="Preview" className="h-full w-full object-cover" />
               </div>
             )}
           </div>
@@ -128,7 +138,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
                 }`}
               />
             </button>
-            <span className="text-xs text-slate-700 dark:text-slate-300 font-medium">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
               {val ? 'Enabled (ON)' : 'Disabled (OFF)'}
             </span>
           </div>
@@ -147,8 +157,8 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
       case 'integer':
       case 'number':
         return (
-          <div className="flex items-center gap-2 max-w-xs">
-            <Hash className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+          <div className="flex max-w-xs items-center gap-2">
+            <Hash className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             <Input
               type="number"
               value={val !== undefined ? val : ''}
@@ -159,8 +169,8 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
 
       case 'datetime':
         return (
-          <div className="flex items-center gap-2 max-w-sm">
-            <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+          <div className="flex max-w-sm items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             <Input
               type="datetime-local"
               value={val || ''}
@@ -189,7 +199,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
                     const copy = arr.filter((_, i) => i !== idx);
                     updateValue(cfg.key, copy);
                   }}
-                  className="px-2.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 text-xs transition"
+                  className="rounded-lg bg-slate-100 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-slate-700"
                 >
                   ✕
                 </button>
@@ -208,12 +218,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
       }
 
       default:
-        return (
-          <Input
-            value={val || ''}
-            onChange={(e) => updateValue(cfg.key, e.target.value)}
-          />
-        );
+        return <Input value={val || ''} onChange={(e) => updateValue(cfg.key, e.target.value)} />;
     }
   };
 
@@ -223,34 +228,36 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('configs.title')}</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('configs.desc')}</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('configs.title')}
+            </h1>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('configs.desc')}</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="secondary" disabled title={t('configs.no_system_desc')}>
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               <span>{t('configs.add_field')}</span>
             </Button>
             <Button disabled title={t('configs.no_system_desc')}>
-              <Save className="w-4 h-4" />
+              <Save className="h-4 w-4" />
               <span>{t('configs.save_all')}</span>
             </Button>
           </div>
         </div>
 
-        <Card className="text-center py-16 px-6 max-w-2xl mx-auto">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center mx-auto mb-4 text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="w-7 h-7" />
+        <Card className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-800/60 dark:bg-amber-950/60 dark:text-amber-400">
+            <AlertTriangle className="h-7 w-7" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+          <h2 className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
             {t('configs.no_system_title')}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+          <p className="mx-auto mb-6 max-w-md text-sm text-slate-500 dark:text-slate-400">
             {t('configs.no_system_desc')}
           </p>
           {onNavigate && (
             <Button onClick={() => onNavigate('systems')} className="gap-2">
-              <Layers className="w-4 h-4" />
+              <Layers className="h-4 w-4" />
               <span>{t('configs.go_to_systems')}</span>
             </Button>
           )}
@@ -264,40 +271,37 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('configs.title')}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('configs.title')}
+            </h1>
             <Badge variant="success">/{currentSystem.slug}</Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('configs.desc')}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('configs.desc')}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" onClick={() => setIsAddOpen(true)}>
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             <span>{t('configs.add_field')}</span>
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            <Save className="w-4 h-4" />
+            <Save className="h-4 w-4" />
             <span>{saving ? t('common.loading') : t('configs.save_all')}</span>
           </Button>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/60 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" />
           <span>{t('configs.saved_success')}</span>
         </div>
       )}
 
       {configs.length === 0 && !loading && (
-        <Card className="text-center py-12 text-slate-500 dark:text-slate-400">
-          <Sliders className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600 mb-3" />
+        <Card className="py-12 text-center text-slate-500 dark:text-slate-400">
+          <Sliders className="mx-auto mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
           <p className="text-sm">{t('configs.empty')}</p>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="mt-4"
-            onClick={() => setIsAddOpen(true)}
-          >
+          <Button size="sm" variant="secondary" className="mt-4" onClick={() => setIsAddOpen(true)}>
             + Define First Setting
           </Button>
         </Card>
@@ -309,8 +313,12 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
           <Card key={cfg.id} className="space-y-2.5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{cfg.label}</span>
-                <span className="ml-2 font-mono text-xs text-slate-400 dark:text-slate-500">({cfg.key})</span>
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {cfg.label}
+                </span>
+                <span className="ml-2 font-mono text-xs text-slate-400 dark:text-slate-500">
+                  ({cfg.key})
+                </span>
               </div>
               <Badge variant="purple">{cfg.value_type}</Badge>
             </div>
@@ -320,14 +328,10 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
       </div>
 
       {/* Modal to add config property definition */}
-      <Modal
-        isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
-        title={t('configs.add_field')}
-      >
+      <Modal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} title={t('configs.add_field')}>
         <form onSubmit={handleAddField} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Configuration Key (e.g. banner_url, start_time, rules)
             </label>
             <Input
@@ -339,7 +343,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Display Label
             </label>
             <Input
@@ -351,11 +355,11 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Visual Widget Type
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
             >
@@ -371,11 +375,7 @@ export function ConfigsPage({ currentSystem, onNavigate }: ConfigsPageProps) {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsAddOpen(false)}
-            >
+            <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>
               {t('common.cancel')}
             </Button>
             <Button type="submit">{t('common.confirm')}</Button>

@@ -30,10 +30,7 @@ export function App() {
 
   const fetchProfileAndSystems = async () => {
     try {
-      const [profile, sysList] = await Promise.all([
-        api.me(),
-        api.listSystems(),
-      ]);
+      const [profile, sysList] = await Promise.all([api.me(), api.listSystems()]);
       setAdmin(profile);
       setSystems(sysList);
       if (sysList.length > 0) {
@@ -72,7 +69,7 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400">
         Initializing Foundry Control Plane...
       </div>
     );
@@ -112,22 +109,13 @@ export function App() {
         />
       )}
       {currentTab === 'configs' && (
-        <ConfigsPage
-          currentSystem={currentSystem}
-          onNavigate={setCurrentTab}
-        />
+        <ConfigsPage currentSystem={currentSystem} onNavigate={setCurrentTab} />
       )}
       {currentTab === 'models' && (
-        <ModelsPage
-          currentSystem={currentSystem}
-          onNavigate={setCurrentTab}
-        />
+        <ModelsPage currentSystem={currentSystem} onNavigate={setCurrentTab} />
       )}
       {currentTab === 'data_explorer' && (
-        <DataExplorerPage
-          currentSystem={currentSystem}
-          onNavigate={setCurrentTab}
-        />
+        <DataExplorerPage currentSystem={currentSystem} onNavigate={setCurrentTab} />
       )}
       {currentTab === 'admins' && <AdminsPage systems={systems} />}
       {currentTab === 'audit_logs' && <AuditLogsPage currentSystem={currentSystem} />}

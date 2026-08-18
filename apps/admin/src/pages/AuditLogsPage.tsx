@@ -59,8 +59,10 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('audit.title')}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            {t('audit.title')}
+          </h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {t('audit.desc')} ({total} records)
           </p>
         </div>
@@ -69,10 +71,10 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-            <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
               <tr>
                 <th className="px-5 py-3.5">{t('audit.time')}</th>
                 <th className="px-5 py-3.5">{t('audit.operator')}</th>
@@ -85,10 +87,13 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
                 <th className="px-5 py-3.5 text-right">Inspect</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-slate-200 text-xs dark:divide-slate-800/60">
               {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                  <td className="px-5 py-3.5 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                <tr
+                  key={log.id}
+                  className="transition hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                >
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                     {new Date(log.created_at).toLocaleString()}
                   </td>
                   <td className="px-5 py-3.5 font-semibold text-slate-800 dark:text-slate-200">
@@ -100,7 +105,7 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">{getMethodBadge(log.method)}</td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-slate-700 dark:text-slate-300 max-w-xs truncate">
+                  <td className="max-w-xs truncate px-5 py-3.5 font-mono text-xs text-slate-700 dark:text-slate-300">
                     {log.path}
                   </td>
                   <td className="px-5 py-3.5 font-mono text-xs text-slate-500 dark:text-slate-400">
@@ -109,7 +114,9 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
                   <td className="px-5 py-3.5">
                     <span
                       className={`font-mono font-semibold ${
-                        (log.status_code || 200) < 400 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                        (log.status_code || 200) < 400
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
                       {log.status_code || 200}
@@ -121,17 +128,17 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
                   <td className="px-5 py-3.5 text-right">
                     <button
                       onClick={() => setInspectLog(log)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                      className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400"
                       title="Inspect Raw Request"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
               ))}
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-500 dark:text-slate-400">
                     {loading ? t('common.loading') : 'No write audit logs recorded yet.'}
                   </td>
                 </tr>
@@ -142,28 +149,26 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
       </Card>
 
       {/* Raw Request Inspector Modal */}
-      <Modal
-        isOpen={!!inspectLog}
-        onClose={() => setInspectLog(null)}
-        title={t('audit.inspector')}
-      >
+      <Modal isOpen={!!inspectLog} onClose={() => setInspectLog(null)} title={t('audit.inspector')}>
         {inspectLog && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3 text-xs dark:border-slate-800">
               <div className="flex items-center gap-2">
                 {getMethodBadge(inspectLog.method)}
-                <span className="font-mono text-slate-800 dark:text-slate-200">{inspectLog.path}</span>
+                <span className="font-mono text-slate-800 dark:text-slate-200">
+                  {inspectLog.path}
+                </span>
               </div>
-              <span className="text-slate-500 dark:text-slate-400 font-mono">
+              <span className="font-mono text-slate-500 dark:text-slate-400">
                 IP: {inspectLog.ip_address || '127.0.0.1'}
               </span>
             </div>
 
             {/* Discrete Tabs */}
-            <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2">
+            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800">
               <button
                 onClick={() => setActiveTab('body')}
-                className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                className={`border-b-2 px-3 py-2 text-xs font-medium transition ${
                   activeTab === 'body'
                     ? 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400'
                     : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -173,7 +178,7 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
               </button>
               <button
                 onClick={() => setActiveTab('query')}
-                className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                className={`border-b-2 px-3 py-2 text-xs font-medium transition ${
                   activeTab === 'query'
                     ? 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400'
                     : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -183,7 +188,7 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
               </button>
               <button
                 onClick={() => setActiveTab('headers')}
-                className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                className={`border-b-2 px-3 py-2 text-xs font-medium transition ${
                   activeTab === 'headers'
                     ? 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400'
                     : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
@@ -194,7 +199,7 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
             </div>
 
             {/* Content Display */}
-            <div className="bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-300 max-h-72 overflow-auto">
+            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200 bg-slate-100 p-4 font-mono text-xs text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
               {activeTab === 'body' && (
                 <pre className="whitespace-pre-wrap">
                   {inspectLog.body_params || '(Empty Request Body)'}

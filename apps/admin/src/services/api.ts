@@ -41,31 +41,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   // Auth
-  login: (data: any) => request<{ token: string; admin: AdminProfile }>('/admin/auth/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  login: (data: any) =>
+    request<{ token: string; admin: AdminProfile }>('/admin/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   me: () => request<AdminProfile>('/admin/auth/me'),
 
   // Systems
   listSystems: () => request<SystemItem[]>('/admin/systems'),
-  createSystem: (data: any) => request<SystemItem>('/admin/systems', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  updateSystem: (id: string, data: any) => request<SystemItem>(`/admin/systems/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  createSystem: (data: any) =>
+    request<SystemItem>('/admin/systems', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateSystem: (id: string, data: any) =>
+    request<SystemItem>(`/admin/systems/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // System Configs
-  getAggregatedConfigs: (systemSlug: string) => request<Record<string, any>>(`/s/${systemSlug}/configs`),
+  getAggregatedConfigs: (systemSlug: string) =>
+    request<Record<string, any>>(`/s/${systemSlug}/configs`),
   updateAggregatedConfigs: (systemSlug: string, data: Record<string, any>) =>
     request<void>(`/s/${systemSlug}/configs`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  listConfigSchema: (systemSlug: string) => request<SystemConfigItem[]>(`/admin/s/${systemSlug}/configs/schema`),
+  listConfigSchema: (systemSlug: string) =>
+    request<SystemConfigItem[]>(`/admin/s/${systemSlug}/configs/schema`),
   upsertConfigSchema: (systemSlug: string, data: any) =>
     request<SystemConfigItem>(`/admin/s/${systemSlug}/configs/schema`, {
       method: 'POST',
@@ -88,7 +93,11 @@ export const api = {
     }),
 
   // Dynamic Records Auto-CRUD
-  listRecords: (systemSlug: string, modelSlug: string, params?: { page?: number; page_size?: number }) => {
+  listRecords: (
+    systemSlug: string,
+    modelSlug: string,
+    params?: { page?: number; page_size?: number },
+  ) => {
     const qs = params ? `?page=${params.page || 1}&page_size=${params.page_size || 20}` : '';
     return request<PaginatedResult<ModelRecordItem>>(`/s/${systemSlug}/${modelSlug}${qs}`);
   },
@@ -109,10 +118,11 @@ export const api = {
 
   // Admins
   listAdmins: () => request<AdminProfile[]>('/admin/admins'),
-  createAdmin: (data: any) => request<AdminProfile>('/admin/admins', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  createAdmin: (data: any) =>
+    request<AdminProfile>('/admin/admins', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Audit Logs
   listAuditLogs: (params?: { page?: number; system_slug?: string }) => {

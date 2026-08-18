@@ -10,9 +10,9 @@ i18n
   .init({
     resources: {
       'en-US': { translation: enUS },
-      'en': { translation: enUS },
+      en: { translation: enUS },
       'zh-CN': { translation: zhCN },
-      'zh': { translation: zhCN },
+      zh: { translation: zhCN },
     },
     fallbackLng: 'zh-CN',
     interpolation: {

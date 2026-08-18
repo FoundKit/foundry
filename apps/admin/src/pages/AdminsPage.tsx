@@ -68,7 +68,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
 
   const toggleSystemSelection = (slug: string) => {
     setSelectedSystems((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
   };
 
@@ -76,21 +76,25 @@ export function AdminsPage({ systems }: AdminsPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('admins.title')}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('admins.desc')}</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            {t('admins.title')}
+          </h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('admins.desc')}</p>
         </div>
-        <Button onClick={() => {
-          setError(null);
-          setIsOpen(true);
-        }}>
-          <UserPlus className="w-4 h-4" />
+        <Button
+          onClick={() => {
+            setError(null);
+            setIsOpen(true);
+          }}
+        >
+          <UserPlus className="h-4 w-4" />
           <span>{t('admins.create_admin')}</span>
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="overflow-hidden p-0">
         <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-          <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
             <tr>
               <th className="px-6 py-4">{t('auth.username')}</th>
               <th className="px-6 py-4">Email</th>
@@ -98,17 +102,19 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               <th className="px-6 py-4">{t('admins.allowed_systems')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs">
+          <tbody className="divide-y divide-slate-200 text-xs dark:divide-slate-800/60">
             {admins.map((adm) => (
-              <tr key={adm.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <tr key={adm.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                <td className="flex items-center gap-2 px-6 py-4 font-semibold text-slate-900 dark:text-slate-100">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{adm.username}</span>
                 </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{adm.email || '-'}</td>
                 <td className="px-6 py-4">
                   <Badge variant={adm.role === 'super_admin' ? 'purple' : 'info'}>
-                    {adm.role === 'super_admin' ? t('admins.super_admin') : t('admins.normal_admin')}
+                    {adm.role === 'super_admin'
+                      ? t('admins.super_admin')
+                      : t('admins.normal_admin')}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
@@ -119,7 +125,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
                       {adm.allowed_systems.map((s, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-mono border border-slate-200 dark:border-slate-700"
+                          className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         >
                           /{s}
                         </span>
@@ -131,7 +137,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
             ))}
             {admins.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-slate-500 dark:text-slate-400">
+                <td colSpan={4} className="py-8 text-center text-slate-500 dark:text-slate-400">
                   {loading ? t('common.loading') : 'No administrators registered.'}
                 </td>
               </tr>
@@ -141,20 +147,16 @@ export function AdminsPage({ systems }: AdminsPageProps) {
       </Card>
 
       {/* Modal: Create Admin */}
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={t('admins.create_admin')}
-      >
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={t('admins.create_admin')}>
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/60 dark:text-rose-300">
+            <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         <form onSubmit={handleCreateAdmin} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               {t('auth.username')}
             </label>
             <Input
@@ -166,7 +168,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Email (Optional)
             </label>
             <Input
@@ -178,7 +180,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               {t('auth.password')}
             </label>
             <Input
@@ -191,11 +193,11 @@ export function AdminsPage({ systems }: AdminsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               {t('admins.role')}
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               value={role}
               onChange={(e) => setRole(e.target.value as any)}
             >
@@ -206,32 +208,34 @@ export function AdminsPage({ systems }: AdminsPageProps) {
 
           {role === 'admin' && (
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Assign Allowed Sub-Systems
               </label>
               {systems.length > 0 ? (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">
                   {systems.map((s) => {
                     const isChecked = selectedSystems.includes(s.slug);
                     return (
                       <label
                         key={s.id}
-                        className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 p-1.5 rounded transition"
+                        className="flex cursor-pointer items-center gap-2 rounded p-1.5 text-xs text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSystemSelection(s.slug)}
-                          className="rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500"
+                          className="rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
                         />
                         <span>{s.name}</span>
-                        <span className="font-mono text-slate-400 dark:text-slate-500 text-[10px]">/{s.slug}</span>
+                        <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                          /{s.slug}
+                        </span>
                       </label>
                     );
                   })}
                 </div>
               ) : (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800/40 dark:bg-amber-950/40 dark:text-amber-300">
                   {t('admins.no_systems_warning')}
                 </div>
               )}

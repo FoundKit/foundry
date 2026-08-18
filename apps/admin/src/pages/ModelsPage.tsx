@@ -126,28 +126,30 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('models.title')}</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('models.desc')}</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('models.title')}
+            </h1>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('models.desc')}</p>
           </div>
           <Button disabled title={t('models.no_system_desc')}>
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             <span>{t('models.create_model')}</span>
           </Button>
         </div>
 
-        <Card className="text-center py-16 px-6 max-w-2xl mx-auto">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center mx-auto mb-4 text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="w-7 h-7" />
+        <Card className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-800/60 dark:bg-amber-950/60 dark:text-amber-400">
+            <AlertTriangle className="h-7 w-7" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+          <h2 className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
             {t('models.no_system_title')}
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+          <p className="mx-auto mb-6 max-w-md text-sm text-slate-500 dark:text-slate-400">
             {t('models.no_system_desc')}
           </p>
           {onNavigate && (
             <Button onClick={() => onNavigate('systems')} className="gap-2">
-              <Layers className="w-4 h-4" />
+              <Layers className="h-4 w-4" />
               <span>{t('models.go_to_systems')}</span>
             </Button>
           )}
@@ -161,21 +163,23 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{t('models.title')}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('models.title')}
+            </h1>
             <Badge variant="success">/{currentSystem.slug}</Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('models.desc')}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('models.desc')}</p>
         </div>
         <Button onClick={() => setIsCreateModelOpen(true)}>
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           <span>{t('models.create_model')}</span>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Left: Models List */}
         <div className="space-y-2">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 px-1 uppercase tracking-wider">
+          <div className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Data Models ({models.length})
           </div>
           {models.map((m) => {
@@ -185,17 +189,21 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
                 key={m.id}
                 className={`cursor-pointer p-4 transition ${
                   isSelected
-                    ? 'border-emerald-500 bg-emerald-50/40 dark:bg-slate-900/90 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30'
-                    : 'hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/40'
+                    ? 'border-emerald-500 bg-emerald-50/40 shadow-md shadow-emerald-500/5 ring-1 ring-emerald-500/30 dark:bg-slate-900/90'
+                    : 'bg-white hover:border-slate-300 dark:bg-slate-900/40 dark:hover:border-slate-700'
                 }`}
               >
                 <div onClick={() => setSelectedModel(m)}>
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{m.name}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {m.name}
+                    </span>
                     <Badge variant="info">Zero-DDL</Badge>
                   </div>
-                  <div className="font-mono text-xs text-emerald-600 dark:text-emerald-400 mt-1">/{m.slug}</div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  <div className="mt-1 font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                    /{m.slug}
+                  </div>
+                  <div className="mt-2 truncate text-[11px] text-slate-500 dark:text-slate-400">
                     {m.description || 'Auto-CRUD collection'}
                   </div>
                 </div>
@@ -203,33 +211,38 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
             );
           })}
           {models.length === 0 && !loading && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 p-6 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl text-center">
+            <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
               {t('models.empty_models')}
             </div>
           )}
         </div>
 
         {/* Right: Selected Model Schema Builder */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="space-y-4 md:col-span-2">
           {selectedModel ? (
             <>
-              <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">{selectedModel.name} Schema</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                    Endpoint: <code className="text-emerald-600 dark:text-emerald-400">/api/v1/s/{currentSystem.slug}/{selectedModel.slug}</code>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    {selectedModel.name} Schema
+                  </h3>
+                  <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">
+                    Endpoint:{' '}
+                    <code className="text-emerald-600 dark:text-emerald-400">
+                      /api/v1/s/{currentSystem.slug}/{selectedModel.slug}
+                    </code>
                   </p>
                 </div>
                 <Button size="sm" onClick={() => setIsAddFieldOpen(true)}>
-                  <Plus className="w-4 h-4" />
+                  <Plus className="h-4 w-4" />
                   <span>{t('models.add_field')}</span>
                 </Button>
               </div>
 
               {/* Field Schema Table */}
-              <Card className="p-0 overflow-hidden">
+              <Card className="overflow-hidden p-0">
                 <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-                  <thead className="bg-slate-50 dark:bg-slate-950/60 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                  <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
                     <tr>
                       <th className="px-5 py-3">{t('models.field_name')}</th>
                       <th className="px-5 py-3">{t('models.field_label')}</th>
@@ -237,9 +250,12 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
                       <th className="px-5 py-3">{t('models.required')}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs">
+                  <tbody className="divide-y divide-slate-200 text-xs dark:divide-slate-800/60">
                     {fields.map((f) => (
-                      <tr key={f.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                      <tr
+                        key={f.id}
+                        className="transition hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                      >
                         <td className="px-5 py-3 font-mono font-medium text-emerald-600 dark:text-emerald-400">
                           {f.name}
                         </td>
@@ -249,7 +265,9 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
                         </td>
                         <td className="px-5 py-3">
                           {f.is_required ? (
-                            <span className="text-rose-600 dark:text-rose-400 font-semibold">Yes</span>
+                            <span className="font-semibold text-rose-600 dark:text-rose-400">
+                              Yes
+                            </span>
                           ) : (
                             <span className="text-slate-400 dark:text-slate-500">Optional</span>
                           )}
@@ -258,7 +276,10 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
                     ))}
                     {fields.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="text-center py-8 text-slate-500 dark:text-slate-400">
+                        <td
+                          colSpan={4}
+                          className="py-8 text-center text-slate-500 dark:text-slate-400"
+                        >
                           No fields added yet. Add your first field to configure model schema.
                         </td>
                       </tr>
@@ -268,8 +289,8 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
               </Card>
             </>
           ) : (
-            <Card className="text-center py-16 text-slate-400 dark:text-slate-500">
-              <Database className="w-10 h-10 mx-auto mb-2 text-slate-300 dark:text-slate-700" />
+            <Card className="py-16 text-center text-slate-400 dark:text-slate-500">
+              <Database className="mx-auto mb-2 h-10 w-10 text-slate-300 dark:text-slate-700" />
               <p>Select a data model to view and configure its fields.</p>
             </Card>
           )}
@@ -284,7 +305,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       >
         <form onSubmit={handleCreateModel} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               {t('models.model_slug')} (e.g. products, articles)
             </label>
             <Input
@@ -295,7 +316,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               {t('models.model_name')}
             </label>
             <Input
@@ -306,7 +327,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Description
             </label>
             <Textarea
@@ -333,7 +354,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       >
         <form onSubmit={handleAddField} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Field Key (e.g. price, title, cover_image)
             </label>
             <Input
@@ -344,7 +365,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Field Display Label
             </label>
             <Input
@@ -355,11 +376,11 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
               Field Type
             </label>
             <select
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
               value={fieldType}
               onChange={(e) => setFieldType(e.target.value)}
             >
@@ -381,7 +402,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
               id="is_required_chk"
               checked={isRequired}
               onChange={(e) => setIsRequired(e.target.checked)}
-              className="rounded bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-emerald-600 focus:ring-emerald-500"
+              className="rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
             />
             <label htmlFor="is_required_chk" className="text-xs text-slate-700 dark:text-slate-300">
               Required field

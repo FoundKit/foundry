@@ -44,15 +44,15 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         title={t('theme.theme')}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-800 transition shadow-sm dark:shadow-none"
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:bg-slate-800 dark:hover:text-white"
       >
-        <CurrentIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        <CurrentIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
         {showLabel && <span>{currentOption.label}</span>}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1.5 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl p-1 z-50 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 mb-1">
+        <div className="animate-in fade-in-50 zoom-in-95 absolute right-0 top-full z-50 mt-1.5 w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-xl duration-100 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-1 border-b border-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:border-slate-800 dark:text-slate-500">
             {t('theme.theme')}
           </div>
           {options.map(({ mode, label, icon: Icon }) => {
@@ -66,17 +66,24 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
                   setIsOpen(false);
                 }}
                 className={cn(
-                  'w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition text-left',
+                  'flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition',
                   isSelected
-                    ? 'bg-emerald-50 text-emerald-700 font-medium dark:bg-emerald-950/60 dark:text-emerald-400'
-                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                    ? 'bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <Icon className={cn('w-3.5 h-3.5', isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400')} />
+                  <Icon
+                    className={cn(
+                      'h-3.5 w-3.5',
+                      isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400',
+                    )}
+                  />
                   <span>{label}</span>
                 </div>
-                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                {isSelected && (
+                  <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                )}
               </button>
             );
           })}

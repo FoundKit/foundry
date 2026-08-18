@@ -37,44 +37,46 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between p-6 transition-colors duration-150">
+    <div className="flex min-h-screen flex-col justify-between bg-slate-50 p-6 transition-colors duration-150 dark:bg-slate-950">
       {/* Top right language & theme toggle */}
       <div className="flex justify-end gap-2">
         <ThemeToggle />
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-800 transition shadow-sm dark:shadow-none"
+          className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:hover:bg-slate-800 dark:hover:text-white"
         >
-          <Globe className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <Globe className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
           <span>{i18n.language.startsWith('zh') ? '中文' : 'EN'}</span>
         </button>
       </div>
 
-      <div className="w-full max-w-md mx-auto my-auto">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-500/20 mb-4">
-            <ShieldCheck className="w-8 h-8 text-white" />
+      <div className="mx-auto my-auto w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-500/20">
+            <ShieldCheck className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {t('auth.login_title')}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t('auth.login_subtitle')}</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            {t('auth.login_subtitle')}
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl dark:shadow-2xl">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-2xl">
           {error && (
-            <div className="mb-5 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300">
+            <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/60 dark:text-rose-300">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                 {t('auth.username')}
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
+                <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Input
                   type="text"
                   required
@@ -87,11 +89,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                 {t('auth.password')}
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3" />
+                <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <Input
                   type="password"
                   required
@@ -103,21 +105,22 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2"
-              size="lg"
-            >
+            <Button type="submit" disabled={loading} className="mt-2 w-full" size="lg">
               <span>{loading ? t('common.loading') : t('auth.sign_in')}</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
+          <div className="mt-6 border-t border-slate-100 pt-4 text-center dark:border-slate-800/80">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Default Super Admin: <code className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">admin</code> /{' '}
-              <code className="text-emerald-600 dark:text-emerald-400 font-mono font-medium">admin123456</code>
+              Default Super Admin:{' '}
+              <code className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                admin
+              </code>{' '}
+              /{' '}
+              <code className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                admin123456
+              </code>
             </p>
           </div>
         </div>
