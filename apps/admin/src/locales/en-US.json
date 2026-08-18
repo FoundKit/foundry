@@ -133,15 +133,16 @@
     "go_to_models": "Go to Data Models"
   },
   "admins": {
-    "title": "Administrators & Topic RBAC",
-    "desc": "Manage platform administrators and delegate topic-scoped access permissions",
+    "title": "Administrators & Access Control",
+    "desc": "Manage platform administrators and delegate Super Admin, General Admin, or Topic-scoped permissions",
     "create_admin": "New Administrator",
     "role": "Role",
-    "super_admin": "Super Admin",
-    "normal_admin": "Topic Admin",
+    "super_admin": "Super Admin (Full Access)",
+    "normal_admin": "General Admin (All except Admin Management)",
+    "topic_admin": "Topic Admin (Assigned Topics Only)",
     "allowed_systems": "Allowed Topics",
     "all_topics_wildcard": "Full Platform (*)",
-    "no_systems_warning": "No sub-systems available to assign. Please create a sub-system first or assign Super Admin role."
+    "no_systems_warning": "No sub-systems available to assign. Please create a sub-system first or assign Super/General Admin role."
   },
   "audit": {
     "title": "Non-GET Operation Audit Trail",

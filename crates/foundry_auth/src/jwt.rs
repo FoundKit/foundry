@@ -8,10 +8,39 @@ use uuid::Uuid;
 pub struct AdminClaims {
     pub sub: Uuid, // admin_id
     pub username: String,
-    pub role: String, // "super_admin" | "admin"
+    pub role: String, // "super_admin" | "admin" | "topic_admin"
     pub allowed_systems: Vec<String>,
     pub exp: usize, // expiration timestamp
     pub iat: usize, // issued at
+}
+
+impl AdminClaims {
+    pub fn is_super_admin(&self) -> bool {
+        self.role == "super_admin"
+    }
+
+    pub fn is_general_admin(&self) -> bool {
+        self.role == "admin"
+    }
+
+    pub fn is_topic_admin(&self) -> bool {
+        self.role == "topic_admin"
+    }
+
+    /// Super Admin and General Admin have full platform-wide sub-system management rights
+    pub fn has_platform_manage_access(&self) -> bool {
+        self.role == "super_admin" || self.role == "admin" || self.allowed_systems.iter().any(|s| s == "*")
+    }
+
+    /// Only Super Admin can view and manage administrators
+    pub fn can_manage_admins(&self) -> bool {
+        self.role == "super_admin"
+    }
+
+    /// Super Admin and General Admin can view platform-wide summary statistics
+    pub fn can_view_platform_summary(&self) -> bool {
+        self.role == "super_admin" || self.role == "admin"
+    }
 }
 
 pub struct JwtService {

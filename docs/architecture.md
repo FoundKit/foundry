@@ -299,7 +299,7 @@ let banner = ctx.configs().get_string("banner_image").await?;
 
 ---
 
-### 3.3 Admin IAM, Topic-Scoped RBAC & Non-GET Audit Logging
+### 3.3 Admin IAM, Three-Tier RBAC & Non-GET Audit Logging
 
 Foundry implements an enterprise-grade administrative identity and audit system focused on security, tenant boundary enforcement, and complete state mutation tracking.
 
@@ -307,11 +307,13 @@ Foundry implements an enterprise-grade administrative identity and audit system 
 +───────────────────────────────────────────────────────────────────────────────────────────+
 |                         ADMIN IAM & NON-GET AUDIT SYSTEM ARCHITECTURE                     |
 |                                                                                           |
-|  [ Admin IAM & Topic-Scoped RBAC (`admins`) ]                                             |
-|    ├── Super Admin (`role: super_admin`, `allowed_systems: ["*"]`)                        |
-|    │   └── Full platform privileges: Create/manage sub-systems, add admins, grant scopes  |
-|    └── Normal Admin (`role: admin`, `allowed_systems: ["carnival_2026", "vip_mall"]`)    |
-|        └── Scoped privileges: Manage configs, models, & records ONLY in assigned topics   |
+|  [ Admin IAM & Three-Tier RBAC (`admins`) ]                                               |
+|    ├── 1. Super Admin (`role: super_admin`, `allowed_systems: ["*"]`)                      |
+|    │   └── Omnipotent platform privileges: Manage all systems, manage admins & IAM scopes  |
+|    ├── 2. General Admin (`role: admin`, `allowed_systems: ["*"]`)                          |
+|    │   └── Platform privileges across all systems, configs & audits (EXCEPT Admin IAM)    |
+|    └── 3. Topic Admin (`role: topic_admin`, `allowed_systems: ["carnival_2026", ...]`)    |
+|        └── Strictly scoped privileges: Overview partial view & assigned topics ONLY       |
 |                                                                                           |
 |  [ Non-GET Audit Interceptor Middleware (`audit_logs`) ]                                  |
 |    ├── Intercepts: All non-GET requests (POST, PUT, PATCH, DELETE, login)                |
@@ -319,45 +321,56 @@ Foundry implements an enterprise-grade administrative identity and audit system 
 |    ├── Captures: admin_id, username, system_slug, method, path, action_name,             |
 |    │             headers, query_params, body_params, ip_address, ua, status, duration    |
 |    └── Dynamic Action Mapping: Flexible code-level route-to-action dictionary             |
-|        (e.g., `/admin/auth/login` -> "Login", `/admin/s/:slug/configs` -> "Edit Configs") |
+|        (e.g., `/admin/auth/login` -> "管理员登录", `/admin/s/:slug/configs` -> "修改专题配置值") |
 +───────────────────────────────────────────────────────────────────────────────────────────+
 ```
 
-#### 3.3.1 Admin IAM & Hierarchical Topic Authorization
+#### 3.3.1 Admin IAM & Three-Tier Role Authorization Matrix
 
 1. **Unified Admin Identity (`admins` Table)**:
    - All management operations in Foundry are executed by administrators registered in the `admins` table.
    - Passwords are encrypted using high-security **Argon2id**.
    - Sessions are authenticated via signed JWT bearer tokens with embedded `admin_id`, `role`, and `allowed_systems` claims.
 
-2. **Hierarchical Roles & Permissions**:
-   - **Super Admin (`super_admin`)**:
-     - System initialization provisions a default super admin (`admin` / `admin123456`).
-     - Possesses global wildcard permissions (`allowed_systems: ["*"]`).
-     - Can create sub-systems, create and manage other administrators, and assign topic scopes.
-   - **Normal Admin (`admin`)**:
-     - Created by the Super Admin.
-     - Has an explicit whitelist of accessible sub-systems stored in `allowed_systems` (e.g. `["carnival_2026", "activity_2026_q1"]`).
-     - Attempting to access or modify any sub-system outside `allowed_systems` immediately triggers a `403 Forbidden` error.
+2. **Three-Tier Roles & Permissions Matrix**:
 
-3. **RBAC Middleware Evaluation Flow**:
+   | Role | Role Code | Platform Dashboard | Platform Summary API | Subsystems Management | Admins & IAM Management | Platform Audit Logs | Subsystem Workspaces |
+   | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+   | **超级管理员** (Super Admin) | `super_admin` | Full view | Yes (`200 OK`) | Full (List all, Create, Edit) | Full (`/admin/admins`) | Full (All global logs) | Full (All subsystems) |
+   | **普通管理员** (General Admin) | `admin` | Full view | Yes (`200 OK`) | Full (List all, Create, Edit) | **Forbidden (`403`)** | Full (All global logs) | Full (All subsystems) |
+   | **专题管理员** (Topic Admin) | `topic_admin` | Partial view (No global stats) | **Forbidden (`403`)** | Scoped (List assigned topics only; no create/edit) | **Forbidden (`403`)** | **Forbidden (`403`)** (Scoped to topics only) | Scoped (Assigned topics only) |
+
+3. **Multi-Layer Permission Enforcement**:
+   - **Frontend Level**: Role-based menu rendering, button visibility toggling, and client-side route guards in `App.tsx` and `Layout.tsx`.
+   - **Backend API & Middleware Level**: Real endpoint protection rejecting unauthorized calls with standard `403 Forbidden` JSON envelopes:
+     - `/api/v1/admin/admins`: Requires `super_admin` (`claims.can_manage_admins()`).
+     - `/api/v1/admin/platform/summary`: Restricted to `super_admin` and `admin` (`claims.can_view_platform_summary()`).
+     - `/api/v1/admin/systems` (POST / PUT): Restricted to `super_admin` and `admin` (`claims.has_platform_manage_access()`).
+     - `/api/v1/admin/systems` (GET): Automatically scopes database query to `claims.allowed_systems` for `topic_admin`.
+     - `/api/v1/admin/audit-logs`: Rejects global queries from `topic_admin` unless filtered by authorized `system_slug`.
+     - `/api/v1/admin/s/{system_slug}/*`: Enforced via `require_topic_access` middleware and `check_system_access`.
+
+4. **RBAC Middleware Evaluation Flow**:
    ```rust
-   // Pseudo-code for Axum Topic RBAC Middleware
-   pub async fn require_system_access(
-       State(ctx): State<SystemContext>,
-       Extension(current_admin): Extension<AdminClaims>,
-       req: Request,
-       next: Next,
-   ) -> Result<Response, StatusCode> {
-       if current_admin.role == "super_admin" {
-           return Ok(next.run(req).await);
+   pub fn check_system_access(claims: &AdminClaims, target_system_slug: &str) -> AppResult<()> {
+       // Super Admin and General Admin have platform-wide access
+       if claims.role == "super_admin" || claims.role == "admin" {
+           return Ok(());
        }
-       
-       if current_admin.allowed_systems.contains(&ctx.system_slug) {
-           return Ok(next.run(req).await);
+
+       // Topic Admin can only access explicitly assigned sub-systems
+       if claims
+           .allowed_systems
+           .iter()
+           .any(|s| s == "*" || s == target_system_slug)
+       {
+           return Ok(());
        }
-       
-       Err(StatusCode::FORBIDDEN)
+
+       Err(AppError::Forbidden(format!(
+           "Administrator '{}' is not authorized to manage sub-system '{}'",
+           claims.username, target_system_slug
+       )))
    }
    ```
 
@@ -651,7 +664,19 @@ Sub-systems management features high-performance database-backed filtering:
    - `configs_count`: Total single-row properties configured
    - `records_count`: Total dynamic data rows stored
 3. **Platform-Wide Summary Metric API**:
-   Super Admins have access to `/api/v1/admin/platform/summary`, delivering real-time platform metrics (total systems, active systems, total models, total records, total admins, total mutation logs).
+   Super Admins and General Admins have access to `/api/v1/admin/platform/summary`, delivering real-time platform metrics (total systems, active systems, total models, total records, total admins, total mutation logs). Topic Admins are strictly restricted from global platform metrics.
+
+#### 3.7.3 Streamlined Navigation Hierarchy & Role-Aware UX
+
+To reduce cognitive load and establish intuitive workflows, the Web Admin UI adopts a clean, focused navigation model:
+1. **Removed Redundant Quick Switchers**:
+   - Eliminated top header dropdown switchers in both platform and subsystem modes.
+   - Removed the duplicate "Active Sub-Systems" quick list at the bottom of the left sidebar.
+   - Navigation into sub-systems is conducted cleanly via the **"专题/子系统管理"** (`/admin/systems`) console list or Dashboard workspace cards.
+2. **Role-Aware Dynamic Navigation Rendering**:
+   - **Super Admin**: Full access to Platform Overview, Sub-Systems Management, Mutation Audit Trail, and Admin IAM.
+   - **General Admin**: Full platform access (Overview, Sub-Systems, Audits) with Admin IAM automatically hidden.
+   - **Topic Admin**: Tailored workspace view displaying only authorized sub-systems, hiding platform-wide audit logs and admin delegation menus.
 
 ---
 

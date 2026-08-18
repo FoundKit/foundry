@@ -9,7 +9,7 @@ export interface AdminProfile {
   id: string;
   username: string;
   email?: string;
-  role: 'super_admin' | 'admin';
+  role: 'super_admin' | 'admin' | 'topic_admin';
   allowed_systems: string[];
 }
 

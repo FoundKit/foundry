@@ -98,6 +98,8 @@
   - [x] **Platform Control Plane vs. Subsystem Workspace Separation**: Platform hub preserves platform-wide governance (Sub-systems list, global audit trail, admin IAM RBAC), while domain modules (Models, Configs, Data Records, APIs, Subsystem Settings) are isolated in dedicated Subsystem Workspaces.
   - [x] **Enhanced Subsystem Search & Pagination**: Multi-criteria search supporting UUID `id`, `slug`, `name`, fuzzy `keyword`, and active/disabled `status` with dynamic SQL pagination.
   - [x] **Live Subsystem & Platform Metrics**: Aggregates real-time counts (`models_count`, `configs_count`, `records_count`, `audit_logs_count`) in subsystem queries and platform overview summary.
+  - [x] **Three-Tier Admin IAM & Strict API RBAC Matrix**: Complete multi-layer permission control across Frontend, Backend Handlers, and DB queries for `super_admin` (All), `admin` (All except Admin Management), and `topic_admin` (Platform overview partial view + authorized topics list only).
+  - [x] **Streamlined Navigation & Header Redundancy Cleanup**: Removed redundant top dropdown topic switchers in both platform and subsystem modes; removed duplicate sidebar bottom topic jump list; established clean and cognitive-lightweight administration flows.
 
 ---
 

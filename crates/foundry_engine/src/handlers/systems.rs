@@ -33,8 +33,8 @@ pub async fn list_systems_handler(
     Extension(claims): Extension<AdminClaims>,
     Query(query): Query<SystemQuery>,
 ) -> AppResult<Json<ApiResponse<PaginatedData<SystemItem>>>> {
-    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
-    let allowed = if is_super {
+    let is_platform_wide = claims.has_platform_manage_access();
+    let allowed = if is_platform_wide {
         None
     } else {
         Some(claims.allowed_systems.as_slice())
@@ -52,10 +52,10 @@ pub async fn get_system_handler(
 ) -> AppResult<Json<ApiResponse<SystemItem>>> {
     let system = SystemStore::get_by_id(&state.db, id).await?;
 
-    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
-    if !is_super && !claims.allowed_systems.contains(&system.slug) {
+    let is_platform_wide = claims.has_platform_manage_access();
+    if !is_platform_wide && !claims.allowed_systems.contains(&system.slug) {
         return Err(AppError::Forbidden(
-            "Access denied to this sub-system".to_string(),
+            "Access denied: You are not authorized to view this sub-system".to_string(),
         ));
     }
 
@@ -85,10 +85,10 @@ pub async fn get_platform_summary_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
 ) -> AppResult<Json<ApiResponse<PlatformSummary>>> {
-    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
-    if !is_super {
+    if !claims.can_view_platform_summary() {
         return Err(AppError::Forbidden(
-            "Only Super Admin can view platform-wide summary".to_string(),
+            "Permission denied: Topic Admin cannot view platform-wide summary statistics"
+                .to_string(),
         ));
     }
 
@@ -102,9 +102,9 @@ pub async fn create_system_handler(
     Extension(claims): Extension<AdminClaims>,
     Json(payload): Json<CreateSystemRequest>,
 ) -> AppResult<Json<ApiResponse<SystemEntity>>> {
-    if claims.role != "super_admin" {
+    if !claims.has_platform_manage_access() {
         return Err(AppError::Forbidden(
-            "Only Super Admin can create sub-systems".to_string(),
+            "Permission denied: Topic Admin cannot create sub-systems".to_string(),
         ));
     }
 
@@ -133,9 +133,9 @@ pub async fn update_system_handler(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateSystemRequest>,
 ) -> AppResult<Json<ApiResponse<SystemEntity>>> {
-    if claims.role != "super_admin" {
+    if !claims.has_platform_manage_access() {
         return Err(AppError::Forbidden(
-            "Only Super Admin can update sub-system status".to_string(),
+            "Permission denied: Topic Admin cannot update sub-systems".to_string(),
         ));
     }
 

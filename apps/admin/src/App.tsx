@@ -88,6 +88,31 @@ export function App() {
     }
   }, [route.subsystemSlug, systems, currentSystem]);
 
+  // Client-side route guard enforcing 3-tier role permissions
+  useEffect(() => {
+    if (!admin) return;
+    if (route.mode === 'platform') {
+      // Only Super Admin can access Admins & Permissions page
+      if (route.platformTab === 'admins' && admin.role !== 'super_admin') {
+        navigatePlatform('dashboard');
+      }
+      // Topic Admin cannot access global platform audit logs
+      else if (route.platformTab === 'audit_logs' && admin.role === 'topic_admin') {
+        navigatePlatform('dashboard');
+      }
+    } else if (route.mode === 'subsystem' && route.subsystemSlug) {
+      // Topic Admin cannot access unauthorized sub-system workspaces
+      if (admin.role === 'topic_admin') {
+        const hasAccess =
+          admin.allowed_systems.includes('*') ||
+          admin.allowed_systems.includes(route.subsystemSlug);
+        if (!hasAccess && systems.length > 0) {
+          navigatePlatform('systems');
+        }
+      }
+    }
+  }, [route.mode, route.platformTab, route.subsystemSlug, admin, systems, navigatePlatform]);
+
   const handleLoginSuccess = (newToken: string, newAdmin: AdminProfile) => {
     localStorage.setItem('foundry_token', newToken);
     setToken(newToken);

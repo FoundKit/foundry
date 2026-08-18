@@ -11,8 +11,6 @@ import {
   Globe,
   LayoutDashboard,
   ExternalLink,
-  ChevronDown,
-  PlusCircle,
   ArrowLeft,
   Compass,
   Code2,
@@ -57,11 +55,11 @@ export function Layout({
 
   const isSubsystemMode = route.mode === 'subsystem' && currentSystem !== null;
 
-  // Platform navigation items
+  // Platform navigation items with strict role gating
   const platformNavItems = [
     { id: 'dashboard' as const, label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'systems' as const, label: t('nav.systems'), icon: Layers },
-    { id: 'audit_logs' as const, label: t('nav.audit_logs'), icon: FileClock },
+    { id: 'audit_logs' as const, label: t('nav.audit_logs'), icon: FileClock, hideForTopicAdmin: true },
     { id: 'admins' as const, label: t('nav.admins'), icon: ShieldCheck, superOnly: true },
   ];
 
@@ -75,6 +73,19 @@ export function Layout({
     { id: 'audit_logs' as const, label: t('nav.sub_audit'), icon: FileClock },
     { id: 'settings' as const, label: t('nav.sub_settings'), icon: Settings },
   ];
+
+  const getRoleDisplayName = (role: AdminProfile['role']) => {
+    switch (role) {
+      case 'super_admin':
+        return t('admins.super_admin');
+      case 'admin':
+        return t('admins.normal_admin');
+      case 'topic_admin':
+        return t('admins.topic_admin');
+      default:
+        return role;
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors duration-150 dark:bg-slate-950 dark:text-slate-100">
@@ -106,8 +117,8 @@ export function Layout({
 
           <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
 
-          {/* Mode Switcher / Breadcrumbs */}
-          {isSubsystemMode ? (
+          {/* Subsystem Mode Navigation Breadcrumb */}
+          {isSubsystemMode && (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onNavigatePlatform('systems')}
@@ -117,101 +128,12 @@ export function Layout({
                 <span>{t('app.back_to_platform')}</span>
               </button>
 
-              {/* Subsystem Switcher Dropdown */}
-              <div className="group relative">
-                <button className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs text-emerald-800 shadow-sm transition hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60">
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
-                    Subsystem:
-                  </span>
-                  <span className="font-semibold">{currentSystem.name}</span>
-                  <span className="font-mono text-[10px] opacity-70">/{currentSystem.slug}</span>
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </button>
-
-                <div className="animate-in fade-in-50 zoom-in-95 absolute left-0 top-full z-50 mt-1.5 hidden w-72 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl duration-100 group-hover:block dark:border-slate-800 dark:bg-slate-900">
-                  <div className="mb-1 border-b border-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-400 dark:border-slate-800 dark:text-slate-500">
-                    SWITCH ACTIVE SUBSYSTEM
-                  </div>
-                  <div className="max-h-60 space-y-0.5 overflow-y-auto">
-                    {systems.map((sys) => (
-                      <button
-                        key={sys.id}
-                        onClick={() => onNavigateSubsystem(sys.slug, route.subsystemTab)}
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition ${
-                          currentSystem?.id === sys.id
-                            ? 'bg-emerald-50 font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
-                            : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <span className="truncate">{sys.name}</span>
-                        <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
-                          /{sys.slug}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Sub-System Switcher Dropdown in Platform Mode */
-            <div className="group relative">
-              <button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-200 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-200 dark:shadow-none dark:hover:bg-slate-700">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Quick Jump:</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {currentSystem ? currentSystem.name : t('app.all_systems')}
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                  Subsystem:
                 </span>
-                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-              </button>
-
-              <div className="animate-in fade-in-50 zoom-in-95 absolute left-0 top-full z-50 mt-1.5 hidden w-72 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl duration-100 group-hover:block dark:border-slate-800 dark:bg-slate-900">
-                <div className="mb-1 border-b border-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-400 dark:border-slate-800 dark:text-slate-500">
-                  OPEN SUBSYSTEM CONSOLE
-                </div>
-
-                {systems.length > 0 ? (
-                  <>
-                    <div className="max-h-60 space-y-0.5 overflow-y-auto">
-                      {systems.map((sys) => (
-                        <button
-                          key={sys.id}
-                          onClick={() => {
-                            onSelectSystem(sys);
-                            onNavigateSubsystem(sys.slug, 'overview');
-                          }}
-                          className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400"
-                        >
-                          <span className="truncate">{sys.name}</span>
-                          <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
-                            /{sys.slug}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="mt-1 border-t border-slate-100 pt-1 dark:border-slate-800">
-                      <button
-                        onClick={() => onNavigatePlatform('systems')}
-                        className="flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-xs text-emerald-600 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
-                      >
-                        <Layers className="h-3.5 w-3.5" />
-                        <span>{t('app.manage_systems')}</span>
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-3 text-center">
-                    <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-                      {t('app.no_systems')}
-                    </p>
-                    <button
-                      onClick={() => onNavigatePlatform('systems')}
-                      className="flex w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-center text-xs font-medium text-white transition hover:bg-emerald-500"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                      <span>{t('systems.create')}</span>
-                    </button>
-                  </div>
-                )}
+                <span className="font-semibold">{currentSystem.name}</span>
+                <span className="font-mono text-[10px] opacity-70">/{currentSystem.slug}</span>
               </div>
             </div>
           )}
@@ -250,8 +172,8 @@ export function Layout({
               <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                 {admin.username}
               </div>
-              <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                {admin.role === 'super_admin' ? 'Super Admin' : 'Topic Admin'}
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                {getRoleDisplayName(admin.role)}
               </div>
             </div>
             <button
@@ -330,6 +252,7 @@ export function Layout({
               <div className="space-y-1">
                 {platformNavItems.map((item) => {
                   if (item.superOnly && admin.role !== 'super_admin') return null;
+                  if (item.hideForTopicAdmin && admin.role === 'topic_admin') return null;
                   const Icon = item.icon;
                   const isActive = route.platformTab === item.id;
                   return (
@@ -350,31 +273,6 @@ export function Layout({
                   );
                 })}
               </div>
-
-              {/* Active Sub-Systems Quick Jump List */}
-              {systems.length > 0 && (
-                <div className="space-y-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-                  <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    <span>{t('nav.systems')}</span>
-                    <span className="font-mono">{systems.length}</span>
-                  </div>
-                  <div className="max-h-48 space-y-1 overflow-y-auto">
-                    {systems.slice(0, 5).map((sys) => (
-                      <button
-                        key={sys.id}
-                        onClick={() => {
-                          onSelectSystem(sys);
-                          onNavigateSubsystem(sys.slug, 'overview');
-                        }}
-                        className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs text-slate-600 transition hover:bg-slate-100 hover:text-emerald-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-emerald-400"
-                      >
-                        <span className="truncate">{sys.name}</span>
-                        <span className="font-mono text-[10px] text-slate-400">/{sys.slug}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </aside>

@@ -19,7 +19,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'super_admin' | 'admin'>('admin');
+  const [role, setRole] = useState<'super_admin' | 'admin' | 'topic_admin'>('topic_admin');
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,12 +42,20 @@ export function AdminsPage({ systems }: AdminsPageProps) {
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (role === 'admin' && systems.length === 0) {
-      setError(t('admins.no_systems_warning'));
-      return;
+
+    if (role === 'topic_admin') {
+      if (systems.length === 0) {
+        setError(t('admins.no_systems_warning'));
+        return;
+      }
+      if (selectedSystems.length === 0) {
+        setError('请至少为专题管理员选择一个授权专题 (Please select at least one sub-system)');
+        return;
+      }
     }
+
     try {
-      const allowed = role === 'super_admin' ? ['*'] : selectedSystems;
+      const allowed = role === 'topic_admin' ? selectedSystems : ['*'];
       await api.createAdmin({
         username,
         email: email || undefined,
@@ -59,6 +67,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
       setUsername('');
       setEmail('');
       setPassword('');
+      setRole('topic_admin');
       setSelectedSystems([]);
       loadAdmins();
     } catch (err: any) {
@@ -70,6 +79,32 @@ export function AdminsPage({ systems }: AdminsPageProps) {
     setSelectedSystems((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
+  };
+
+  const getRoleBadgeVariant = (r: AdminProfile['role']) => {
+    switch (r) {
+      case 'super_admin':
+        return 'purple';
+      case 'admin':
+        return 'info';
+      case 'topic_admin':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const getRoleLabel = (r: AdminProfile['role']) => {
+    switch (r) {
+      case 'super_admin':
+        return t('admins.super_admin');
+      case 'admin':
+        return t('admins.normal_admin');
+      case 'topic_admin':
+        return t('admins.topic_admin');
+      default:
+        return r;
+    }
   };
 
   return (
@@ -111,25 +146,27 @@ export function AdminsPage({ systems }: AdminsPageProps) {
                 </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{adm.email || '-'}</td>
                 <td className="px-6 py-4">
-                  <Badge variant={adm.role === 'super_admin' ? 'purple' : 'info'}>
-                    {adm.role === 'super_admin'
-                      ? t('admins.super_admin')
-                      : t('admins.normal_admin')}
+                  <Badge variant={getRoleBadgeVariant(adm.role) as any}>
+                    {getRoleLabel(adm.role)}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
-                  {adm.role === 'super_admin' ? (
+                  {adm.role === 'super_admin' || adm.role === 'admin' ? (
                     <Badge variant="success">{t('admins.all_topics_wildcard')}</Badge>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {adm.allowed_systems.map((s, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                        >
-                          /{s}
-                        </span>
-                      ))}
+                      {adm.allowed_systems && adm.allowed_systems.length > 0 ? (
+                        adm.allowed_systems.map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-[10px] text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                          >
+                            /{s}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-slate-400">无授权专题 (None)</span>
+                      )}
                     </div>
                   )}
                 </td>
@@ -201,15 +238,22 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               value={role}
               onChange={(e) => setRole(e.target.value as any)}
             >
-              <option value="admin">{t('admins.normal_admin')} (Topic Scoped)</option>
-              <option value="super_admin">{t('admins.super_admin')} (Platform Wildcard)</option>
+              <option value="topic_admin">
+                {t('admins.topic_admin')}
+              </option>
+              <option value="admin">
+                {t('admins.normal_admin')}
+              </option>
+              <option value="super_admin">
+                {t('admins.super_admin')}
+              </option>
             </select>
           </div>
 
-          {role === 'admin' && (
+          {role === 'topic_admin' && (
             <div>
               <label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Assign Allowed Sub-Systems
+                指派授权子系统/专题 (Assign Allowed Sub-Systems)
               </label>
               {systems.length > 0 ? (
                 <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">

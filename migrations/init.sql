@@ -111,8 +111,12 @@ CREATE INDEX IF NOT EXISTS idx_model_records_lookup ON model_records(system_id, 
 CREATE INDEX IF NOT EXISTS idx_model_records_data_gin ON model_records USING GIN(data);
 
 -- ============================================================================
--- 6. UNIFIED ADMIN IDENTITIES & TOPIC RBAC (平台管理员与专题授权表)
--- 包含超级管理员 (super_admin) 与普通管理员 (admin)，支持对特定子系统/专题进行权限指派
+-- ============================================================================
+-- 6. UNIFIED ADMIN IDENTITIES & THREE-TIER RBAC (平台分级管理员与专题授权表)
+-- 包含超级管理员 (super_admin)、普通管理员 (admin)、专题管理员 (topic_admin)
+-- - 超级管理员 (super_admin): 平台所有权限，allowed_systems 为 '["*"]'
+-- - 普通管理员 (admin): 除了“管理员与权限管理”外的其他所有平台与子系统权限，allowed_systems 为 '["*"]'
+-- - 专题管理员 (topic_admin): 平台概览基础模块及指定授权专题工作台权限，allowed_systems 为具体专题列表如 '["carnival_2026"]'
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS admins (
@@ -120,8 +124,8 @@ CREATE TABLE IF NOT EXISTS admins (
     username VARCHAR(48) UNIQUE NOT NULL,          -- Username
     email VARCHAR(96) UNIQUE,                      -- Email
     password_hash VARCHAR(128) NOT NULL,           -- Argon2id password hash (~96-100 chars)
-    role VARCHAR(24) NOT NULL DEFAULT 'admin',     -- 'super_admin' (超管) | 'admin' (普通管理员)
-    allowed_systems JSONB NOT NULL DEFAULT '[]'::jsonb, -- 授权子系统 slug 列表 (超管为 '["*"]'；普通管理员由超管赋予特定专题如 '["carnival_2026", "vip_mall"]')
+    role VARCHAR(24) NOT NULL DEFAULT 'topic_admin', -- 'super_admin' (超管) | 'admin' (普通管理员) | 'topic_admin' (专题管理员)
+    allowed_systems JSONB NOT NULL DEFAULT '[]'::jsonb, -- 授权子系统 slug 列表 (超管与普通管理员为 '["*"]'；专题管理员由超管赋予特定专题如 '["carnival_2026", "vip_mall"]')
     status SMALLINT NOT NULL DEFAULT 1,            -- 1: Active, 0: Disabled
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -13,8 +13,8 @@ pub async fn list_audit_logs_handler(
     Extension(claims): Extension<AdminClaims>,
     Query(query): Query<AuditLogQuery>,
 ) -> AppResult<Json<ApiResponse<PaginatedData<AuditLogEntity>>>> {
-    // If not super_admin, constrain query to only allowed systems
-    if claims.role != "super_admin" && !claims.allowed_systems.iter().any(|s| s == "*") {
+    // If not super_admin or admin (platform-wide), constrain query strictly to allowed systems
+    if !claims.has_platform_manage_access() {
         if let Some(ref slug) = query.system_slug {
             if !claims.allowed_systems.contains(slug) {
                 return Err(AppError::Forbidden(
@@ -22,9 +22,9 @@ pub async fn list_audit_logs_handler(
                 ));
             }
         } else {
-            // Cannot query global logs without super_admin
+            // Cannot query global platform-wide logs without super_admin or admin
             return Err(AppError::Forbidden(
-                "Please specify a sub-system you are authorized to manage".to_string(),
+                "Permission denied: Topic Admin cannot view global audit logs. Please specify an authorized sub-system.".to_string(),
             ));
         }
     }

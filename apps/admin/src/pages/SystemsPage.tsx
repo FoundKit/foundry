@@ -209,7 +209,7 @@ export function SystemsPage({
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('systems.desc')}</p>
         </div>
-        {admin.role === 'super_admin' && (
+        {(admin.role === 'super_admin' || admin.role === 'admin') && (
           <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             <span>{t('systems.create')}</span>
@@ -387,7 +387,7 @@ export function SystemsPage({
                   </td>
 
                   <td className="space-x-2 px-5 py-3.5 text-right">
-                    {admin.role === 'super_admin' && (
+                    {(admin.role === 'super_admin' || admin.role === 'admin') && (
                       <button
                         onClick={() => openEditModal(sys)}
                         className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
@@ -423,9 +423,11 @@ export function SystemsPage({
                           {t('systems.empty_title')}
                         </h3>
                         <p className="mx-auto mb-4 max-w-sm text-xs text-slate-500 dark:text-slate-400">
-                          {t('systems.empty_desc')}
+                          {admin.role === 'topic_admin'
+                            ? 'No authorized sub-systems found matching your criteria.'
+                            : t('systems.empty_desc')}
                         </p>
-                        {admin.role === 'super_admin' && (
+                        {(admin.role === 'super_admin' || admin.role === 'admin') && (
                           <Button onClick={() => setIsCreateOpen(true)} className="mx-auto gap-2">
                             <PlusCircle className="h-4 w-4" />
                             <span>{t('systems.create')}</span>
