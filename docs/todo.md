@@ -93,6 +93,12 @@
   - [x] **Admin IAM Manager**: UI for Super Admin to create/edit normal admins and assign specific sub-systems (`allowed_systems`).
   - [x] **Audit Log Explorer**: Real-time log table displaying Non-GET admin operations with filters (by admin, sub-system, method, path, time range) and discrete inspector tabs for Headers (JSON), Raw Query String (Text), and Raw Request Body (Text / JSON Formatter).
 
+- [x] **2.5 Route Persistence, Subsystem Console Independence & Multi-Attribute Search**
+  - [x] **Bidirectional URL Route Persistence**: Browser URL explicitly mirrors route path, active subsystem (`/admin/s/:slug/*`), active tab, filters, model selection (`?model=...`), and pagination (`?page=...&page_size=...`).
+  - [x] **Platform Control Plane vs. Subsystem Workspace Separation**: Platform hub preserves platform-wide governance (Sub-systems list, global audit trail, admin IAM RBAC), while domain modules (Models, Configs, Data Records, APIs, Subsystem Settings) are isolated in dedicated Subsystem Workspaces.
+  - [x] **Enhanced Subsystem Search & Pagination**: Multi-criteria search supporting UUID `id`, `slug`, `name`, fuzzy `keyword`, and active/disabled `status` with dynamic SQL pagination.
+  - [x] **Live Subsystem & Platform Metrics**: Aggregates real-time counts (`models_count`, `configs_count`, `records_count`, `audit_logs_count`) in subsystem queries and platform overview summary.
+
 ---
 
 ## Milestone 3: Non-GET Write Audit Engine & Operation Interception

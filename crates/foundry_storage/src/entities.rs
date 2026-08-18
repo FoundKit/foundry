@@ -15,6 +15,51 @@ pub struct SystemEntity {
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
+/// Subsystem entity enriched with live statistics (model, config, record counts)
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SystemItem {
+    pub id: Uuid,
+    pub slug: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: i16,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    #[sqlx(default)]
+    pub models_count: i64,
+    #[sqlx(default)]
+    pub configs_count: i64,
+    #[sqlx(default)]
+    pub records_count: i64,
+}
+
+/// Detailed subsystem statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemStats {
+    pub id: Uuid,
+    pub slug: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: i16,
+    pub created_at: DateTime<Utc>,
+    pub models_count: u64,
+    pub configs_count: u64,
+    pub records_count: u64,
+    pub audit_logs_count: u64,
+}
+
+/// Platform-wide statistical summary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlatformSummary {
+    pub total_systems: u64,
+    pub active_systems: u64,
+    pub total_models: u64,
+    pub total_records: u64,
+    pub total_admins: u64,
+    pub total_audit_logs: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct SystemConfigEntity {
     pub id: i64,

@@ -14,4 +14,4 @@ pub use db::{DbPool, init_db_pool, run_migrations};
 pub use entities::*;
 pub use models::{ModelStore, RecordQuery, RecordStore};
 pub use redis_client::{RedisPool, init_redis};
-pub use systems::SystemStore;
+pub use systems::{SystemQuery, SystemStore};

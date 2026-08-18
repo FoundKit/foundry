@@ -106,3 +106,41 @@ async fn test_subsystem_custom_route_validation_error() {
     assert_eq!(err_json["code"], 42200);
     assert_eq!(err_json["i18n_key"], "errors.validation_failed");
 }
+
+#[tokio::test]
+async fn test_admin_systems_auth_required() {
+    let state = dummy_app_state();
+    let subsystems = systems::register_subsystems();
+    let app = build_router(state, subsystems);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/systems")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_admin_platform_summary_auth_required() {
+    let state = dummy_app_state();
+    let subsystems = systems::register_subsystems();
+    let app = build_router(state, subsystems);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/admin/platform/summary")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}

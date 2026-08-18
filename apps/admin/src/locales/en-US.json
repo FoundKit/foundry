@@ -5,7 +5,12 @@
     "all_systems": "All Systems",
     "no_systems": "No Sub-Systems",
     "manage_systems": "Manage All Sub-Systems",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "platform_hub": "Platform Control Plane",
+    "subsystem_hub": "Subsystem Workspace",
+    "back_to_platform": "Back to Platform Central",
+    "enter_subsystem": "Enter Subsystem Console",
+    "switch_subsystem": "Switch Subsystem"
   },
   "theme": {
     "theme": "Theme",
@@ -14,14 +19,20 @@
     "dark": "Dark Theme"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "systems": "Sub-Systems",
-    "configs": "System Configs",
+    "platform_section": "PLATFORM CONTROL PLANE",
+    "subsystem_section": "SUBSYSTEM WORKSPACE",
+    "dashboard": "Platform Overview",
+    "systems": "Sub-Systems Manager",
+    "admins": "Admin & RBAC",
+    "audit_logs": "Mutation Audit Trail",
+    "api_docs": "API Docs",
+    "sub_overview": "Overview & Stats",
+    "configs": "Topic Configs",
     "models": "Data Models",
     "data_explorer": "Data Explorer",
-    "admins": "Admin & RBAC",
-    "audit_logs": "Audit Logs",
-    "api_docs": "API Docs"
+    "sub_apis": "APIs & Endpoints",
+    "sub_audit": "Subsystem Logs",
+    "sub_settings": "Subsystem Settings"
   },
   "auth": {
     "login_title": "Sign In to Foundry",
@@ -33,17 +44,51 @@
   },
   "systems": {
     "title": "Sub-Systems Management",
-    "desc": "Manage independent backend sub-systems and topics",
+    "desc": "Manage independent backend sub-systems and topics with pagination, ID, slug, and name filters",
     "create": "New Sub-System",
+    "id": "System ID (UUID)",
     "slug": "System Slug",
     "name": "Display Name",
     "description": "Description",
     "status": "Status",
+    "all_status": "All Statuses",
     "active": "Active",
     "disabled": "Disabled",
     "actions": "Actions",
-    "empty_title": "No Sub-Systems Created Yet",
-    "empty_desc": "Foundry supports multi-system tenancy and topic isolation. Click below to create your first sub-system."
+    "manage": "Enter Console",
+    "edit": "Edit Info",
+    "search_keyword": "Search keyword (slug, name, desc)",
+    "search_id": "Exact or partial UUID",
+    "search_slug": "System slug (e.g. carnival_2026)",
+    "search_name": "System display name",
+    "filter_button": "Search",
+    "reset_button": "Reset Filters",
+    "models_count": "Models",
+    "configs_count": "Configs",
+    "records_count": "Records",
+    "total_count": "{{total}} total sub-systems",
+    "empty_title": "No Matching Sub-Systems Found",
+    "empty_desc": "Adjust your search filters or click below to create a new sub-system."
+  },
+  "subsystem": {
+    "overview_title": "Subsystem Overview",
+    "overview_desc": "Runtime health, real-time statistics, and RESTful API integration guides",
+    "apis_title": "Subsystem APIs & Endpoints Directory",
+    "apis_desc": "Browse dynamic Auto-CRUD endpoints and code-first custom Rust controller routes",
+    "settings_title": "Subsystem General Settings",
+    "settings_desc": "Manage display name, description, and active/disabled lifecycle status",
+    "api_prefix": "REST API Root Path",
+    "stats_models": "Data Models",
+    "stats_configs": "Topic Configs",
+    "stats_records": "Total Records",
+    "stats_audits": "Write Audits",
+    "quick_actions": "Quick Actions",
+    "api_examples": "API Integration Examples",
+    "curl_example": "cURL Quick Test",
+    "fetch_example": "TypeScript / Fetch Example",
+    "view_docs": "OpenAPI Specification",
+    "save_settings": "Save Subsystem Settings",
+    "settings_saved": "Subsystem settings updated successfully!"
   },
   "configs": {
     "title": "Topic Configuration",
@@ -114,6 +159,14 @@
     "tab_query": "Raw Query String",
     "tab_body": "Raw Body Payload"
   },
+  "pagination": {
+    "page": "Page",
+    "page_size": "Page Size",
+    "prev": "Previous",
+    "next": "Next",
+    "total": "{{total}} total records",
+    "page_info": "Page {{current}} of {{total}}"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -123,6 +176,9 @@
     "confirm": "Confirm",
     "search": "Search...",
     "actions": "Actions",
-    "success": "Operation successful"
+    "success": "Operation successful",
+    "reset": "Reset",
+    "copy": "Copy",
+    "copied": "Copied"
   }
 }

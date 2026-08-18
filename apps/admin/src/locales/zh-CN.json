@@ -5,7 +5,12 @@
     "all_systems": "全部子系统",
     "no_systems": "暂无子系统",
     "manage_systems": "管理所有子系统",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "platform_hub": "平台总控中台",
+    "subsystem_hub": "子系统独立控制台",
+    "back_to_platform": "返回主系统中台",
+    "enter_subsystem": "进入子系统后台",
+    "switch_subsystem": "切换子系统"
   },
   "theme": {
     "theme": "主题切换",
@@ -14,14 +19,20 @@
     "dark": "暗色主题"
   },
   "nav": {
+    "platform_section": "平台总控中台",
+    "subsystem_section": "子系统工作台",
     "dashboard": "平台概览",
-    "systems": "专题/子系统",
-    "configs": "专题专属配置",
+    "systems": "专题/子系统管理",
+    "admins": "管理员与权限",
+    "audit_logs": "全量写操作审计",
+    "api_docs": "API 接口文档",
+    "sub_overview": "子系统概览",
+    "configs": "专属配置项",
     "models": "数据模型定义",
     "data_explorer": "数据记录浏览器",
-    "admins": "分级管理员授权",
-    "audit_logs": "写操作审计日志",
-    "api_docs": "API 接口文档"
+    "sub_apis": "接口与扩展目录",
+    "sub_audit": "专属审计日志",
+    "sub_settings": "子系统设置"
   },
   "auth": {
     "login_title": "登录 Foundry 平台",
@@ -33,17 +44,51 @@
   },
   "systems": {
     "title": "专题/子系统管理",
-    "desc": "统一注册与管理独立运行的专题业务子系统与租户标识",
+    "desc": "统一注册与管理独立运行的业务子系统，支持按 ID、标识、名称与状态多维分页筛选",
     "create": "创建新子系统",
+    "id": "系统 ID (UUID)",
     "slug": "系统标识 (Slug)",
-    "name": "显示名称",
-    "description": "描述",
-    "status": "状态",
+    "name": "系统显示名称",
+    "description": "描述说明",
+    "status": "运行状态",
+    "all_status": "全部状态",
     "active": "运行中",
     "disabled": "已禁用",
     "actions": "操作",
-    "empty_title": "暂未创建任何子系统",
-    "empty_desc": "Foundry 支持多业务子系统与租户隔离。点击下方按钮创建您的第一个业务子系统。"
+    "manage": "进入控制台",
+    "edit": "编辑信息",
+    "search_keyword": "综合关键词搜索 (标识/名称/描述)",
+    "search_id": "输入完整或部分 UUID 查询",
+    "search_slug": "输入系统唯一标识 (如 carnival_2026)",
+    "search_name": "输入系统名称",
+    "filter_button": "搜索查询",
+    "reset_button": "重置筛选",
+    "models_count": "模型数",
+    "configs_count": "配置项",
+    "records_count": "数据记录",
+    "total_count": "共 {{total}} 个子系统",
+    "empty_title": "未找到匹配的子系统",
+    "empty_desc": "您可以调整筛选条件或点击下方按钮创建新的业务子系统。"
+  },
+  "subsystem": {
+    "overview_title": "子系统概览",
+    "overview_desc": "独立子系统运行状态、数据概览及 RESTful 接口集成指引",
+    "apis_title": "子系统接口与扩展目录",
+    "apis_desc": "查看当前子系统提供的动态 Auto-CRUD 端点与 Rust 原生扩展控制器接口",
+    "settings_title": "子系统基础设置",
+    "settings_desc": "管理子系统显示名称、业务描述以及启用/禁用状态",
+    "api_prefix": "REST API 根路径",
+    "stats_models": "动态业务模型",
+    "stats_configs": "专属配置属性",
+    "stats_records": "海量数据记录",
+    "stats_audits": "变动审计记录",
+    "quick_actions": "快速操作",
+    "api_examples": "接口调用示例",
+    "curl_example": "cURL 快速测试",
+    "fetch_example": "TypeScript / Fetch 示例",
+    "view_docs": "查看 OpenAPI 规范",
+    "save_settings": "保存子系统设置",
+    "settings_saved": "子系统设置已更新成功！"
   },
   "configs": {
     "title": "专题专属配置 (System Configs)",
@@ -114,6 +159,14 @@
     "tab_query": "原始 Query 参数",
     "tab_body": "原始 Body 请求体"
   },
+  "pagination": {
+    "page": "页码",
+    "page_size": "每页条数",
+    "prev": "上一页",
+    "next": "下一页",
+    "total": "共 {{total}} 条记录",
+    "page_info": "第 {{current}} / {{total}} 页"
+  },
   "common": {
     "save": "保存",
     "cancel": "取消",
@@ -123,6 +176,9 @@
     "confirm": "确定",
     "search": "关键词搜索...",
     "actions": "操作",
-    "success": "操作成功"
+    "success": "操作成功",
+    "reset": "重置",
+    "copy": "复制",
+    "copied": "已复制"
   }
 }

@@ -22,10 +22,17 @@ pub fn build_router(state: AppState, subsystems: Vec<Box<dyn SubsystemModule>>) 
     let admin_routes = Router::new()
         .route("/admin/auth/me", get(auth::me_handler))
         .route(
+            "/admin/platform/summary",
+            get(systems::get_platform_summary_handler),
+        )
+        .route(
             "/admin/systems",
             get(systems::list_systems_handler).post(systems::create_system_handler),
         )
-        .route("/admin/systems/{id}", put(systems::update_system_handler))
+        .route(
+            "/admin/systems/{id}",
+            get(systems::get_system_handler).put(systems::update_system_handler),
+        )
         .route(
             "/admin/admins",
             get(admins::list_admins_handler).post(admins::create_admin_handler),
@@ -33,6 +40,16 @@ pub fn build_router(state: AppState, subsystems: Vec<Box<dyn SubsystemModule>>) 
         .route("/admin/admins/{id}", put(admins::update_admin_handler))
         .route("/admin/audit-logs", get(audit::list_audit_logs_handler))
         // Topic-scoped admin routes
+        .route(
+            "/admin/s/{system_slug}/details",
+            get(systems::get_system_by_slug_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/admin/s/{system_slug}/stats",
+            get(systems::get_system_stats_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
         .route(
             "/admin/s/{system_slug}/configs/schema",
             get(configs::list_config_schema_handler)

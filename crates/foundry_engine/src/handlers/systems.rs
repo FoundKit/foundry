@@ -1,13 +1,15 @@
 use crate::state::AppState;
 use axum::{
     Json,
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
 };
 use foundry_auth::AdminClaims;
 use foundry_core::error::{AppError, AppResult};
-use foundry_core::response::ApiResponse;
+use foundry_core::response::{ApiResponse, PaginatedData};
 use foundry_core::types::is_valid_slug;
-use foundry_storage::{SystemEntity, SystemStore};
+use foundry_storage::{
+    PlatformSummary, SystemEntity, SystemItem, SystemQuery, SystemStats, SystemStore,
+};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -25,24 +27,76 @@ pub struct UpdateSystemRequest {
     pub status: Option<i16>,
 }
 
+/// GET /api/v1/admin/systems (Paginated and filterable list of sub-systems)
 pub async fn list_systems_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
-) -> AppResult<Json<ApiResponse<Vec<SystemEntity>>>> {
-    let all_systems = SystemStore::list(&state.db).await?;
+    Query(query): Query<SystemQuery>,
+) -> AppResult<Json<ApiResponse<PaginatedData<SystemItem>>>> {
+    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
+    let allowed = if is_super {
+        None
+    } else {
+        Some(claims.allowed_systems.as_slice())
+    };
 
-    if claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*") {
-        return Ok(Json(ApiResponse::success(all_systems)));
-    }
-
-    let filtered = all_systems
-        .into_iter()
-        .filter(|s| claims.allowed_systems.contains(&s.slug))
-        .collect();
-
-    Ok(Json(ApiResponse::success(filtered)))
+    let result = SystemStore::list_paginated(&state.db, query, allowed).await?;
+    Ok(Json(ApiResponse::success(result)))
 }
 
+/// GET /api/v1/admin/systems/{id} (Get single sub-system by UUID)
+pub async fn get_system_handler(
+    State(state): State<AppState>,
+    Extension(claims): Extension<AdminClaims>,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<ApiResponse<SystemItem>>> {
+    let system = SystemStore::get_by_id(&state.db, id).await?;
+
+    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
+    if !is_super && !claims.allowed_systems.contains(&system.slug) {
+        return Err(AppError::Forbidden(
+            "Access denied to this sub-system".to_string(),
+        ));
+    }
+
+    Ok(Json(ApiResponse::success(system)))
+}
+
+/// GET /api/v1/admin/s/{system_slug}/details (Get single sub-system by Slug)
+pub async fn get_system_by_slug_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+) -> AppResult<Json<ApiResponse<SystemItem>>> {
+    let system = SystemStore::get_by_slug(&state.db, &system_slug).await?;
+    Ok(Json(ApiResponse::success(system)))
+}
+
+/// GET /api/v1/admin/s/{system_slug}/stats (Get detailed statistics for a sub-system)
+pub async fn get_system_stats_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+) -> AppResult<Json<ApiResponse<SystemStats>>> {
+    let stats = SystemStore::get_stats(&state.db, &system_slug).await?;
+    Ok(Json(ApiResponse::success(stats)))
+}
+
+/// GET /api/v1/admin/platform/summary (Get platform-wide statistics summary)
+pub async fn get_platform_summary_handler(
+    State(state): State<AppState>,
+    Extension(claims): Extension<AdminClaims>,
+) -> AppResult<Json<ApiResponse<PlatformSummary>>> {
+    let is_super = claims.role == "super_admin" || claims.allowed_systems.iter().any(|s| s == "*");
+    if !is_super {
+        return Err(AppError::Forbidden(
+            "Only Super Admin can view platform-wide summary".to_string(),
+        ));
+    }
+
+    let summary = SystemStore::platform_summary(&state.db).await?;
+    Ok(Json(ApiResponse::success(summary)))
+}
+
+/// POST /api/v1/admin/systems (Create sub-system)
 pub async fn create_system_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -72,6 +126,7 @@ pub async fn create_system_handler(
     Ok(Json(ApiResponse::success(system)))
 }
 
+/// PUT /api/v1/admin/systems/{id} (Update sub-system)
 pub async fn update_system_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,

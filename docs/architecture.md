@@ -598,6 +598,63 @@ Foundry supports complete internationalization across all layers:
 
 ---
 
+### 3.7 Web Admin Architecture: Platform Control Plane, Subsystem Workspaces & URL Route Persistence
+
+To maintain strict domain autonomy and clean separation of concerns, Foundry's visual Web Admin Panel is architected into two decoupled tiers:
+
+```
++───────────────────────────────────────────────────────────────────────────────────────────+
+|                             FOUNDRY WEB ADMIN ARCHITECTURE                                |
+|                                                                                           |
+|  [ Level 1: Platform Control Plane (平台总控中台) ]                                       |
+|    - URL Scope: `/admin/dashboard`, `/admin/systems`, `/admin/admins`, `/admin/audit-logs`|
+|    - Responsibilities: Platform KPI summary, tenant provisioning, global write audit,     |
+|      hierarchical admin RBAC delegation, multi-attribute paginated search.                |
+|                                                                                           |
+|                                │ (Enter Subsystem / Switch System)                        |
+|                                ▼                                                          |
+|                                                                                           |
+|  [ Level 2: Subsystem Dedicated Workspaces (子系统独立工作台) ]                            |
+|    - URL Scope: `/admin/s/:system_slug/*`                                                 |
+|    - Responsibilities: Self-contained realm strictly scoped to that sub-system.           |
+|      ├── `/admin/s/:slug/overview`    -> Subsystem KPI stats, API integration guide       |
+|      ├── `/admin/s/:slug/configs`     -> Topic-scoped visual single-row property editor   |
+|      ├── `/admin/s/:slug/models`      -> Zero-DDL dynamic data schema builder             |
+|      ├── `/admin/s/:slug/data`        -> Dynamic data records browser & modal editor      |
+|      ├── `/admin/s/:slug/apis`        -> Auto-CRUD & custom Rust endpoints directory      |
+|      ├── `/admin/s/:slug/audit-logs`  -> Scoped mutation audit trail                      |
+|      └── `/admin/s/:slug/settings`    -> Subsystem lifecycle status & metadata editor     |
++───────────────────────────────────────────────────────────────────────────────────────────+
+```
+
+#### 3.7.1 Bidirectional URL Routing & State Persistence
+All admin state in Foundry is **explicitly synchronized with the browser location bar**:
+- **Full Path Explicit Sync**: Every view corresponds to an explicit URL (e.g. `/admin/s/carnival_2026/models`).
+- **Query & Pagination Parameters**: Search criteria, active model selections, and pagination parameters are serialized into URL query parameters:
+  - Subsystems search: `/admin/systems?page=1&page_size=10&keyword=carnival&status=1`
+  - Data records explorer: `/admin/s/carnival_2026/data?model=products&page=2&page_size=15`
+  - Dynamic models schema: `/admin/s/carnival_2026/models?model=products`
+  - Audit trail: `/admin/audit-logs?page=1&method=POST`
+- **History Navigation & Bookmarking**: Operators can refresh, bookmark, or share any link, and the entire workspace state (active subsystem, selected model, page number, filters) is faithfully restored.
+
+#### 3.7.2 Multi-Attribute Sub-System Search & Real-Time Stats
+Sub-systems management features high-performance database-backed filtering:
+1. **Multi-Dimension Search**:
+   - `id`: Exact/partial UUID query
+   - `slug`: Subsystem unique identifier matching
+   - `name`: Fuzzy display name search
+   - `keyword`: Cross-field search over slug, name, and description
+   - `status`: Active (`1`) vs. Disabled (`0`) filter
+2. **Enriched Live Subsystem Statistics**:
+   The backend aggregates live statistical counters directly into the paginated sub-system query:
+   - `models_count`: Total data models created in the sub-system
+   - `configs_count`: Total single-row properties configured
+   - `records_count`: Total dynamic data rows stored
+3. **Platform-Wide Summary Metric API**:
+   Super Admins have access to `/api/v1/admin/platform/summary`, delivering real-time platform metrics (total systems, active systems, total models, total records, total admins, total mutation logs).
+
+---
+
 ## 4. Client Integration & API Contract Strategy
 
 ### 4.1 REST-First Philosophy & "Zero-SDK" Autonomy

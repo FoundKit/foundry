@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS systems (
 );
 
 CREATE INDEX IF NOT EXISTS idx_systems_slug ON systems(slug) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(name) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_systems_status ON systems(status);
+CREATE INDEX IF NOT EXISTS idx_systems_created_at ON systems(created_at DESC);
 
 -- ============================================================================
 -- 2. SYSTEM CONFIGS (专题专属配置项表: 纯粹的配置键值与UI控件定义)

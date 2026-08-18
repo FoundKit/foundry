@@ -1,24 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Edit2, Database, Layers, AlertTriangle } from 'lucide-react';
-import { Card, Button, Input, Modal, Badge } from '../components/UiWidgets';
+import { Card, Button, Input, Modal, Badge, Pagination } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { ModelFieldItem, ModelItem, ModelRecordItem, SystemItem } from '../types';
 
 interface DataExplorerProps {
   currentSystem: SystemItem | null;
+  queryParams?: Record<string, string>;
+  onUpdateParams?: (params: Record<string, any>) => void;
   onNavigate?: (tab: string) => void;
 }
 
-export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProps) {
+export function DataExplorerPage({
+  currentSystem,
+  queryParams,
+  onUpdateParams,
+  onNavigate,
+}: DataExplorerProps) {
   const { t } = useTranslation();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelItem | null>(null);
   const [fields, setFields] = useState<ModelFieldItem[]>([]);
   const [records, setRecords] = useState<ModelRecordItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page] = useState(1);
   const [total, setTotal] = useState(0);
+
+  const currentPage = Number(queryParams?.page) || 1;
+  const currentPageSize = Number(queryParams?.page_size) || 15;
 
   // Record Create/Edit Modal
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
@@ -29,8 +38,17 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
     try {
       const list = await api.listModels(slug);
       setModels(list);
-      if (list.length > 0) {
+
+      const targetModelSlug = queryParams?.model;
+      const matched = list.find((m) => m.slug === targetModelSlug);
+
+      if (matched) {
+        setSelectedModel(matched);
+      } else if (list.length > 0) {
         setSelectedModel(list[0]);
+        if (onUpdateParams && !targetModelSlug) {
+          onUpdateParams({ model: list[0].slug });
+        }
       } else {
         setSelectedModel(null);
       }
@@ -41,12 +59,12 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
     }
   };
 
-  const loadRecords = async (slug: string, model: ModelItem) => {
+  const loadRecords = async (slug: string, model: ModelItem, page: number, pageSize: number) => {
     setLoading(true);
     try {
       const [f, recs] = await Promise.all([
         api.listModelFields(slug, model.id),
-        api.listRecords(slug, model.slug, { page, page_size: 15 }),
+        api.listRecords(slug, model.slug, { page, page_size: pageSize }),
       ]);
       setFields(f);
       setRecords(recs.items);
@@ -73,15 +91,47 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
     }
   }, [currentSystem?.slug]);
 
+  // If queryParams.model changes externally
+  useEffect(() => {
+    if (queryParams?.model && models.length > 0) {
+      const found = models.find((m) => m.slug === queryParams.model);
+      if (found && found.id !== selectedModel?.id) {
+        setSelectedModel(found);
+      }
+    }
+  }, [queryParams?.model, models]);
+
   useEffect(() => {
     if (currentSystem?.slug && selectedModel) {
-      loadRecords(currentSystem.slug, selectedModel);
+      loadRecords(currentSystem.slug, selectedModel, currentPage, currentPageSize);
     } else {
       setFields([]);
       setRecords([]);
       setTotal(0);
     }
-  }, [currentSystem?.slug, selectedModel, page]);
+  }, [currentSystem?.slug, selectedModel, currentPage, currentPageSize]);
+
+  const handleSelectModel = (modelSlug: string) => {
+    const m = models.find((x) => x.slug === modelSlug);
+    if (m) {
+      setSelectedModel(m);
+      if (onUpdateParams) {
+        onUpdateParams({ model: m.slug, page: 1 });
+      }
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (onUpdateParams) {
+      onUpdateParams({ page });
+    }
+  };
+
+  const handlePageSizeChange = (page_size: number) => {
+    if (onUpdateParams) {
+      onUpdateParams({ page: 1, page_size });
+    }
+  };
 
   const openCreateModal = () => {
     setEditingRecord(null);
@@ -104,7 +154,7 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
     if (!confirm(t('explorer.delete_confirm'))) return;
     try {
       await api.deleteRecord(currentSystem.slug, selectedModel.slug, id);
-      loadRecords(currentSystem.slug, selectedModel);
+      loadRecords(currentSystem.slug, selectedModel, currentPage, currentPageSize);
     } catch (err: any) {
       alert(err.message || 'Delete failed');
     }
@@ -120,7 +170,7 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
         await api.createRecord(currentSystem.slug, selectedModel.slug, formData);
       }
       setIsRecordModalOpen(false);
-      loadRecords(currentSystem.slug, selectedModel);
+      loadRecords(currentSystem.slug, selectedModel, currentPage, currentPageSize);
     } catch (err: any) {
       alert(err.message || 'Save failed');
     }
@@ -207,7 +257,7 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -225,10 +275,7 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
           <select
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
             value={selectedModel?.slug || ''}
-            onChange={(e) => {
-              const m = models.find((x) => x.slug === e.target.value);
-              if (m) setSelectedModel(m);
-            }}
+            onChange={(e) => handleSelectModel(e.target.value)}
           >
             {models.map((m) => (
               <option key={m.id} value={m.slug}>
@@ -238,7 +285,7 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
           </select>
 
           {selectedModel && (
-            <Button onClick={openCreateModal}>
+            <Button onClick={openCreateModal} className="shrink-0 gap-1.5">
               <Plus className="h-4 w-4" />
               <span>{t('explorer.create_record')}</span>
             </Button>
@@ -321,6 +368,16 @@ export function DataExplorerPage({ currentSystem, onNavigate }: DataExplorerProp
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          page={currentPage}
+          pageSize={currentPageSize}
+          total={total}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          pageSizeOptions={[15, 30, 50]}
+        />
       </Card>
 
       {/* Record Edit/Create Modal */}

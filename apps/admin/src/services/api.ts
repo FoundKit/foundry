@@ -6,8 +6,11 @@ import {
   ModelItem,
   ModelRecordItem,
   PaginatedResult,
+  PlatformSummary,
   SystemConfigItem,
   SystemItem,
+  SystemQuery,
+  SystemStats,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -48,8 +51,27 @@ export const api = {
     }),
   me: () => request<AdminProfile>('/admin/auth/me'),
 
+  // Platform Summary
+  getPlatformSummary: () => request<PlatformSummary>('/admin/platform/summary'),
+
   // Systems
-  listSystems: () => request<SystemItem[]>('/admin/systems'),
+  listSystems: (params?: SystemQuery) => {
+    const search = new URLSearchParams();
+    if (params?.page) search.set('page', params.page.toString());
+    if (params?.page_size) search.set('page_size', params.page_size.toString());
+    if (params?.id) search.set('id', params.id);
+    if (params?.slug) search.set('slug', params.slug);
+    if (params?.name) search.set('name', params.name);
+    if (params?.keyword) search.set('keyword', params.keyword);
+    if (params?.status !== undefined && params?.status !== null) {
+      search.set('status', params.status.toString());
+    }
+    const qs = search.toString() ? `?${search.toString()}` : '';
+    return request<PaginatedResult<SystemItem>>(`/admin/systems${qs}`);
+  },
+  getSystem: (id: string) => request<SystemItem>(`/admin/systems/${id}`),
+  getSystemBySlug: (systemSlug: string) => request<SystemItem>(`/admin/s/${systemSlug}/details`),
+  getSystemStats: (systemSlug: string) => request<SystemStats>(`/admin/s/${systemSlug}/stats`),
   createSystem: (data: any) =>
     request<SystemItem>('/admin/systems', {
       method: 'POST',

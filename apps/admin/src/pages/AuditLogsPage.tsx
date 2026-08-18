@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye } from 'lucide-react';
-import { Card, Button, Modal, Badge } from '../components/UiWidgets';
+import { Eye, RotateCcw } from 'lucide-react';
+import { Card, Button, Modal, Badge, Pagination } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { AuditLogItem, SystemItem } from '../types';
 
 interface AuditLogsPageProps {
-  currentSystem: SystemItem | null;
+  currentSystem?: SystemItem | null;
+  queryParams?: Record<string, string>;
+  onUpdateParams?: (params: Record<string, any>) => void;
 }
 
-export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
+export function AuditLogsPage({ currentSystem, queryParams, onUpdateParams }: AuditLogsPageProps) {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page] = useState(1);
   const [total, setTotal] = useState(0);
+
+  const currentPage = Number(queryParams?.page) || 1;
+  const currentPageSize = Number(queryParams?.page_size) || 20;
+  const methodFilter = queryParams?.method || '';
 
   // Inspector Modal state
   const [inspectLog, setInspectLog] = useState<AuditLogItem | null>(null);
@@ -24,13 +29,19 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
     setLoading(true);
     try {
       const res = await api.listAuditLogs({
-        page,
-        system_slug: currentSystem?.slug,
+        page: currentPage,
+        system_slug: currentSystem?.slug || queryParams?.system_slug || undefined,
       });
-      setLogs(res.items);
+      let items = res.items;
+      if (methodFilter) {
+        items = items.filter((l) => l.method.toUpperCase() === methodFilter.toUpperCase());
+      }
+      setLogs(items);
       setTotal(res.pagination.total);
     } catch (err) {
       console.error(err);
+      setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -38,7 +49,25 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
 
   useEffect(() => {
     loadLogs();
-  }, [currentSystem, page]);
+  }, [currentSystem?.slug, queryParams?.page, queryParams?.system_slug, queryParams?.method]);
+
+  const handlePageChange = (page: number) => {
+    if (onUpdateParams) {
+      onUpdateParams({ page });
+    }
+  };
+
+  const handleMethodChange = (method: string) => {
+    if (onUpdateParams) {
+      onUpdateParams({ method: method || undefined, page: 1 });
+    }
+  };
+
+  const handleReset = () => {
+    if (onUpdateParams) {
+      onUpdateParams({ method: undefined, page: 1 });
+    }
+  };
 
   const getMethodBadge = (method: string) => {
     switch (method.toUpperCase()) {
@@ -57,18 +86,43 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            {t('audit.title')}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('audit.title')}
+            </h1>
+            {currentSystem && <Badge variant="success">/{currentSystem.slug}</Badge>}
+          </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {t('audit.desc')} ({total} records)
           </p>
         </div>
-        <Button variant="secondary" onClick={loadLogs} size="sm">
-          Refresh Trail
-        </Button>
+
+        <div className="flex items-center gap-2">
+          {/* Method Filter */}
+          <select
+            value={methodFilter}
+            onChange={(e) => handleMethodChange(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <option value="">All Methods</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+
+          {methodFilter && (
+            <Button variant="secondary" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          <Button variant="secondary" onClick={loadLogs} size="sm">
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden p-0">
@@ -146,6 +200,13 @@ export function AuditLogsPage({ currentSystem }: AuditLogsPageProps) {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          page={currentPage}
+          pageSize={currentPageSize}
+          total={total}
+          onPageChange={handlePageChange}
+        />
       </Card>
 
       {/* Raw Request Inspector Modal */}

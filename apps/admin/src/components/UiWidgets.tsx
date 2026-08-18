@@ -145,3 +145,107 @@ export function Modal({
     </div>
   );
 }
+
+export function Pagination({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+  pageSizeOptions = [10, 20, 50],
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  pageSizeOptions?: number[];
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Compute page numbers to display
+  const getPageNumbers = () => {
+    const delta = 2;
+    const range: number[] = [];
+    for (let i = Math.max(2, page - delta); i <= Math.min(totalPages - 1, page + delta); i++) {
+      range.push(i);
+    }
+    if (page - delta > 2) range.unshift(-1); // ellipsis
+    if (page + delta < totalPages - 1) range.push(-2); // ellipsis
+    range.unshift(1);
+    if (totalPages > 1) range.push(totalPages);
+    return range;
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/50 px-6 py-3.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+      <div className="flex items-center gap-3">
+        <span>
+          Total{' '}
+          <strong className="font-semibold text-slate-900 dark:text-slate-200">{total}</strong>{' '}
+          records (Page {page} of {totalPages})
+        </span>
+        {onPageSizeChange && (
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 dark:border-slate-800">
+            <span>Per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              {pageSizeOptions.map((sz) => (
+                <option key={sz} value={sz}>
+                  {sz} / page
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:disabled:hover:bg-slate-800"
+        >
+          Previous
+        </button>
+
+        <div className="flex items-center gap-1 px-1">
+          {getPageNumbers().map((p, idx) => {
+            if (p < 0) {
+              return (
+                <span key={idx} className="px-1 text-slate-400">
+                  ...
+                </span>
+              );
+            }
+            const isActive = p === page;
+            return (
+              <button
+                key={p}
+                onClick={() => onPageChange(p)}
+                className={`h-7 min-w-[28px] rounded-lg text-xs font-medium transition ${
+                  isActive
+                    ? 'bg-emerald-600 font-semibold text-white shadow-sm'
+                    : 'text-slate-700 hover:bg-slate-200/70 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {p}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:disabled:hover:bg-slate-800"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}

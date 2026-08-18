@@ -7,10 +7,17 @@ import { ModelFieldItem, ModelItem, SystemItem } from '../types';
 
 interface ModelsPageProps {
   currentSystem: SystemItem | null;
+  queryParams?: Record<string, string>;
+  onUpdateParams?: (params: Record<string, any>) => void;
   onNavigate?: (tab: string) => void;
 }
 
-export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
+export function ModelsPage({
+  currentSystem,
+  queryParams,
+  onUpdateParams,
+  onNavigate,
+}: ModelsPageProps) {
   const { t } = useTranslation();
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelItem | null>(null);
@@ -35,8 +42,18 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
     try {
       const list = await api.listModels(slug);
       setModels(list);
-      if (list.length > 0) {
+
+      // Restore selected model from URL query if present
+      const targetModelSlug = queryParams?.model;
+      const matched = list.find((m) => m.slug === targetModelSlug);
+
+      if (matched) {
+        setSelectedModel(matched);
+      } else if (list.length > 0) {
         setSelectedModel(list[0]);
+        if (onUpdateParams && !targetModelSlug) {
+          onUpdateParams({ model: list[0].slug });
+        }
       } else {
         setSelectedModel(null);
       }
@@ -69,6 +86,16 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
     }
   }, [currentSystem?.slug]);
 
+  // Sync selectedModel if queryParams.model changes externally
+  useEffect(() => {
+    if (queryParams?.model && models.length > 0) {
+      const found = models.find((m) => m.slug === queryParams.model);
+      if (found && found.id !== selectedModel?.id) {
+        setSelectedModel(found);
+      }
+    }
+  }, [queryParams?.model, models]);
+
   useEffect(() => {
     if (currentSystem?.slug && selectedModel) {
       loadFields(currentSystem.slug, selectedModel.id);
@@ -76,6 +103,13 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       setFields([]);
     }
   }, [currentSystem?.slug, selectedModel]);
+
+  const handleSelectModel = (m: ModelItem) => {
+    setSelectedModel(m);
+    if (onUpdateParams) {
+      onUpdateParams({ model: m.slug });
+    }
+  };
 
   const handleCreateModel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +119,9 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
     }
     try {
       const created = await api.createModel(currentSystem.slug, {
-        slug: modelSlug,
-        name: modelName,
-        description: modelDesc,
+        slug: modelSlug.trim(),
+        name: modelName.trim(),
+        description: modelDesc.trim() || undefined,
       });
       setIsCreateModelOpen(false);
       setModelSlug('');
@@ -95,6 +129,9 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
       setModelDesc('');
       await loadModels(currentSystem.slug);
       setSelectedModel(created);
+      if (onUpdateParams) {
+        onUpdateParams({ model: created.slug });
+      }
     } catch (err: any) {
       alert(err.message || 'Failed to create model');
     }
@@ -105,8 +142,8 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
     if (!currentSystem?.slug || !selectedModel) return;
     try {
       await api.addModelField(currentSystem.slug, selectedModel.id, {
-        name: fieldName,
-        label: fieldLabel,
+        name: fieldName.trim(),
+        label: fieldLabel.trim(),
         field_type: fieldType,
         is_required: isRequired,
         sort_order: fields.length + 1,
@@ -193,7 +230,7 @@ export function ModelsPage({ currentSystem, onNavigate }: ModelsPageProps) {
                     : 'bg-white hover:border-slate-300 dark:bg-slate-900/40 dark:hover:border-slate-700'
                 }`}
               >
-                <div onClick={() => setSelectedModel(m)}>
+                <div onClick={() => handleSelectModel(m)}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {m.name}

@@ -21,6 +21,49 @@ export interface SystemItem {
   status: number;
   created_at: string;
   updated_at: string;
+  models_count?: number;
+  configs_count?: number;
+  records_count?: number;
+}
+
+export interface SystemQuery {
+  page?: number;
+  page_size?: number;
+  id?: string;
+  slug?: string;
+  name?: string;
+  keyword?: string;
+  status?: number;
+}
+
+export interface SystemStats {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  status: number;
+  created_at: string;
+  models_count: number;
+  configs_count: number;
+  records_count: number;
+  audit_logs_count: number;
+}
+
+export interface PlatformSummary {
+  total_systems: number;
+  active_systems: number;
+  total_models: number;
+  total_records: number;
+  total_admins: number;
+  total_audit_logs: number;
+}
+
+export interface RouteState {
+  mode: 'platform' | 'subsystem';
+  platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs';
+  subsystemSlug: string | null;
+  subsystemTab: 'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings';
+  params: Record<string, string>;
 }
 
 export interface SystemConfigItem {
