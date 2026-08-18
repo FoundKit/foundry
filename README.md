@@ -6,7 +6,8 @@
 
 *Foundry is an open-source platform for building and running multiple independent backend systems from a shared foundation.*
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/react-18%2B%20%2F%2019-61dafb.svg)](https://react.dev)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-18.6%2B-336791.svg)](https://www.postgresql.org)
