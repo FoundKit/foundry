@@ -87,6 +87,6 @@ cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Sta
 
 ## 后续阅读
 
-- 阅读 [架构蓝图设计](/zh/architecture/blueprint/) 深入了解 Foundry 核心原理。
-- 阅读 [子系统与扩展开发](/zh/guides/extensions/) 学习如何编写自定义 Rust API 与管理后台页面。
-- 查看 [开发路线图](/zh/roadmap/) 了解功能排期与进度。
+- 阅读 [架构蓝图设计](../architecture/blueprint/) 深入了解 Foundry 核心原理。
+- 阅读 [子系统与扩展开发](../guides/extensions/) 学习如何编写自定义 Rust API 与管理后台页面。
+- 查看 [开发路线图](../roadmap/) 了解功能排期与进度。

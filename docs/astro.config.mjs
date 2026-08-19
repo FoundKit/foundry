@@ -74,6 +74,7 @@ export default defineConfig({
           link: '/roadmap/',
         },
       ],
+      customCss: ['./src/styles/custom.css'],
     }),
   ],
 });

@@ -88,6 +88,6 @@ cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Sta
 
 ## Next Steps
 
-- Explore the [Architecture Blueprint](/architecture/blueprint/) to understand Foundry's internals.
-- Read the [Subsystem Extensions Guide](/guides/extensions/) to write custom Rust endpoints and Admin UI pages.
-- Check the [Development Roadmap](/roadmap/) for upcoming features.
+- Explore the [Architecture Blueprint](../architecture/blueprint/) to understand Foundry's internals.
+- Read the [Subsystem Extensions Guide](../guides/extensions/) to write custom Rust endpoints and Admin UI pages.
+- Check the [Development Roadmap](../roadmap/) for upcoming features.

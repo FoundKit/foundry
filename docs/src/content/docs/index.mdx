@@ -1,40 +1,97 @@
 ---
 title: Foundry
-description: Build complete multi-tenant systems from a shared foundation.
+head:
+  - tag: title
+    content: Foundry — Next-Gen Multi-System Backend Engine in Rust
+description: Build, isolate, and extend independent multi-tenant systems from a shared high-performance Rust foundation.
 template: splash
 hero:
-  tagline: An open-source Rust platform for building, isolating, and extending independent backend systems and admin panels.
+  tagline: High-performance, open-source multi-system infrastructure platform & admin control plane built with Rust, Axum, and React.
   image:
     file: ../../assets/hero.svg
   actions:
     - text: Getting Started
-      link: /getting-started/
+      link: ./getting-started/
       icon: right-arrow
       variant: primary
     - text: Architecture Blueprint
-      link: /architecture/blueprint/
+      link: ./architecture/blueprint/
       icon: document
       variant: secondary
-    - text: View on GitHub
+    - text: GitHub Repository
       link: https://github.com/FoundKit/foundry
       icon: external
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Key Capabilities
+<div class="tech-badge">
+  <span>⚡</span> Next-Gen Rust Multi-Tenant Platform
+</div>
+
+<div class="tech-terminal">
+  <div class="tech-terminal-header">
+    <span class="tech-terminal-dot dot-red"></span>
+    <span class="tech-terminal-dot dot-yellow"></span>
+    <span class="tech-terminal-dot dot-green"></span>
+    <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
+  </div>
+  <div class="tech-terminal-body">
+    <span style="color: #64748b;"># Scaffold a new compiled subsystem in seconds</span><br />
+    <span style="color: #22c55e;">➜</span> <span style="color: #38bdf8;">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span style="color: #fb923c;">"Carnival Demo"</span><br />
+    <span style="color: #10b981;">✔</span> Initialized subsystem directory: <span style="color: #94a3b8;">systems/src/carnival_demo/</span><br />
+    <span style="color: #10b981;">✔</span> Bound Auto-CRUD endpoints: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/*</span><br />
+    <span style="color: #10b981;">✔</span> Bound Extension routes: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span style="color: #10b981;">✔</span> Isolated Redis cache prefix: <span style="color: #94a3b8;">foundry:carnival_demo:*</span>
+  </div>
+</div>
+
+## 🌟 Core Architecture Pillars
 
 <CardGrid stagger>
   <Card title="Multi-Tenant Sub-System Engine" icon="puzzle">
-    Run independent sub-systems (apps, mini-programs, campaign backends) within a single Foundry instance with strict tenant isolation.
+    Run $N$ independent apps, mini-programs, and campaign backends within a single unified Foundry instance with strict tenant data isolation.
   </Card>
   <Card title="Zero-DDL Dynamic Storage" icon="setting">
-    Define system configs and dynamic data models without database DDL migrations or metadata locks.
+    Visually define system configurations and dynamic data models without database DDL migrations, locks, or downtime.
   </Card>
   <Card title="Automatic RESTful CRUD" icon="rocket">
-    Instant REST APIs generated for all dynamic models with fine-grained access control toggles.
+    Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access switches.
   </Card>
-  <Card title="Decoupled Architecture" icon="laptop">
-    Code-first Rust extensions, custom Admin UI pages, and standalone external repository hosting.
+  <Card title="Code-First Rust & WASM Extensions" icon="laptop">
+    Extend subsystems with native high-performance Rust traits or sandboxed dynamic WASM plugins without restarting the server engine.
+  </Card>
+  <Card title="Hierarchical IAM & Topic RBAC" icon="open-book">
+    Super Admin (`super_admin`) with omnipotent privileges, and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
+  </Card>
+  <Card title="Non-GET Operation Audit Trail" icon="warning">
+    Security-first middleware capturing all state-mutating requests (POST, PUT, PATCH, DELETE, login) with full payloads and tracing metadata.
   </Card>
 </CardGrid>
+
+---
+
+## 🏗️ Architecture Pipeline
+
+<div class="tech-pipeline">
+  <div class="tech-pipeline-node">
+    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌐</div>
+    <div style="font-weight: 700; color: #f8fafc;">Client Requests</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Admin SPA / Mobile Apps / HTTP Clients</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
+    <div style="font-weight: 700; color: #f8fafc;">Axum Routing Engine</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Context Extraction & Topic RBAC</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚙️</div>
+    <div style="font-weight: 700; color: #f8fafc;">Subsystem Runtime</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Auto-CRUD + Rust Logic + WASM</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💾</div>
+    <div style="font-weight: 700; color: #f8fafc;">Zero-DDL Storage</div>
+    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Postgres JSONB/GIN + Redis Cache</div>
+  </div>
+</div>

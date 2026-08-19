@@ -1,0 +1,275 @@
+/* ==========================================================================
+   Foundry High-Tech Starlight Theme Customizations
+   ========================================================================== */
+
+:root {
+  --sl-color-accent-low: #2c1206;
+  --sl-color-accent: #ea580c;
+  --sl-color-accent-high: #fed7aa;
+  --sl-color-white: #f8fafc;
+  --sl-color-gray-1: #e2e8f0;
+  --sl-color-gray-2: #cbd5e1;
+  --sl-color-gray-3: #94a3b8;
+  --sl-color-gray-4: #64748b;
+  --sl-color-gray-5: #334155;
+  --sl-color-gray-6: #1e293b;
+  --sl-color-black: #090d16;
+}
+
+[data-theme='dark'] {
+  --sl-color-bg: #070a11;
+  --sl-color-bg-nav: rgba(11, 15, 25, 0.85);
+  --sl-color-bg-sidebar: rgba(11, 15, 25, 0.8);
+  --sl-color-hairline-light: rgba(255, 255, 255, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Ambient Tech Background & Grid
+   -------------------------------------------------------------------------- */
+body {
+  background-color: var(--sl-color-bg);
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(234, 88, 12, 0.18), transparent),
+    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(56, 189, 248, 0.08), transparent),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+}
+
+/* Glassmorphism Header */
+header.header {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Hero Section High-End Styling
+   -------------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  padding: 4rem 1rem 3rem !important;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.15) 0%, rgba(249, 115, 22, 0.05) 50%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero h1[data-page-title] {
+  font-size: clamp(2.5rem, 6vw, 4.5rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  background: linear-gradient(135deg, #ffffff 30%, #fb923c 70%, #f97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 40px rgba(249, 115, 22, 0.3);
+}
+
+.hero .tagline {
+  font-size: clamp(1.1rem, 2vw, 1.35rem) !important;
+  color: #94a3b8 !important;
+  max-width: 44rem;
+  line-height: 1.6;
+}
+
+.hero img {
+  filter: drop-shadow(0 0 45px rgba(249, 115, 22, 0.35));
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero img:hover {
+  transform: scale(1.04) rotate(1deg);
+}
+
+/* --------------------------------------------------------------------------
+   High-Tech Buttons (Hero Actions)
+   -------------------------------------------------------------------------- */
+.sl-link-button.primary {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 0 20px -3px rgba(234, 88, 12, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem 1.75rem !important;
+  transition: all 0.25s ease !important;
+}
+
+.sl-link-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px 2px rgba(234, 88, 12, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.sl-link-button.secondary {
+  background: rgba(15, 23, 42, 0.75) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(8px);
+  font-weight: 500 !important;
+  border-radius: 9999px !important;
+  padding: 0.75rem 1.75rem !important;
+  transition: all 0.25s ease !important;
+}
+
+.sl-link-button.secondary:hover {
+  background: rgba(30, 41, 59, 0.9) !important;
+  border-color: rgba(249, 115, 22, 0.5) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   Cards & Bento Grid Customization
+   -------------------------------------------------------------------------- */
+.card:where(.astro-zhtc3yc6),
+.card {
+  background: rgba(11, 15, 25, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 1rem !important;
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(249, 115, 22, 0.4) !important;
+  box-shadow: 0 12px 32px -4px rgba(234, 88, 12, 0.2);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+}
+
+.card .title {
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+  font-size: 1.15rem !important;
+}
+
+.card .icon {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(234, 88, 12, 0.05)) !important;
+  border: 1px solid rgba(234, 88, 12, 0.3) !important;
+  border-radius: 0.75rem !important;
+  color: #fb923c !important;
+  padding: 0.4rem !important;
+}
+
+.card .body p {
+  color: #94a3b8 !important;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   Terminal Box Mockup
+   -------------------------------------------------------------------------- */
+.tech-terminal {
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px -10px rgba(234, 88, 12, 0.15);
+  margin: 2rem 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tech-terminal-header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tech-terminal-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #eab308; }
+.dot-green { background: #22c55e; }
+
+.tech-terminal-title {
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 0.75rem;
+  color: #64748b;
+  letter-spacing: 0.05em;
+}
+
+.tech-terminal-body {
+  padding: 1.25rem 1.5rem;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  line-height: 1.7;
+}
+
+/* --------------------------------------------------------------------------
+   High-Tech Architecture Visual Flow
+   -------------------------------------------------------------------------- */
+.tech-pipeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 2.5rem 0;
+}
+
+.tech-pipeline-node {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.tech-pipeline-node:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 20px -5px rgba(56, 189, 248, 0.2);
+}
+
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  border-radius: 9999px;
+  color: #fb923c;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 1rem;
+}
