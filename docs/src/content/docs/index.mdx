@@ -1,0 +1,40 @@
+---
+title: Foundry
+description: Build complete multi-tenant systems from a shared foundation.
+template: splash
+hero:
+  tagline: An open-source Rust platform for building, isolating, and extending independent backend systems and admin panels.
+  image:
+    file: ../../assets/hero.svg
+  actions:
+    - text: Getting Started
+      link: /getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Architecture Blueprint
+      link: /architecture/blueprint/
+      icon: document
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/FoundKit/foundry
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Key Capabilities
+
+<CardGrid stagger>
+  <Card title="Multi-Tenant Sub-System Engine" icon="puzzle">
+    Run independent sub-systems (apps, mini-programs, campaign backends) within a single Foundry instance with strict tenant isolation.
+  </Card>
+  <Card title="Zero-DDL Dynamic Storage" icon="setting">
+    Define system configs and dynamic data models without database DDL migrations or metadata locks.
+  </Card>
+  <Card title="Automatic RESTful CRUD" icon="rocket">
+    Instant REST APIs generated for all dynamic models with fine-grained access control toggles.
+  </Card>
+  <Card title="Decoupled Architecture" icon="laptop">
+    Code-first Rust extensions, custom Admin UI pages, and standalone external repository hosting.
+  </Card>
+</CardGrid>

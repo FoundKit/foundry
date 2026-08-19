@@ -70,9 +70,11 @@ cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Sta
 
 ## 📖 Documentation
 
-- [Architecture Blueprint](docs/architecture.md)
-- [Subsystem Extensions & Admin UI Guide](docs/extensions.md)
-- [Development Roadmap & TODO](docs/todo.md)
+- 🌐 [Official Documentation (GitHub Pages)](https://foundkit.github.io/foundry/)
+- 📘 [Getting Started Guide](docs/src/content/docs/getting-started.md)
+- 🏗️ [Architecture Blueprint](docs/src/content/docs/architecture/blueprint.md)
+- 🔌 [Subsystem Extensions & Admin UI Guide](docs/src/content/docs/guides/extensions.md)
+- 🗺️ [Development Roadmap & TODO](docs/src/content/docs/roadmap.md)
 
 ---
 

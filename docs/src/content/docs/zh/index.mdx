@@ -1,0 +1,40 @@
+---
+title: Foundry
+description: 基于统一基座构建与运行独立的多租户后端系统与管理后台。
+template: splash
+hero:
+  tagline: 基于 Rust 构建的高性能、开源多系统多租户基础设施平台与管理系统。
+  image:
+    file: ../../../assets/hero.svg
+  actions:
+    - text: 快速入门
+      link: /zh/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: 架构蓝图
+      link: /zh/architecture/blueprint/
+      icon: document
+      variant: secondary
+    - text: GitHub 仓库
+      link: https://github.com/FoundKit/foundry
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## 核心特性
+
+<CardGrid stagger>
+  <Card title="多子系统隔离引擎" icon="puzzle">
+    在单个 Foundry 实例中同时运行与管理多个独立业务子系统（应用、小程序、营销活动后端），保持严格的数据与租户隔离。
+  </Card>
+  <Card title="Zero-DDL 动态存储引擎" icon="setting">
+    可视化定义系统参数配置与动态数据模型，无需数据库 DDL 迁移或元数据锁。
+  </Card>
+  <Card title="自动化 RESTful CRUD" icon="rocket">
+    为所有动态数据模型即时生成高性能 RESTful API，并支持细粒度权限开关控制。
+  </Card>
+  <Card title="解耦扩展与独立仓库托管" icon="laptop">
+    支持 Code-first Rust 扩展路由、自定义 Admin UI 嵌入页面以及独立外部代码仓库托管。
+  </Card>
+</CardGrid>

@@ -1,3 +1,8 @@
+---
+title: Subsystems & Extensions
+description: Guide to extending Foundry with custom backend APIs, Admin UI pages, and standalone repositories.
+---
+
 # Subsystem Extensions & Custom Admin UI Guide
 
 Foundry provides a code-first extension engine allowing sub-systems to define **custom backend APIs**, **custom Admin UI pages**, and **standalone decoupled repository hosting**.

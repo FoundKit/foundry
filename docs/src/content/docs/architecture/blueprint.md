@@ -1,3 +1,8 @@
+---
+title: Architecture Blueprint
+description: Complete architecture design and blueprint for Foundry multi-tenant platform.
+---
+
 # Foundry Architecture Blueprint
 
 > **Organization**: [foundkit](https://github.com/foundkit)  
