@@ -1,8 +1,54 @@
 /* ==========================================================================
    Foundry High-Tech Starlight Theme Customizations
+   Light & dark themes driven by Starlight's [data-theme] attribute.
+   Custom surface tokens are prefixed with --fk-* and defined per theme.
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   Light theme (default, :root)
+   -------------------------------------------------------------------------- */
 :root {
+  --sl-color-accent-low: #ffedd5;
+  --sl-color-accent: #c2410c;
+  --sl-color-accent-high: #7c2d12;
+  --sl-color-white: #1e293b;
+  /* Starlight 约定：亮色模式下 gray-1 最深 → gray-6 最浅（与暗色方向相反） */
+  --sl-color-gray-1: #0f172a;
+  --sl-color-gray-2: #334155;
+  --sl-color-gray-3: #475569;
+  --sl-color-gray-4: #94a3b8;
+  --sl-color-gray-5: #cbd5e1;
+  --sl-color-gray-6: #e2e8f0;
+  --sl-color-black: #ffffff;
+  --sl-color-bg: #f8fafc;
+  --sl-color-bg-nav: rgba(255, 255, 255, 0.85);
+  --sl-color-bg-sidebar: rgba(255, 255, 255, 0.8);
+  --sl-color-hairline-light: rgba(15, 23, 42, 0.12);
+
+  /* Foundry surface tokens (light) */
+  --fk-surface: rgba(255, 255, 255, 0.75);
+  --fk-surface-2: rgba(255, 255, 255, 0.7);
+  --fk-surface-hover: rgba(241, 245, 249, 0.9);
+  --fk-border: rgba(15, 23, 42, 0.1);
+  --fk-border-strong: rgba(15, 23, 42, 0.18);
+  --fk-border-shine: rgba(255, 255, 255, 0.6);
+  --fk-text: #0f172a;
+  --fk-text-muted: #64748b;
+  --fk-accent-text: #c2410c;
+  --fk-glow-1: rgba(234, 88, 12, 0.1);
+  --fk-glow-2: rgba(56, 189, 248, 0.06);
+  --fk-grid-line: rgba(15, 23, 42, 0.035);
+  --fk-hero-gradient: linear-gradient(135deg, #1e293b 20%, #c2410c 70%, #ea580c 100%);
+  --fk-card-shadow: 0 4px 24px -1px rgba(15, 23, 42, 0.12);
+  --fk-card-shadow-hover: 0 12px 32px -4px rgba(234, 88, 12, 0.25);
+  --fk-hero-glow: rgba(234, 88, 12, 0.12);
+  --fk-img-glow: rgba(249, 115, 22, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   Dark theme
+   -------------------------------------------------------------------------- */
+[data-theme='dark'] {
   --sl-color-accent-low: #2c1206;
   --sl-color-accent: #ea580c;
   --sl-color-accent-high: #fed7aa;
@@ -14,13 +60,29 @@
   --sl-color-gray-5: #334155;
   --sl-color-gray-6: #1e293b;
   --sl-color-black: #090d16;
-}
-
-[data-theme='dark'] {
   --sl-color-bg: #070a11;
   --sl-color-bg-nav: rgba(11, 15, 25, 0.85);
   --sl-color-bg-sidebar: rgba(11, 15, 25, 0.8);
   --sl-color-hairline-light: rgba(255, 255, 255, 0.08);
+
+  /* Foundry surface tokens (dark) */
+  --fk-surface: rgba(11, 15, 25, 0.65);
+  --fk-surface-2: rgba(15, 23, 42, 0.6);
+  --fk-surface-hover: rgba(30, 41, 59, 0.9);
+  --fk-border: rgba(255, 255, 255, 0.08);
+  --fk-border-strong: rgba(255, 255, 255, 0.15);
+  --fk-border-shine: rgba(255, 255, 255, 0.15);
+  --fk-text: #f8fafc;
+  --fk-text-muted: #94a3b8;
+  --fk-accent-text: #fb923c;
+  --fk-glow-1: rgba(234, 88, 12, 0.18);
+  --fk-glow-2: rgba(56, 189, 248, 0.08);
+  --fk-grid-line: rgba(255, 255, 255, 0.015);
+  --fk-hero-gradient: linear-gradient(135deg, #ffffff 30%, #fb923c 70%, #f97316 100%);
+  --fk-card-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.4);
+  --fk-card-shadow-hover: 0 12px 32px -4px rgba(234, 88, 12, 0.2);
+  --fk-hero-glow: rgba(234, 88, 12, 0.15);
+  --fk-img-glow: rgba(249, 115, 22, 0.35);
 }
 
 /* --------------------------------------------------------------------------
@@ -28,11 +90,11 @@
    -------------------------------------------------------------------------- */
 body {
   background-color: var(--sl-color-bg);
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(234, 88, 12, 0.18), transparent),
-    radial-gradient(ellipse 60% 40% at 85% 10%, rgba(56, 189, 248, 0.08), transparent),
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, var(--fk-glow-1), transparent),
+    radial-gradient(ellipse 60% 40% at 85% 10%, var(--fk-glow-2), transparent),
+    linear-gradient(var(--fk-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--fk-grid-line) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
   background-position: 0 0, 0 0, -1px -1px, -1px -1px;
 }
@@ -41,7 +103,12 @@ body {
 header.header {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid var(--fk-border) !important;
+}
+
+/* Sidebar / menu links: slightly heavier for legibility */
+.sidebar-content a {
+  font-weight: 500;
 }
 
 /* --------------------------------------------------------------------------
@@ -50,6 +117,7 @@ header.header {
 .hero {
   position: relative;
   padding: 4rem 1rem 3rem !important;
+  overflow: hidden;
 }
 
 .hero::before {
@@ -60,7 +128,7 @@ header.header {
   transform: translate(-50%, -50%);
   width: 600px;
   height: 400px;
-  background: radial-gradient(circle, rgba(234, 88, 12, 0.15) 0%, rgba(249, 115, 22, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, var(--fk-hero-glow) 0%, rgba(249, 115, 22, 0.05) 50%, transparent 70%);
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
@@ -75,21 +143,21 @@ header.header {
   font-size: clamp(2.5rem, 6vw, 4.5rem) !important;
   font-weight: 800 !important;
   letter-spacing: -0.03em !important;
-  background: linear-gradient(135deg, #ffffff 30%, #fb923c 70%, #f97316 100%);
+  background: var(--fk-hero-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 40px rgba(249, 115, 22, 0.3);
 }
 
 .hero .tagline {
   font-size: clamp(1.1rem, 2vw, 1.35rem) !important;
-  color: #94a3b8 !important;
+  color: var(--fk-text-muted) !important;
   max-width: 44rem;
   line-height: 1.6;
 }
 
 .hero img {
-  filter: drop-shadow(0 0 45px rgba(249, 115, 22, 0.35));
+  filter: drop-shadow(0 0 45px var(--fk-img-glow));
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -117,9 +185,9 @@ header.header {
 }
 
 .sl-link-button.secondary {
-  background: rgba(15, 23, 42, 0.75) !important;
-  color: #e2e8f0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fk-surface-2) !important;
+  color: var(--fk-text) !important;
+  border: 1px solid var(--fk-border-strong) !important;
   backdrop-filter: blur(8px);
   font-weight: 500 !important;
   border-radius: 9999px !important;
@@ -128,24 +196,23 @@ header.header {
 }
 
 .sl-link-button.secondary:hover {
-  background: rgba(30, 41, 59, 0.9) !important;
+  background: var(--fk-surface-hover) !important;
   border-color: rgba(249, 115, 22, 0.5) !important;
-  color: #ffffff !important;
+  color: var(--fk-text) !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.25);
 }
 
 /* --------------------------------------------------------------------------
    Cards & Bento Grid Customization
    -------------------------------------------------------------------------- */
-.card:where(.astro-zhtc3yc6),
 .card {
-  background: rgba(11, 15, 25, 0.65) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--fk-surface) !important;
+  border: 1px solid var(--fk-border) !important;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 1rem !important;
-  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--fk-card-shadow);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
@@ -154,7 +221,7 @@ header.header {
 .card:hover {
   transform: translateY(-4px);
   border-color: rgba(249, 115, 22, 0.4) !important;
-  box-shadow: 0 12px 32px -4px rgba(234, 88, 12, 0.2);
+  box-shadow: var(--fk-card-shadow-hover);
 }
 
 .card::before {
@@ -164,12 +231,12 @@ header.header {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  background: linear-gradient(90deg, transparent, var(--fk-border-shine), transparent);
 }
 
 .card .title {
   font-weight: 700 !important;
-  color: #f8fafc !important;
+  color: var(--fk-text) !important;
   font-size: 1.15rem !important;
 }
 
@@ -177,24 +244,24 @@ header.header {
   background: linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(234, 88, 12, 0.05)) !important;
   border: 1px solid rgba(234, 88, 12, 0.3) !important;
   border-radius: 0.75rem !important;
-  color: #fb923c !important;
+  color: var(--fk-accent-text) !important;
   padding: 0.4rem !important;
 }
 
 .card .body p {
-  color: #94a3b8 !important;
+  color: var(--fk-text-muted) !important;
   line-height: 1.6;
 }
 
 /* --------------------------------------------------------------------------
-   Terminal Box Mockup
+   Terminal Box Mockup (always dark — terminal convention)
    -------------------------------------------------------------------------- */
 .tech-terminal {
   background: #0b0f19;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px -10px rgba(234, 88, 12, 0.15);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.35), 0 0 30px -10px rgba(234, 88, 12, 0.15);
   margin: 2rem 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -234,6 +301,14 @@ header.header {
   line-height: 1.7;
 }
 
+/* Terminal token colors (fixed — terminal is always dark) */
+.tech-terminal-body .t-comment { color: #64748b; }
+.tech-terminal-body .t-prompt { color: #22c55e; }
+.tech-terminal-body .t-cmd { color: #38bdf8; }
+.tech-terminal-body .t-ok { color: #10b981; }
+.tech-terminal-body .t-path { color: #94a3b8; }
+.tech-terminal-body .t-string { color: #fb923c; }
+
 /* --------------------------------------------------------------------------
    High-Tech Architecture Visual Flow
    -------------------------------------------------------------------------- */
@@ -245,8 +320,8 @@ header.header {
 }
 
 .tech-pipeline-node {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--fk-surface-2);
+  border: 1px solid var(--fk-border);
   border-radius: 0.75rem;
   padding: 1.25rem;
   text-align: center;
@@ -259,6 +334,22 @@ header.header {
   box-shadow: 0 0 20px -5px rgba(56, 189, 248, 0.2);
 }
 
+.tech-pipeline-node .node-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tech-pipeline-node .node-title {
+  font-weight: 700;
+  color: var(--fk-text);
+}
+
+.tech-pipeline-node .node-desc {
+  font-size: 0.85rem;
+  color: var(--fk-text-muted);
+  margin-top: 0.25rem;
+}
+
 .tech-badge {
   display: inline-flex;
   align-items: center;
@@ -267,9 +358,34 @@ header.header {
   background: rgba(234, 88, 12, 0.12);
   border: 1px solid rgba(234, 88, 12, 0.3);
   border-radius: 9999px;
-  color: #fb923c;
+  color: var(--fk-accent-text);
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   margin-bottom: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile optimizations
+   -------------------------------------------------------------------------- */
+@media (max-width: 50rem) {
+  .hero {
+    padding: 2.5rem 0.75rem 2rem !important;
+  }
+
+  /* Backdrop blur is a performance drag on low-end mobile devices */
+  .card,
+  .sl-link-button.secondary {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .tech-pipeline {
+    gap: 0.75rem;
+  }
+
+  .tech-terminal-body {
+    padding: 1rem;
+    font-size: 0.8rem;
+  }
 }

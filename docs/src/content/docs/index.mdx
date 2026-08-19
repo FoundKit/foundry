@@ -37,18 +37,18 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span style="color: #64748b;"># Scaffold a new compiled subsystem in seconds</span><br />
-    <span style="color: #22c55e;">➜</span> <span style="color: #38bdf8;">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span style="color: #fb923c;">"Carnival Demo"</span><br />
-    <span style="color: #10b981;">✔</span> Initialized subsystem directory: <span style="color: #94a3b8;">systems/src/carnival_demo/</span><br />
-    <span style="color: #10b981;">✔</span> Bound Auto-CRUD endpoints: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/*</span><br />
-    <span style="color: #10b981;">✔</span> Bound Extension routes: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/ext/*</span><br />
-    <span style="color: #10b981;">✔</span> Isolated Redis cache prefix: <span style="color: #94a3b8;">foundry:carnival_demo:*</span>
+    <span class="t-comment"># Scaffold a new compiled subsystem in seconds</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
+    <span class="t-ok">✔</span> Initialized subsystem directory: <span class="t-path">systems/src/carnival_demo/</span><br />
+    <span class="t-ok">✔</span> Bound Auto-CRUD endpoints: <span class="t-path">/api/v1/s/carnival_demo/*</span><br />
+    <span class="t-ok">✔</span> Bound Extension routes: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span class="t-ok">✔</span> Isolated Redis cache prefix: <span class="t-path">foundry:carnival_demo:*</span>
   </div>
 </div>
 
 ## 🌟 Core Architecture Pillars
 
-<CardGrid stagger>
+<CardGrid>
   <Card title="Multi-Tenant Sub-System Engine" icon="puzzle">
     Run $N$ independent apps, mini-programs, and campaign backends within a single unified Foundry instance with strict tenant data isolation.
   </Card>
@@ -75,23 +75,23 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-pipeline">
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌐</div>
-    <div style="font-weight: 700; color: #f8fafc;">Client Requests</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Admin SPA / Mobile Apps / HTTP Clients</div>
+    <div class="node-icon">🌐</div>
+    <div class="node-title">Client Requests</div>
+    <div class="node-desc">Admin SPA / Mobile Apps / HTTP Clients</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
-    <div style="font-weight: 700; color: #f8fafc;">Axum Routing Engine</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Context Extraction & Topic RBAC</div>
+    <div class="node-icon">⚡</div>
+    <div class="node-title">Axum Routing Engine</div>
+    <div class="node-desc">Context Extraction & Topic RBAC</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚙️</div>
-    <div style="font-weight: 700; color: #f8fafc;">Subsystem Runtime</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Auto-CRUD + Rust Logic + WASM</div>
+    <div class="node-icon">⚙️</div>
+    <div class="node-title">Subsystem Runtime</div>
+    <div class="node-desc">Auto-CRUD + Rust Logic + WASM</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💾</div>
-    <div style="font-weight: 700; color: #f8fafc;">Zero-DDL Storage</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Postgres JSONB/GIN + Redis Cache</div>
+    <div class="node-icon">💾</div>
+    <div class="node-title">Zero-DDL Storage</div>
+    <div class="node-desc">Postgres JSONB/GIN + Redis Cache</div>
   </div>
 </div>

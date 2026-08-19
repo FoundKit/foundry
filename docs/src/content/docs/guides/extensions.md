@@ -9,13 +9,15 @@ Foundry provides a code-first extension engine allowing sub-systems to define **
 
 ---
 
-## 1. Custom Backend Extension APIs (`/api/v1/s/{slug}/ext/*`)
+## 1. Custom Backend Extension APIs
 
-Custom controllers written in Rust (or dynamic WASM modules) are mounted under the dedicated extension path prefix `/:system_slug/ext/*` to eliminate route collisions with dynamic Auto-CRUD models.
+Custom controllers written in Rust (or dynamic WASM modules) are mounted under the dedicated extension path prefix `/api/v1/s/{slug}/ext/*` to eliminate route collisions with dynamic Auto-CRUD models.
 
 ### Example: Writing a Custom Controller in Rust
 
-#### 1. Define Request/Response DTO (`dto/draw_dto.rs`)
+#### 1. Define Request/Response DTO
+
+Define the DTOs in `dto/draw_dto.rs`:
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -34,7 +36,9 @@ pub struct DrawResponse {
 }
 ```
 
-#### 2. Implement Domain Logic Service (`logic/draw_service.rs`)
+#### 2. Implement Domain Logic Service
+
+Implement the domain logic in `logic/draw_service.rs`:
 
 ```rust
 use crate::carnival_demo::dto::{DrawRequest, DrawResponse};
@@ -54,7 +58,9 @@ impl DrawService {
 }
 ```
 
-#### 3. Implement HTTP Handler (`controllers/draw_controller.rs`)
+#### 3. Implement HTTP Handler
+
+Implement the Axum handler in `controllers/draw_controller.rs`:
 
 ```rust
 use axum::{extract::Extension, Json};
@@ -75,7 +81,9 @@ pub async fn handle_draw(
 }
 ```
 
-#### 4. Register Extension Routes (`controllers/mod.rs`)
+#### 4. Register Extension Routes
+
+Register the extension routes in `controllers/mod.rs`:
 
 ```rust
 use axum::{routing::post, Router};
@@ -89,13 +97,13 @@ Endpoint path: `POST /api/v1/s/carnival_demo/ext/draw`
 
 ---
 
-## 2. Custom Subsystem Admin UI Pages (`CustomAdminPageSpec`)
+## 2. Custom Subsystem Admin UI Pages
 
 Subsystems can register custom admin UI views (e.g. interactive dashboards, custom operational tools) that seamlessly integrate into the Foundry Admin UI shell with automatic JWT token and theme injection.
 
-### Specification Schema (`CustomAdminPageSpec`)
+### Specification Schema
 
-Custom pages can be declared in Rust (`SubsystemModule::custom_admin_pages()`) or in `subsystem.json`:
+Custom pages can be declared using the `CustomAdminPageSpec` schema, in Rust (`SubsystemModule::custom_admin_pages()`) or in `subsystem.json`:
 
 ```json
 {
@@ -113,9 +121,9 @@ Custom pages can be declared in Rust (`SubsystemModule::custom_admin_pages()`) o
 }
 ```
 
-### Embedded View SDK Bridge (`window.FoundryBridge`)
+### Embedded View SDK Bridge
 
-Embedded custom admin pages receive initialization messages from the Foundry Admin UI shell:
+Embedded custom admin pages receive initialization messages from the Foundry Admin UI shell via the `window.FoundryBridge` SDK:
 
 ```html
 <!DOCTYPE html>

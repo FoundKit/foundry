@@ -37,18 +37,18 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span style="color: #64748b;"># 数秒内创建并脚手架化一个新的编译型子系统</span><br />
-    <span style="color: #22c55e;">➜</span> <span style="color: #38bdf8;">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span style="color: #fb923c;">"Carnival Demo"</span><br />
-    <span style="color: #10b981;">✔</span> 初始化子系统目录: <span style="color: #94a3b8;">systems/src/carnival_demo/</span><br />
-    <span style="color: #10b981;">✔</span> 自动挂载 Auto-CRUD 动态接口: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/*</span><br />
-    <span style="color: #10b981;">✔</span> 自动挂载原生扩展路由: <span style="color: #94a3b8;">/api/v1/s/carnival_demo/ext/*</span><br />
-    <span style="color: #10b981;">✔</span> 独立分配 Redis 缓存隔离前缀: <span style="color: #94a3b8;">foundry:carnival_demo:*</span>
+    <span class="t-comment"># 数秒内创建并脚手架化一个新的编译型子系统</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
+    <span class="t-ok">✔</span> 初始化子系统目录: <span class="t-path">systems/src/carnival_demo/</span><br />
+    <span class="t-ok">✔</span> 自动挂载 Auto-CRUD 动态接口: <span class="t-path">/api/v1/s/carnival_demo/*</span><br />
+    <span class="t-ok">✔</span> 自动挂载原生扩展路由: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span class="t-ok">✔</span> 独立分配 Redis 缓存隔离前缀: <span class="t-path">foundry:carnival_demo:*</span>
   </div>
 </div>
 
 ## 🌟 核心架构支柱
 
-<CardGrid stagger>
+<CardGrid>
   <Card title="多子系统隔离引擎" icon="puzzle">
     在单个 Foundry 统一实例中同时运行与管理多个独立业务子系统（App、小程序、营销活动后端），保持严格的数据与租户隔离。
   </Card>
@@ -75,23 +75,23 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-pipeline">
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🌐</div>
-    <div style="font-weight: 700; color: #f8fafc;">客户端请求层</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Admin SPA / 小程序 / HTTP 客户端</div>
+    <div class="node-icon">🌐</div>
+    <div class="node-title">客户端请求层</div>
+    <div class="node-desc">Admin SPA / 小程序 / HTTP 客户端</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
-    <div style="font-weight: 700; color: #f8fafc;">Axum 路由引擎</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">上下文提取 & Topic RBAC 鉴权</div>
+    <div class="node-icon">⚡</div>
+    <div class="node-title">Axum 路由引擎</div>
+    <div class="node-desc">上下文提取 & Topic RBAC 鉴权</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚙️</div>
-    <div style="font-weight: 700; color: #f8fafc;">子系统运行时</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Auto-CRUD + Rust 逻辑 + WASM</div>
+    <div class="node-icon">⚙️</div>
+    <div class="node-title">子系统运行时</div>
+    <div class="node-desc">Auto-CRUD + Rust 逻辑 + WASM</div>
   </div>
   <div class="tech-pipeline-node">
-    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💾</div>
-    <div style="font-weight: 700; color: #f8fafc;">Zero-DDL 存储</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">Postgres JSONB/GIN + Redis 缓存</div>
+    <div class="node-icon">💾</div>
+    <div class="node-title">Zero-DDL 存储</div>
+    <div class="node-desc">Postgres JSONB/GIN + Redis 缓存</div>
   </div>
 </div>

@@ -9,13 +9,15 @@ Foundry 提供了 Code-first 优先的扩展引擎，允许子系统定义 **自
 
 ---
 
-## 1. 自定义后端扩展 API (`/api/v1/s/{slug}/ext/*`)
+## 1. 自定义后端扩展 API
 
-使用 Rust 编写的自定义控制器（或动态 WASM 模块）挂载在专用的扩展路径前缀 `/:system_slug/ext/*` 下，避免与动态 Auto-CRUD 模型产生路由冲突。
+使用 Rust 编写的自定义控制器（或动态 WASM 模块）挂载在专用的扩展路径前缀 `/api/v1/s/{slug}/ext/*` 下，避免与动态 Auto-CRUD 模型产生路由冲突。
 
 ### 示例：使用 Rust 编写自定义控制器
 
-#### 1. 定义请求/响应 DTO (`dto/draw_dto.rs`)
+#### 1. 定义请求/响应 DTO
+
+在 `dto/draw_dto.rs` 中定义 DTO 结构：
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -34,7 +36,9 @@ pub struct DrawResponse {
 }
 ```
 
-#### 2. 实现领域业务逻辑服务 (`logic/draw_service.rs`)
+#### 2. 实现领域业务逻辑服务
+
+在 `logic/draw_service.rs` 中实现领域业务逻辑：
 
 ```rust
 use crate::carnival_demo::dto::{DrawRequest, DrawResponse};
@@ -54,7 +58,9 @@ impl DrawService {
 }
 ```
 
-#### 3. 实现 HTTP 处理函数 (`controllers/draw_controller.rs`)
+#### 3. 实现 HTTP 处理函数
+
+在 `controllers/draw_controller.rs` 中实现 Axum 处理函数：
 
 ```rust
 use axum::{extract::Extension, Json};
@@ -75,7 +81,9 @@ pub async fn handle_draw(
 }
 ```
 
-#### 4. 注册扩展路由 (`controllers/mod.rs`)
+#### 4. 注册扩展路由
+
+在 `controllers/mod.rs` 中注册扩展路由：
 
 ```rust
 use axum::{routing::post, Router};
@@ -89,13 +97,13 @@ pub fn build_routes() -> Router {
 
 ---
 
-## 2. 自定义子系统管理后台页面 (`CustomAdminPageSpec`)
+## 2. 自定义子系统管理后台页面
 
 子系统可以注册自定义的管理后台页面（例如可视化仪表盘、运营工具），自动注入 JWT Token 和当前主题色，无缝嵌入 Foundry Admin UI 壳层中。
 
-### 规范声明 (`CustomAdminPageSpec`)
+### 规范声明
 
-可以在 Rust 代码中声明（`SubsystemModule::custom_admin_pages()`）或在 `subsystem.json` 中配置：
+通过 `CustomAdminPageSpec` 规范声明自定义页面，可以在 Rust 代码中声明（`SubsystemModule::custom_admin_pages()`）或在 `subsystem.json` 中配置：
 
 ```json
 {
@@ -113,9 +121,9 @@ pub fn build_routes() -> Router {
 }
 ```
 
-### 嵌入式页面 SDK 桥接 (`window.FoundryBridge`)
+### 嵌入式页面 SDK 桥接
 
-嵌入的自定义管理页面接收来自 Foundry Admin UI 外壳的初始化消息：
+嵌入的自定义管理页面通过 `window.FoundryBridge` SDK 接收来自 Foundry Admin UI 外壳的初始化消息：
 
 ```html
 <!DOCTYPE html>
