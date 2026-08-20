@@ -153,7 +153,6 @@ export function useAppRouter() {
     [],
   );
 
-
   const updateParams = useCallback((newParams: Record<string, any>, replace = true) => {
     setRoute((prev) => {
       const mergedParams: Record<string, any> = { ...prev.params };

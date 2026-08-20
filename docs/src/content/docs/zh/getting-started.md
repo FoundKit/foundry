@@ -5,7 +5,7 @@ description: Foundry 快速上手与本地开发指南。
 
 # Foundry 快速入门
 
-Foundry 是一个基于 Rust、PostgreSQL、Redis 与 React 构建的高性能开源多子系统后端平台。
+Foundry 是一个基于 Rust、PostgreSQL、Redis 与 React 构建的高性能开源多子系统后端平台，支持基础架构与业务子系统完全解耦。
 
 ## 环境要求
 
@@ -26,7 +26,7 @@ docker compose -f docker/docker-compose.yml up -d
 ```
 
 服务端口：
-- PostgreSQL: `localhost:5432`（数据库名: `foundry`, 用户: `postgres`, 密码: `password`）
+- PostgreSQL: `localhost:5432`（数据库名: `foundry`, 用户: `postgres`, 密码: `postgrespassword`）
 - Redis: `localhost:6379`
 
 ---
@@ -36,7 +36,7 @@ docker compose -f docker/docker-compose.yml up -d
 执行基线数据表结构初始化：
 
 ```bash
-psql -h localhost -U postgres -d foundry -f migrations/init.sql
+cargo run --bin foundry-cli -- migrate
 ```
 
 ---
@@ -69,24 +69,36 @@ pnpm --dir apps/admin dev
 
 ---
 
-## 5. 脚手架创建子系统
+## 5. 脚手架创建自包含子系统
 
-使用 `foundry-cli` 快速创建 Monorepo 编译型子系统：
+使用 `foundry-cli` 快速创建包含 API、逻辑、DTO 与自定义后台页面的完整自包含子系统：
 
 ```bash
 cargo run --bin foundry-cli -- system new carnival_demo --name "Carnival Demo"
 ```
 
-或者创建独立的外部仓库子系统：
+或者初始化独立的私有子系统 Git 仓库：
 
 ```bash
-cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Standalone"
+cargo run --bin foundry-cli -- system init-repo ../my-foundry-systems
 ```
+
+---
+
+## 6. 一键合并打包生产产物
+
+使用统一发布脚本合并基座引擎与所有自定义子系统：
+
+```bash
+./scripts/build-release.sh
+```
+
+打包产物将输出至 `dist/release/`，包含独立运行的 `start.sh`、二进制与静态后台资源。
 
 ---
 
 ## 后续阅读
 
-- 阅读 [架构蓝图设计](../architecture/blueprint/) 深入了解 Foundry 核心原理。
+- 阅读 [架构蓝图设计](../architecture/blueprint/) 深入了解 Foundry 解耦架构原理。
 - 阅读 [子系统与扩展开发](../guides/extensions/) 学习如何编写自定义 Rust API 与管理后台页面。
 - 查看 [开发路线图](../roadmap/) 了解功能排期与进度。

@@ -75,7 +75,6 @@ async fn main() -> anyhow::Result<()> {
     // 8. Build Router
     let app = build_router(state);
 
-
     // 9. Bind and Serve
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
     info!("🚀 Foundry Server listening on http://{}", addr);

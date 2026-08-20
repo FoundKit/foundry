@@ -17,7 +17,6 @@ import {
 const ADMIN_API_BASE = '/api/v1/admin';
 const AUTO_API_BASE = '/api/v1';
 
-
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('foundry_token');
   const headers: HeadersInit = {
@@ -73,8 +72,10 @@ export const api = {
     return request<PaginatedResult<SystemItem>>(ADMIN_API_BASE, `/systems${qs}`);
   },
   getSystem: (id: string) => request<SystemItem>(ADMIN_API_BASE, `/systems/${id}`),
-  getSystemBySlug: (systemSlug: string) => request<SystemItem>(ADMIN_API_BASE, `/s/${systemSlug}/details`),
-  getSystemStats: (systemSlug: string) => request<SystemStats>(ADMIN_API_BASE, `/s/${systemSlug}/stats`),
+  getSystemBySlug: (systemSlug: string) =>
+    request<SystemItem>(ADMIN_API_BASE, `/s/${systemSlug}/details`),
+  getSystemStats: (systemSlug: string) =>
+    request<SystemStats>(ADMIN_API_BASE, `/s/${systemSlug}/stats`),
   createSystem: (data: any) =>
     request<SystemItem>(ADMIN_API_BASE, '/systems', {
       method: 'POST',
@@ -107,7 +108,8 @@ export const api = {
     }),
 
   // Models & Fields
-  listModels: (systemSlug: string) => request<ModelItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models`),
+  listModels: (systemSlug: string) =>
+    request<ModelItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models`),
   createModel: (systemSlug: string, data: any) =>
     request<ModelItem>(ADMIN_API_BASE, `/s/${systemSlug}/models`, {
       method: 'POST',
@@ -128,7 +130,10 @@ export const api = {
     params?: { page?: number; page_size?: number },
   ) => {
     const qs = params ? `?page=${params.page || 1}&page_size=${params.page_size || 20}` : '';
-    return request<PaginatedResult<ModelRecordItem>>(AUTO_API_BASE, `/s/${systemSlug}/${modelSlug}${qs}`);
+    return request<PaginatedResult<ModelRecordItem>>(
+      AUTO_API_BASE,
+      `/s/${systemSlug}/${modelSlug}${qs}`,
+    );
   },
   createRecord: (systemSlug: string, modelSlug: string, data: any) =>
     request<ModelRecordItem>(AUTO_API_BASE, `/s/${systemSlug}/${modelSlug}`, {

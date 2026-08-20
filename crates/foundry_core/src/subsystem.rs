@@ -34,4 +34,3 @@ pub trait SubsystemModule: Send + Sync + 'static {
         vec![]
     }
 }
-

@@ -52,7 +52,7 @@ export function CustomAdminPageViewer({
     if (!iframeRef.current || !targetPage) return;
     const token = localStorage.getItem('foundry_token');
     const isDark = document.documentElement.classList.contains('dark');
-    
+
     iframeRef.current.contentWindow?.postMessage(
       {
         type: 'FOUNDRY_INIT',
@@ -107,7 +107,11 @@ export function CustomAdminPageViewer({
   }
 
   // Role access enforcement for custom page
-  if (targetPage.required_role && admin.role !== 'super_admin' && admin.role !== targetPage.required_role) {
+  if (
+    targetPage.required_role &&
+    admin.role !== 'super_admin' &&
+    admin.role !== targetPage.required_role
+  ) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-8 text-center dark:border-amber-900/40 dark:bg-amber-950/20">
         <ShieldAlert className="mx-auto h-10 w-10 text-amber-500" />
@@ -115,7 +119,8 @@ export function CustomAdminPageViewer({
           Access Restricted
         </h3>
         <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-          This custom admin view requires role: <code className="font-bold">{targetPage.required_role}</code>.
+          This custom admin view requires role:{' '}
+          <code className="font-bold">{targetPage.required_role}</code>.
         </p>
       </div>
     );

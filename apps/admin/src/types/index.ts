@@ -71,11 +71,11 @@ export interface RouteState {
   mode: 'platform' | 'subsystem';
   platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs';
   subsystemSlug: string | null;
-  subsystemTab: 'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings' | 'custom';
+  subsystemTab:
+    'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings' | 'custom';
   customPageKey?: string | null;
   params: Record<string, string>;
 }
-
 
 export interface SystemConfigItem {
   id: number;

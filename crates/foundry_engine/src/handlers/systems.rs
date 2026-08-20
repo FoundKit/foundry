@@ -165,4 +165,3 @@ pub async fn list_subsystem_custom_pages_handler(
 
     Ok(Json(ApiResponse::success(pages)))
 }
-

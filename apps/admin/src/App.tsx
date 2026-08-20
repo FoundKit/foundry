@@ -18,7 +18,6 @@ import { AdminProfile, SystemItem } from './types';
 import { useAppRouter } from './utils/router';
 
 export function App() {
-
   const [token, setToken] = useState<string | null>(localStorage.getItem('foundry_token'));
   const [admin, setAdmin] = useState<AdminProfile | null>(null);
   const [systems, setSystems] = useState<SystemItem[]>([]);
@@ -205,7 +204,6 @@ export function App() {
           )}
         </>
       )}
-
 
       {/* 2. Platform Mode */}
       {route.mode === 'platform' && (

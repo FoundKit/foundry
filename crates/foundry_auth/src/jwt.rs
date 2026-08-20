@@ -29,7 +29,9 @@ impl AdminClaims {
 
     /// Super Admin and General Admin have full platform-wide sub-system management rights
     pub fn has_platform_manage_access(&self) -> bool {
-        self.role == "super_admin" || self.role == "admin" || self.allowed_systems.iter().any(|s| s == "*")
+        self.role == "super_admin"
+            || self.role == "admin"
+            || self.allowed_systems.iter().any(|s| s == "*")
     }
 
     /// Only Super Admin can view and manage administrators

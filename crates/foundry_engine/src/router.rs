@@ -11,14 +11,16 @@ use axum::{
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
-
 pub fn build_router(state: AppState) -> Router {
     // 1. Admin Control Plane APIs (/api/v1/admin/*)
     let admin_public_routes = Router::new().route("/auth/login", post(auth::login_handler));
 
     let admin_protected_routes = Router::new()
         .route("/auth/me", get(auth::me_handler))
-        .route("/platform/summary", get(systems::get_platform_summary_handler))
+        .route(
+            "/platform/summary",
+            get(systems::get_platform_summary_handler),
+        )
         .route(
             "/systems",
             get(systems::list_systems_handler).post(systems::create_system_handler),
@@ -102,8 +104,7 @@ pub fn build_router(state: AppState) -> Router {
             sub.slug()
         );
         let sub_router = sub.register_routes(Router::new());
-        custom_ext_api =
-            custom_ext_api.nest_service(&format!("/s/{}/ext", sub.slug()), sub_router);
+        custom_ext_api = custom_ext_api.nest_service(&format!("/s/{}/ext", sub.slug()), sub_router);
     }
 
     // Combine into uniform RESTful API tree (/api/v1)
@@ -118,16 +119,35 @@ pub fn build_router(state: AppState) -> Router {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    Router::new()
+    let mut router = Router::new()
         .nest("/api/v1", api_v1)
         .layer(from_fn_with_state(state.clone(), audit_interceptor))
         .layer(from_fn_with_state(state.clone(), extract_system_context))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(state);
+
+    // If static Admin SPA build exists, serve it under /admin
+    let admin_static_dirs = [
+        std::path::PathBuf::from("static/admin"),
+        std::path::PathBuf::from("apps/admin/dist"),
+        std::path::PathBuf::from("../apps/admin/dist"),
+    ];
+
+    for dir in admin_static_dirs {
+        if dir.exists() {
+            let index_file = dir.join("index.html");
+            if index_file.exists() {
+                let serve_dir = tower_http::services::ServeDir::new(dir.clone())
+                    .not_found_service(tower_http::services::ServeFile::new(index_file));
+                router = router.nest_service("/admin", serve_dir);
+                break;
+            }
+        }
+    }
+
+    router
 }
-
-
 
 async fn health_check() -> &'static str {
     "OK"

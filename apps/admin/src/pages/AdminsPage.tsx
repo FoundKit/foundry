@@ -238,15 +238,9 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               value={role}
               onChange={(e) => setRole(e.target.value as any)}
             >
-              <option value="topic_admin">
-                {t('admins.topic_admin')}
-              </option>
-              <option value="admin">
-                {t('admins.normal_admin')}
-              </option>
-              <option value="super_admin">
-                {t('admins.super_admin')}
-              </option>
+              <option value="topic_admin">{t('admins.topic_admin')}</option>
+              <option value="admin">{t('admins.normal_admin')}</option>
+              <option value="super_admin">{t('admins.super_admin')}</option>
             </select>
           </div>
 

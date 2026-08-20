@@ -12,4 +12,3 @@ pub fn register_subsystems() -> Vec<Box<dyn SubsystemModule>> {
     list.extend(external_list);
     list
 }
-

@@ -18,14 +18,14 @@ fn dummy_app_state() -> AppState {
         .unwrap();
     let jwt = JwtService::new("test_secret_key_1234567890", 24);
     let hooks = HookPipeline::new();
-    AppState::new(pool, None, jwt, hooks)
+    let subsystems = systems::register_subsystems();
+    AppState::new(pool, None, jwt, hooks, subsystems)
 }
 
 #[tokio::test]
 async fn test_health_check_endpoint() {
     let state = dummy_app_state();
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     let response = app
         .oneshot(
@@ -45,8 +45,7 @@ async fn test_health_check_endpoint() {
 #[tokio::test]
 async fn test_subsystem_custom_route_success() {
     let state = dummy_app_state();
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     let payload = serde_json::json!({
         "nickname": "Tester",
@@ -57,7 +56,7 @@ async fn test_subsystem_custom_route_success() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/carnival_demo/participate")
+                .uri("/api/v1/s/carnival_demo/ext/participate")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -78,8 +77,7 @@ async fn test_subsystem_custom_route_success() {
 #[tokio::test]
 async fn test_subsystem_custom_route_validation_error() {
     let state = dummy_app_state();
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     // Invalid nickname length (< 2) and invalid lucky_number (> 100)
     let payload = serde_json::json!({
@@ -91,7 +89,7 @@ async fn test_subsystem_custom_route_validation_error() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/carnival_demo/participate")
+                .uri("/api/v1/s/carnival_demo/ext/participate")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -110,8 +108,7 @@ async fn test_subsystem_custom_route_validation_error() {
 #[tokio::test]
 async fn test_admin_systems_auth_required() {
     let state = dummy_app_state();
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     let response = app
         .oneshot(
@@ -129,8 +126,7 @@ async fn test_admin_systems_auth_required() {
 #[tokio::test]
 async fn test_admin_platform_summary_auth_required() {
     let state = dummy_app_state();
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     let response = app
         .oneshot(
@@ -158,8 +154,7 @@ async fn test_general_admin_forbidden_on_admins_management() {
         )
         .unwrap();
 
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     // General admin (admin) trying to GET /admin/admins should receive 403 FORBIDDEN
     let response = app
@@ -189,8 +184,7 @@ async fn test_topic_admin_forbidden_on_platform_summary() {
         )
         .unwrap();
 
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     // Topic admin trying to GET /admin/platform/summary should receive 403 FORBIDDEN
     let response = app
@@ -220,8 +214,7 @@ async fn test_topic_admin_forbidden_on_creating_subsystems() {
         )
         .unwrap();
 
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     let payload = serde_json::json!({
         "slug": "new_subsystem",
@@ -258,8 +251,7 @@ async fn test_topic_admin_forbidden_on_unauthorized_topic_access() {
         )
         .unwrap();
 
-    let subsystems = systems::register_subsystems();
-    let app = build_router(state, subsystems);
+    let app = build_router(state);
 
     // Topic admin trying to access unauthorized topic details should receive 403 FORBIDDEN
     let response = app

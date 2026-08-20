@@ -5,7 +5,7 @@ description: Quick start guide to running and developing with Foundry.
 
 # Getting Started with Foundry
 
-Foundry is an open-source multi-system backend platform built with Rust, PostgreSQL, Redis, and React.
+Foundry is an open-source multi-system backend platform built with Rust, PostgreSQL, Redis, and React, featuring complete decoupling between platform infrastructure and custom business subsystems.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 Verify the services are running:
 
-- PostgreSQL: `localhost:5432` (database: `foundry`, user: `postgres`, password: `password`)
+- PostgreSQL: `localhost:5432` (database: `foundry`, user: `postgres`, password: `postgrespassword`)
 - Redis: `localhost:6379`
 
 ---
@@ -37,7 +37,7 @@ Verify the services are running:
 Apply the baseline database migration:
 
 ```bash
-psql -h localhost -U postgres -d foundry -f migrations/init.sql
+cargo run --bin foundry-cli -- migrate
 ```
 
 ---
@@ -70,24 +70,34 @@ Open your browser at `http://localhost:5173`. Default Super Admin credentials:
 
 ---
 
-## 5. Scaffold a Subsystem
+## 5. Scaffold a Self-Contained Subsystem
 
-Use the `foundry-cli` tool to scaffold a new compiled subsystem:
+Use the `foundry-cli` tool to scaffold a self-contained subsystem with controllers, logic, DTOs, and custom admin pages:
 
 ```bash
 cargo run --bin foundry-cli -- system new carnival_demo --name "Carnival Demo"
 ```
 
-Or scaffold a standalone external subsystem repository:
+Or initialize a standalone Git repository for team custom subsystems:
 
 ```bash
-cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Standalone"
+cargo run --bin foundry-cli -- system init-repo ../my-foundry-systems
+```
+
+---
+
+## 6. Unified Production Release Packaging
+
+Merge platform infrastructure and all custom subsystems into a release bundle with a single command:
+
+```bash
+./scripts/build-release.sh
 ```
 
 ---
 
 ## Next Steps
 
-- Explore the [Architecture Blueprint](../architecture/blueprint/) to understand Foundry's internals.
+- Explore the [Architecture Blueprint](../architecture/blueprint/) to understand Foundry's decoupled architecture.
 - Read the [Subsystem Extensions Guide](../guides/extensions/) to write custom Rust endpoints and Admin UI pages.
 - Check the [Development Roadmap](../roadmap/) for upcoming features.

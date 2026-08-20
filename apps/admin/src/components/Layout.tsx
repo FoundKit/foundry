@@ -44,9 +44,9 @@ export function Layout({
   onNavigatePlatform,
   onNavigateSubsystem,
   admin,
-  systems,
+  systems: _systems,
   currentSystem,
-  onSelectSystem,
+  onSelectSystem: _onSelectSystem,
   onLogout,
   children,
 }: LayoutProps) {
@@ -55,7 +55,10 @@ export function Layout({
 
   useEffect(() => {
     if (currentSystem?.slug) {
-      api.listCustomPages(currentSystem.slug).then(setCustomPages).catch(() => setCustomPages([]));
+      api
+        .listCustomPages(currentSystem.slug)
+        .then(setCustomPages)
+        .catch(() => setCustomPages([]));
     } else {
       setCustomPages([]);
     }
@@ -66,14 +69,18 @@ export function Layout({
     i18n.changeLanguage(nextLang);
   };
 
-
   const isSubsystemMode = route.mode === 'subsystem' && currentSystem !== null;
 
   // Platform navigation items with strict role gating
   const platformNavItems = [
     { id: 'dashboard' as const, label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'systems' as const, label: t('nav.systems'), icon: Layers },
-    { id: 'audit_logs' as const, label: t('nav.audit_logs'), icon: FileClock, hideForTopicAdmin: true },
+    {
+      id: 'audit_logs' as const,
+      label: t('nav.audit_logs'),
+      icon: FileClock,
+      hideForTopicAdmin: true,
+    },
     { id: 'admins' as const, label: t('nav.admins'), icon: ShieldCheck, superOnly: true },
   ];
 
@@ -247,9 +254,9 @@ export function Layout({
               {/* Subsystem Custom Admin Pages Section */}
               {customPages.length > 0 && (
                 <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-                  <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
+                  <div className="flex items-center justify-between px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     <span>✨ 自定义后台 / Custom Pages</span>
-                    <span className="rounded bg-indigo-100 px-1 py-0.2 text-[9px] text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-mono">
+                    <span className="py-0.2 rounded bg-indigo-100 px-1 font-mono text-[9px] text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                       {customPages.length}
                     </span>
                   </div>
@@ -298,7 +305,6 @@ export function Layout({
                   <span>{t('app.back_to_platform')}</span>
                 </button>
               </div>
-
             </>
           ) : (
             <>

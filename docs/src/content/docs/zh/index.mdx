@@ -6,7 +6,7 @@ head:
 description: 基于统一的 Rust 高性能底座，构建、隔离与扩展独立的多租户后端系统与现代化管理后台。
 template: splash
 hero:
-  tagline: 基于 Rust、Axum 与 React 构建的高性能开源多系统基础设施平台与管理控制中心。
+  tagline: 基于 Rust、Axum 与 React 构建的高性能开源多系统基础设施平台与管理控制中心。基建与业务子系统完全解耦。
   image:
     file: ../../../assets/hero.svg
   actions:
@@ -26,7 +26,7 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-badge not-content">
-  <span>⚡</span> 下一代 Rust 高性能多租户平台
+  <span>⚡</span> 下一代 Rust 高性能多租户平台 · 基建与子系统完全解耦
 </div>
 
 <div class="tech-terminal not-content">
@@ -37,11 +37,13 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># 数秒内创建并脚手架化一个新的编译型子系统</span><br />
+    <span class="t-comment"># 初始化独立私有子系统代码仓库 & 创建自包含子系统</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system init-repo ../my-foundry-systems<br />
+    <span class="t-ok">✔</span> 初始化独立子系统 Git 仓库模板: <span class="t-path">../my-foundry-systems/</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
-    <span class="t-ok">✔</span> 初始化子系统目录: <span class="t-path">systems/src/carnival_demo/</span><br />
-    <span class="t-ok">✔</span> 自动挂载 Auto-CRUD 动态接口: <span class="t-path">/api/v1/s/carnival_demo/*</span><br />
+    <span class="t-ok">✔</span> 初始化自包含子系统 (API + 逻辑 + DTO + 自定义 Admin 页面): <span class="t-path">systems/src/carnival_demo/</span><br />
     <span class="t-ok">✔</span> 自动挂载原生扩展路由: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span class="t-ok">✔</span> 自动挂载自定义后台大屏: <span class="t-path">/api/v1/s/carnival_demo/ext/custom-pages/*</span><br />
     <span class="t-ok">✔</span> 独立分配 Redis 缓存隔离前缀: <span class="t-path">foundry:carnival_demo:*</span>
   </div>
 </div>
@@ -49,8 +51,11 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 ## 🌟 核心架构支柱
 
 <CardGrid>
-  <Card title="多子系统隔离引擎" icon="puzzle">
-    在单个 Foundry 统一实例中同时运行与管理多个独立业务子系统（App、小程序、营销活动后端），保持严格的数据与租户隔离。
+  <Card title="基建与子系统完全解耦" icon="puzzle">
+    平台基础设施与业务子系统代码彻底物理隔离。所有子系统代码可单独存放于专属私有 Git 仓库，平台升级零代码冲突。
+  </Card>
+  <Card title="自包含子系统标准" icon="document">
+    每个子系统目录下自包含其专属的控制器、业务服务、DTO 校验、自定义后台大屏（HTML/React）与元数据清单。
   </Card>
   <Card title="Zero-DDL 动态存储引擎" icon="setting">
     可视化定义系统参数配置与动态数据模型，无需数据库 DDL 迁移、表锁或停机维护。
@@ -58,14 +63,11 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
   <Card title="自动化 RESTful CRUD" icon="rocket">
     为所有动态模型即时生成高性能 RESTful API（`GET`, `POST`, `PUT`, `DELETE`），并支持细粒度公开/鉴权开关。
   </Card>
-  <Card title="Code-First Rust 与 WASM 扩展" icon="laptop">
-    通过原生 Rust Trait 实现极致业务性能，或通过沙箱化 WASM 插件实现零停机动态热加载。
-  </Card>
   <Card title="分级 IAM 与 Topic 范围 RBAC" icon="open-book">
     内置超级管理员（`super_admin`）全局权限，支持为普通管理员精细化划分特定子系统管理权限（`allowed_systems`）。
   </Card>
-  <Card title="非 GET 写操作全量审计追踪" icon="warning">
-    安全第一的中间件体系，自动捕获所有写操作（POST、PUT、PATCH、DELETE、登录）的完整载荷与链路追踪信息。
+  <Card title="一键合并打包发布流水线" icon="laptop">
+    统一构建流水线（`build-release.sh` / Dockerfile），在发布打包时自动将基建与私有子系统合并为单一可执行产物。
   </Card>
 </CardGrid>
 
@@ -87,7 +89,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
   <div class="tech-pipeline-node">
     <div class="node-icon">⚙️</div>
     <div class="node-title">子系统运行时</div>
-    <div class="node-desc">Auto-CRUD + Rust 逻辑 + WASM</div>
+    <div class="node-desc">Auto-CRUD + 自包含 Rust + Admin UI</div>
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">💾</div>

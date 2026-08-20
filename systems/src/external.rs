@@ -56,47 +56,52 @@ impl SubsystemModule for ExternalSubsystemModule {
 /// Discover and load external standalone subsystem directories
 pub fn load_external_subsystems() -> Vec<Box<dyn SubsystemModule>> {
     let mut modules: Vec<Box<dyn SubsystemModule>> = Vec::new();
+    let mut seen_slugs = std::collections::HashSet::new();
 
     let external_dirs = get_external_search_paths();
 
     for dir_path in external_dirs {
-        if !dir_path.exists() || !dir_path.is_dir() {
+        if !dir_path.exists() {
             continue;
         }
 
-        let entries = match fs::read_dir(&dir_path) {
-            Ok(e) => e,
-            Err(err) => {
-                warn!("Failed to read external subsystem dir {:?}: {}", dir_path, err);
-                continue;
+        // Case 1: dir_path itself contains subsystem.json
+        let direct_manifest = dir_path.join("subsystem.json");
+        if direct_manifest.exists() {
+            if let Some(m) = try_load_manifest_module(&dir_path, &direct_manifest)
+                .filter(|m| seen_slugs.insert(m.slug().to_string()))
+            {
+                modules.push(m);
             }
-        };
+            continue;
+        }
 
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
+        // Case 2: dir_path is a parent directory containing multiple subsystem subfolders
+        if dir_path.is_dir() {
+            let entries = match fs::read_dir(&dir_path) {
+                Ok(e) => e,
+                Err(err) => {
+                    warn!(
+                        "Failed to read external subsystem dir {:?}: {}",
+                        dir_path, err
+                    );
+                    continue;
+                }
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_dir() {
+                    continue;
+                }
                 let manifest_path = path.join("subsystem.json");
-                if manifest_path.exists() {
-                    match fs::read_to_string(&manifest_path) {
-                        Ok(content) => match serde_json::from_str::<ExternalSubsystemManifest>(&content) {
-                            Ok(manifest) => {
-                                info!(
-                                    "Loaded external subsystem: {} ({}) from {:?}",
-                                    manifest.display_name, manifest.slug, path
-                                );
-                                modules.push(Box::new(ExternalSubsystemModule {
-                                    manifest,
-                                    root_dir: path,
-                                }));
-                            }
-                            Err(e) => {
-                                warn!("Failed to parse manifest at {:?}: {}", manifest_path, e);
-                            }
-                        },
-                        Err(e) => {
-                            warn!("Failed to read manifest file at {:?}: {}", manifest_path, e);
-                        }
-                    }
+                if !manifest_path.exists() {
+                    continue;
+                }
+                if let Some(m) = try_load_manifest_module(&path, &manifest_path)
+                    .filter(|m| seen_slugs.insert(m.slug().to_string()))
+                {
+                    modules.push(m);
                 }
             }
         }
@@ -105,10 +110,42 @@ pub fn load_external_subsystems() -> Vec<Box<dyn SubsystemModule>> {
     modules
 }
 
+fn try_load_manifest_module(
+    root_dir: &std::path::Path,
+    manifest_path: &std::path::Path,
+) -> Option<Box<dyn SubsystemModule>> {
+    match fs::read_to_string(manifest_path) {
+        Ok(content) => match serde_json::from_str::<ExternalSubsystemManifest>(&content) {
+            Ok(manifest) => {
+                info!(
+                    "Loaded external standalone subsystem: {} ({}) from {:?}",
+                    manifest.display_name, manifest.slug, root_dir
+                );
+                Some(Box::new(ExternalSubsystemModule {
+                    manifest,
+                    root_dir: root_dir.to_path_buf(),
+                }))
+            }
+            Err(e) => {
+                warn!("Failed to parse manifest at {:?}: {}", manifest_path, e);
+                None
+            }
+        },
+        Err(e) => {
+            warn!("Failed to read manifest file at {:?}: {}", manifest_path, e);
+            None
+        }
+    }
+}
+
 fn get_external_search_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if let Ok(env_path) = env::var("FOUNDRY_SYSTEMS_DIR") {
-        paths.push(PathBuf::from(env_path));
+        for p in env_path.split([';', ':']) {
+            if !p.trim().is_empty() {
+                paths.push(PathBuf::from(p.trim()));
+            }
+        }
     }
     // Default search paths in current working directory
     paths.push(PathBuf::from("./external_systems"));

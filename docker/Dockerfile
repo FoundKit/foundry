@@ -38,10 +38,13 @@ COPY --from=backend-builder /app/target/release/foundry-server /usr/local/bin/fo
 COPY --from=backend-builder /app/target/release/foundry-cli /usr/local/bin/foundry-cli
 COPY --from=frontend-builder /app/apps/admin/dist /app/static/admin
 COPY migrations /app/migrations
+COPY systems /app/systems
+COPY external_systems /app/external_systems
 
 ENV PORT=8080
 ENV HOST=0.0.0.0
 ENV RUST_LOG=info
+ENV FOUNDRY_SYSTEMS_DIR=/app/external_systems
 
 EXPOSE 8080
 

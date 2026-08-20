@@ -1,23 +1,68 @@
 ---
 title: 子系统与扩展开发
-description: 使用自定义后端 API、管理后台页面与独立仓库扩展 Foundry。
+description: 使用自定义后端 API、管理后台页面与单一自定义代码仓库扩展 Foundry。
 ---
 
-# 子系统扩展与自定义管理后台指南
+# 子系统扩展与单一自定义代码仓库开发指南
 
-Foundry 提供了 Code-first 优先的扩展引擎，允许子系统定义 **自定义后端 API 接口**、**自定义管理后台页面** 以及 **解耦的独立代码仓库托管**。
+Foundry 提供了 **“平台核心基建 + 统一自定义代码仓库”** 的扩展体系。团队或个人所有的业务子系统（所有自定义接口 + 业务逻辑 + 自定义 Admin 页面 + 清单配置）统一存放在 **一个单独的 Git 仓库** 中，每个子系统是该仓库下的独立目录。
 
 ---
 
-## 1. 自定义后端扩展 API
+## 1. 核心架构：为什么所有子系统放在同一个自定义代码仓库？
 
-使用 Rust 编写的自定义控制器（或动态 WASM 模块）挂载在专用的扩展路径前缀 `/api/v1/s/{slug}/ext/*` 下，避免与动态 Auto-CRUD 模型产生路由冲突。
+```
+[基建开源仓库 foundry] ───(Git Submodule / 目录挂载)───> [统一自定义仓库 foundry-systems]
+         │                                                            │
+    (持续 pull 基座更新)                                     (存放团队所有的子系统)
+   100% 升级 0 冲突!                                         • carnival_demo/
+         │                                                   • vip_mall/
+         │                                                   • order_center/
+         │                                                   • payment_gateway/
+         │                                                            │
+         └─────────────────> 统一发布打包流水线 <──────────────────────┘
+                                         │
+                             (编译为一个生产产物/镜像)
+```
 
-### 示例：使用 Rust 编写自定义控制器
+- **维护成本最低**：使用者只需要维护自己的 **一个** 业务代码仓库，无需为每个子系统单独建仓。
+- **基建升级 0 冲突**：所有的业务定制代码 100% 独立于 `foundry` 基建仓库。当 Foundry 官方发布新版本或安全修复时，直接在基建仓库拉取更新（`git pull upstream main`），绝不产生任何代码冲突。
+- **发布打包一键合并**：在打包阶段，执行构建脚本即可将基座引擎与该自定义仓库中的所有子系统合并编译为一个统一可执行文件或 Docker 镜像。
 
-#### 1. 定义请求/响应 DTO
+---
 
-在 `dto/draw_dto.rs` 中定义 DTO 结构：
+## 2. 自包含子系统目录规范 (Self-Contained Standard)
+
+在自定义代码仓库中，每个子系统目录（如 `carnival_demo/`、`vip_mall/`）完全自包含自身的所有定制资产：
+
+```
+foundry-systems/                     # 统一自定义代码仓库根目录
+├── carnival_demo/                   # 子系统 A (目录完全自包含)
+│   ├── mod.rs                       # [入口] 实现 SubsystemModule Trait，挂载路由与静态资源
+│   ├── subsystem.json               # [清单] 声明子系统元数据与自定义后台大屏
+│   ├── controllers/                 # [表现层] Axum HTTP 控制器 (挂载在 /api/v1/s/:slug/ext/*)
+│   │   ├── mod.rs                   # 导出路由树
+│   │   └── draw_controller.rs       # 处理函数与参数提取
+│   ├── logic/                       # [领域层] 纯业务逻辑、服务与事务处理
+│   │   ├── mod.rs                   # 导出领域服务
+│   │   └── draw_service.rs          # 核心业务规则与持久化调用 (ctx.model / ctx.configs)
+│   ├── dto/                         # [契约层] 请求/响应 DTO 与参数校验约束
+│   │   ├── mod.rs                   # 导出 DTOs
+│   │   └── draw_dto.rs              # 声明式参数校验 (validator)
+│   └── custom_pages/                # [视图层] 自定义管理后台专属页面 (HTML/JS/CSS)
+│       ├── lottery_dashboard.html   # 抽奖大屏可视化
+│       └── wheel_control.html       # 专属调控面板
+├── vip_mall/                        # 子系统 B
+│   └── ...
+└── order_center/                    # 子系统 C
+    └── ...
+```
+
+---
+
+## 3. 编写子系统自定义业务 (三层架构)
+
+### 步骤 1：定义 DTO 与校验 (`dto/draw_dto.rs`)
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -25,20 +70,20 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct DrawRequest {
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1, message = "用户 ID 不能为空"))]
     pub user_id: String,
+    #[validate(range(min = 1, max = 100, message = "幸运数字必须在 1-100 之间"))]
+    pub lucky_number: u32,
 }
 
 #[derive(Debug, Serialize)]
 pub struct DrawResponse {
     pub prize_name: String,
-    pub is_win: bool,
+    pub is_winner: bool,
 }
 ```
 
-#### 2. 实现领域业务逻辑服务
-
-在 `logic/draw_service.rs` 中实现领域业务逻辑：
+### 步骤 2：实现领域业务服务 (`logic/draw_service.rs`)
 
 ```rust
 use crate::carnival_demo::dto::{DrawRequest, DrawResponse};
@@ -50,17 +95,18 @@ pub struct DrawService;
 impl DrawService {
     pub async fn execute(ctx: &SystemContext, req: DrawRequest) -> AppResult<DrawResponse> {
         let configs = ctx.configs();
+        let is_winner = req.lucky_number == 14;
+        let prize_name = if is_winner { "一等奖" } else { "感谢参与" };
+
         Ok(DrawResponse {
-            prize_name: "Grand Prize".to_string(),
-            is_win: true,
+            prize_name: prize_name.to_string(),
+            is_winner,
         })
     }
 }
 ```
 
-#### 3. 实现 HTTP 处理函数
-
-在 `controllers/draw_controller.rs` 中实现 Axum 处理函数：
+### 步骤 3：编写 HTTP 控制器 (`controllers/draw_controller.rs`)
 
 ```rust
 use axum::{extract::Extension, Json};
@@ -81,70 +127,89 @@ pub async fn handle_draw(
 }
 ```
 
-#### 4. 注册扩展路由
-
-在 `controllers/mod.rs` 中注册扩展路由：
+### 步骤 4：挂载路由与静态后台页面 (`mod.rs`)
 
 ```rust
-use axum::{routing::post, Router};
+pub mod controllers;
+pub mod dto;
+pub mod logic;
 
-pub fn build_routes() -> Router {
-    Router::new().route("/draw", post(draw_controller::handle_draw))
+use std::path::PathBuf;
+use axum::Router;
+use foundry_core::SubsystemModule;
+use tower_http::services::ServeDir;
+
+pub struct CarnivalDemoModule;
+
+impl SubsystemModule for CarnivalDemoModule {
+    fn slug(&self) -> &'static str {
+        "carnival_demo"
+    }
+
+    fn display_name(&self) -> &'static str {
+        "Carnival 2026 Demo Subsystem"
+    }
+
+    fn register_routes(&self, router: Router) -> Router {
+        let mut r = router.merge(controllers::build_routes());
+        let possible_dirs = [
+            PathBuf::from("systems/src/carnival_demo/custom_pages"),
+            PathBuf::from("static/custom_pages/carnival_demo"),
+        ];
+        for dir in possible_dirs {
+            if dir.exists() {
+                r = r.nest_service("/custom-pages", ServeDir::new(dir));
+                break;
+            }
+        }
+        r
+    }
+
+    fn custom_admin_pages(&self) -> Vec<foundry_core::CustomAdminPageSpec> {
+        vec![
+            foundry_core::CustomAdminPageSpec {
+                key: "lottery_dashboard".to_string(),
+                title: "抽奖运营大屏".to_string(),
+                icon: "Gift".to_string(),
+                page_type: "iframe".to_string(),
+                entry: "/api/v1/s/carnival_demo/ext/custom-pages/lottery_dashboard.html".to_string(),
+                required_role: None,
+            },
+        ]
+    }
 }
 ```
-
-接口请求路径: `POST /api/v1/s/carnival_demo/ext/draw`
 
 ---
 
-## 2. 自定义子系统管理后台页面
+## 4. 自定义管理后台 UI 与 SDK Bridge
 
-子系统可以注册自定义的管理后台页面（例如可视化仪表盘、运营工具），自动注入 JWT Token 和当前主题色，无缝嵌入 Foundry Admin UI 壳层中。
-
-### 规范声明
-
-通过 `CustomAdminPageSpec` 规范声明自定义页面，可以在 Rust 代码中声明（`SubsystemModule::custom_admin_pages()`）或在 `subsystem.json` 中配置：
-
-```json
-{
-  "slug": "vip_mall",
-  "display_name": "VIP Mall Subsystem",
-  "custom_pages": [
-    {
-      "key": "vip_overview",
-      "title": "VIP 数据看板",
-      "icon": "Crown",
-      "type": "iframe",
-      "entry": "/api/v1/s/vip_mall/ext/custom-pages/overview.html"
-    }
-  ]
-}
-```
-
-### 嵌入式页面 SDK 桥接
-
-嵌入的自定义管理页面通过 `window.FoundryBridge` SDK 接收来自 Foundry Admin UI 外壳的初始化消息：
+每个子系统专属的管理大屏放在 `custom_pages/` 目录下，Foundry Admin UI 外壳会自动将其嵌入在对应子系统的侧边栏与主工作区中：
 
 ```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>VIP 概览</title>
+  <title>抽奖大屏</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="p-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
-  <h1 class="text-xl font-bold">自定义子系统视图</h1>
-  <p id="token-display" class="text-xs font-mono text-slate-500">正在检查认证 Token...</p>
+<body class="p-6 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen">
+  <h1 class="text-xl font-bold">🎁 自定义抽奖控制台</h1>
+  <p id="admin-info" class="text-xs text-slate-500 mt-2">连接中...</p>
 
   <script>
-    // 监听来自 Foundry Admin 外壳的初始化事件
-    window.addEventListener('message', function(event) {
-      if (event.data && event.data.type === 'FOUNDRY_INIT') {
-        const { token, subsystemSlug, admin, theme } = event.data.payload;
-        document.getElementById('token-display').innerText = 'Token: ' + token.substring(0, 20) + '...';
+    let authContext = null;
 
-        if (theme === 'dark') {
+    // 1. 监听外壳发送的初始化上下文 (Token、当前子系统、主题、管理员角色)
+    window.addEventListener('message', function(event) {
+      if (event.data?.type === 'FOUNDRY_INIT') {
+        authContext = event.data.payload;
+        document.getElementById('admin-info').innerText =
+          `当前管理员: ${authContext.admin.username} (${authContext.admin.role})`;
+
+        // 自动适配深色模式
+        if (authContext.theme === 'dark') {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
@@ -152,11 +217,12 @@ pub fn build_routes() -> Router {
       }
     });
 
-    // 调用平台核心 API
-    async function loadConfigs() {
-      const res = await fetch('/api/v1/s/vip_mall/configs');
-      const data = await res.json();
-      console.log(data);
+    // 2. 向外壳发送通知 Toast
+    function notifyParent(msg) {
+      window.parent.postMessage({
+        type: 'FOUNDRY_TOAST',
+        payload: { message: msg, level: 'success' }
+      }, '*');
     }
   </script>
 </body>
@@ -165,20 +231,59 @@ pub fn build_routes() -> Router {
 
 ---
 
-## 3. 独立外部子系统仓库托管
+## 5. 团队统一自定义代码仓库工作流
 
-为了保持核心平台的独立性与整洁，子系统可以托管在独立的 Git 仓库中。
+### 步骤 1：初始化团队单一自定义代码仓库
 
-1. **创建外部子系统脚手架**:
-   ```bash
-   cargo run --bin foundry-cli -- system new-external vip_mall --name "VIP Mall Standalone"
-   ```
-2. **目录结构**:
-   ```
-   external_systems/vip_mall/
-   ├── subsystem.json
-   └── custom_pages/
-       └── overview.html
-   ```
-3. **动态发现与加载**:
-   Foundry 服务在启动时会自动扫描环境变量 `FOUNDRY_SYSTEMS_DIR` 以及 `./external_systems` 目录。
+```bash
+cargo run --bin foundry-cli -- system init-repo ../my-foundry-systems
+```
+
+### 步骤 2：在自定义仓库中管理所有子系统
+
+```bash
+cd ../my-foundry-systems
+# 查看该仓库中已有的子系统
+ls -l
+# 包含 carnival_demo/ vip_mall/ order_center/ 等
+```
+
+### 步骤 3：一键校验所有子系统
+
+```bash
+cargo run --bin foundry-cli -- system validate ../my-foundry-systems
+```
+
+CLI 会自动扫描该自定义仓库下的所有子系统并输出校验状态：
+```
+🔍 Validating unified custom subsystems under: ["../my-foundry-systems"]
+  👉 Found subsystem: 'carnival_demo'
+     • Manifest (subsystem.json): ✅ Present
+     • Custom Pages (custom_pages/): ✅ Present
+     • Display Name: Carnival 2026 Demo
+     • Version: 1.0.0
+  👉 Found subsystem: 'vip_mall'
+     • Manifest (subsystem.json): ✅ Present
+     • Custom Pages (custom_pages/): ✅ Present
+     • Display Name: VIP 尊享商城
+     • Version: 1.0.0
+✅ Validation completed: Found 2 valid subsystem package(s).
+```
+
+---
+
+## 6. 一键合并打包生产产物
+
+在持续集成或生产发布时，只需传入自定义仓库路径，构建流水线即可自动完成所有子系统与基建的合并打包：
+
+```bash
+# 传入自定义代码仓库路径一键打包
+./scripts/build-release.sh --systems-dir ../my-foundry-systems
+```
+
+打包流水线自动完成：
+1. 构建 React Admin SPA (`apps/admin`) 产物。
+2. 汇集自定义仓库中所有子系统的 `custom_pages` 静态后台页面与清单配置。
+3. 编译 release 优化的 Rust 服务端与 CLI 命令行工具。
+4. 输出完整的独立生产发布包至 `dist/release/` 目录。
+

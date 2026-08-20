@@ -6,7 +6,7 @@ head:
 description: Build, isolate, and extend independent multi-tenant systems from a shared high-performance Rust foundation.
 template: splash
 hero:
-  tagline: High-performance, open-source multi-system infrastructure platform & admin control plane built with Rust, Axum, and React.
+  tagline: High-performance, open-source multi-system infrastructure platform & admin control plane built with Rust, Axum, and React. Base infra and subsystems are completely decoupled.
   image:
     file: ../../assets/hero.svg
   actions:
@@ -26,7 +26,7 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-badge not-content">
-  <span>⚡</span> Next-Gen Rust Multi-Tenant Platform
+  <span>⚡</span> Next-Gen Rust Multi-Tenant Platform · Decoupled Subsystem Architecture
 </div>
 
 <div class="tech-terminal not-content">
@@ -37,11 +37,13 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># Scaffold a new compiled subsystem in seconds</span><br />
+    <span class="t-comment"># Initialize standalone subsystem Git repository & scaffold subsystem</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system init-repo ../my-foundry-systems<br />
+    <span class="t-ok">✔</span> Initialized standalone Subsystems Git repo: <span class="t-path">../my-foundry-systems/</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
-    <span class="t-ok">✔</span> Initialized subsystem directory: <span class="t-path">systems/src/carnival_demo/</span><br />
-    <span class="t-ok">✔</span> Bound Auto-CRUD endpoints: <span class="t-path">/api/v1/s/carnival_demo/*</span><br />
-    <span class="t-ok">✔</span> Bound Extension routes: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span class="t-ok">✔</span> Initialized self-contained subsystem (API + Logic + DTO + Custom Admin UI): <span class="t-path">systems/src/carnival_demo/</span><br />
+    <span class="t-ok">✔</span> Bound Custom Extension routes: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
+    <span class="t-ok">✔</span> Bound Custom Admin Pages: <span class="t-path">/api/v1/s/carnival_demo/ext/custom-pages/*</span><br />
     <span class="t-ok">✔</span> Isolated Redis cache prefix: <span class="t-path">foundry:carnival_demo:*</span>
   </div>
 </div>
@@ -49,23 +51,23 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 ## 🌟 Core Architecture Pillars
 
 <CardGrid>
-  <Card title="Multi-Tenant Sub-System Engine" icon="puzzle">
-    Run $N$ independent apps, mini-programs, and campaign backends within a single unified Foundry instance with strict tenant data isolation.
+  <Card title="Base & Subsystems Complete Decoupling" icon="puzzle">
+    Platform infrastructure is completely decoupled from custom business subsystems. Subsystem custom code lives in a separate Git repository with zero upstream merge conflicts.
+  </Card>
+  <Card title="Self-Contained Subsystem Standard" icon="document">
+    Each subsystem folder self-contains its custom API controllers, business services, DTO validation, custom admin pages (HTML/React), and manifest.
   </Card>
   <Card title="Zero-DDL Dynamic Storage" icon="setting">
-    Visually define system configurations and dynamic data models without database DDL migrations, locks, or downtime.
+    Visually define system configs and dynamic data models without database DDL migrations, locks, or downtime.
   </Card>
   <Card title="Automatic RESTful CRUD" icon="rocket">
     Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access switches.
   </Card>
-  <Card title="Code-First Rust & WASM Extensions" icon="laptop">
-    Extend subsystems with native high-performance Rust traits or sandboxed dynamic WASM plugins without restarting the server engine.
-  </Card>
   <Card title="Hierarchical IAM & Topic RBAC" icon="open-book">
-    Super Admin (`super_admin`) with omnipotent privileges, and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
+    Super Admin (`super_admin`) with universal privileges, and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
   </Card>
-  <Card title="Non-GET Operation Audit Trail" icon="warning">
-    Security-first middleware capturing all state-mutating requests (POST, PUT, PATCH, DELETE, login) with full payloads and tracing metadata.
+  <Card title="Unified Release Packaging Pipeline" icon="laptop">
+    Automated build pipeline (`build-release.sh` / Dockerfile) merging base infra and custom subsystems into a single production binary or container.
   </Card>
 </CardGrid>
 
@@ -87,7 +89,7 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
   <div class="tech-pipeline-node">
     <div class="node-icon">⚙️</div>
     <div class="node-title">Subsystem Runtime</div>
-    <div class="node-desc">Auto-CRUD + Rust Logic + WASM</div>
+    <div class="node-desc">Auto-CRUD + Self-Contained Rust + Admin UI</div>
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">💾</div>
