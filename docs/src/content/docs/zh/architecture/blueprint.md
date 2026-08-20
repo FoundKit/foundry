@@ -19,38 +19,41 @@ description: Foundry 多系统多租户后端平台完整架构设计与蓝图�
 
 与传统的单项目 BaaS 方案（如 Strapi, Directus, PocketBase 或 Supabase）不同，**Foundry 从一开始就以 Monorepo 架构为核心，支持在单一统一基座上管理多个完全独立的业务子系统。**
 
-```
-+-------------------------------------------------------------------------------------------------------+
-|                                        FOUNDRY 平台生态架构                                           |
-|                                                                                                       |
-|  +--------------------------------+  +-------------------------------------------------------------+  |
-|  |     Foundry Admin UI (SPA)     |  |         客户端调用层 (REST-First & OpenAPI-Native)          |  |
-|  |  - 可视化系统构建器            |  |  - 标准 HTTP 客户端 (Fetch, Axios, Ktor, cURL 等)           |  |
-|  |  - Zero-DDL 动态数据模型       |  |  - 基于 OpenAPI 3.0 规范生成的类型安全客户端                |  |
-|  |  - 管理员与主题权限 RBAC       |  |  - 子系统自定义业务 API                                     |  |
-|  |  - 非 GET 操作审计日志面板     |  |                                                             |  |
-|  +---------------+----------------+  +------------------------------+------------------------------+  |
-|                  |                                                  |                                 |
-|                  +------------------------+-------------------------+                                 |
-|                                           | 标准 RESTful / OpenAPI (Utoipa)                           |
-|                                           v                                                           |
-|  +-------------------------------------------------------------------------------------------------+  |
-|  |                              Foundry 服务端引擎 (Rust Monorepo)                                 |  |
-|  |                                                                                                 |  |
-|  |  +--------------------+  +--------------------+  +--------------------+  +-------------------+  |  |
-|  |  | 子系统 Alpha       |  | 子系统 Beta        |  | 子系统 Gamma       |  | 自定义后端 N      |  |  |
-|  |  | (参数配置, 数据模型|  | (参数配置, 数据模型|  | (自定义逻辑, DTO,  |  | (自包含业务逻辑)  |  |  |
-|  |  |  Auto-CRUD 接口)   |  |  Auto-CRUD 接口)   |  |  领域模型)         |  |                   |  |  |
-|  |  +--------------------+  +--------------------+  +--------------------+  +-------------------+  |  |
-|  |                                                                                                 |  |
-|  |  +-------------------------------------------------------------------------------------------+  |  |
-|  |  |                               平台核心基础设施与通用服务                                  |  |  |
-|  |  |  - 多租户路由器 (`/api/v1/s/:slug`)         - Zero-DDL 动态存储引擎 (Postgres JSONB/GIN) |  |  |
-|  |  |  - 管理员 IAM 与 Topic 范围 RBAC           - 非 GET 写入操作审计拦截器                   |  |  |
-|  |  |  - Wasmtime 沙箱与 Trait 扩展钩子          - 编译期 OpenAPI 3.0 规范聚合器               |  |  |
-|  |  +-------------------------------------------------------------------------------------------+  |  |
-|  +-------------------------------------------------------------------------------------------------+  |
-+-------------------------------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph Presentation["🌐 接入与交互层 (Presentation & Client Layer)"]
+        direction LR
+        AdminUI["🖥️ Foundry Admin UI (React SPA)<br/>• 可视化系统构建器<br/>• Zero-DDL 动态数据模型<br/>• 管理员与主题权限 RBAC<br/>• 非 GET 写入操作审计日志"]
+        Clients["📱 客户端调用层 (REST-First / OpenAPI)<br/>• 标准 HTTP 客户端 (Fetch / Axios / cURL)<br/>• OpenAPI 3.0 类型安全代码生成<br/>• 子系统业务应用 / 小程序 / 第三方调用"]
+    end
+
+    AdminUI -->|"标准 RESTful / OpenAPI (Utoipa)"| Router
+    Clients -->|"标准 RESTful / OpenAPI (Utoipa)"| Router
+
+    subgraph ServerEngine["⚡ Foundry 服务端引擎 (Rust Monorepo)"]
+        direction TB
+        Router["🔀 Axum 多系统动态分发路由器<br/>/api/v1/admin/* & /api/v1/s/:system_slug/*"]
+
+        subgraph Subsystems["📦 独立多租户子系统集群 (Subsystems Monorepo Workspace)"]
+            direction LR
+            SubAlpha["子系统 Alpha<br/>• 参数配置<br/>• 动态数据模型<br/>• Auto-CRUD 接口"]
+            SubBeta["子系统 Beta<br/>• 参数配置<br/>• 动态数据模型<br/>• Auto-CRUD 接口"]
+            SubGamma["子系统 Gamma<br/>• 自定义 Rust 控制器<br/>• 领域服务与 DTO 校验<br/>• 原生扩展路由"]
+            SubN["自定义后端 N<br/>• 自包含业务逻辑<br/>• WASM 沙箱插件<br/>• 专属数据契约"]
+        end
+
+        Router --> Subsystems
+
+        subgraph CoreInfra["🛠️ 平台核心基础设施与通用服务 (crates/*)"]
+            direction LR
+            Storage["💾 Zero-DDL 存储引擎<br/>(Postgres JSONB/GIN)"]
+            Auth["🛡️ 管理员 IAM 与 Topic RBAC<br/>(Argon2id + JWT)"]
+            Audit["📋 全量写操作审计拦截器<br/>(Non-GET Auditing)"]
+            Extension["🔌 Wasmtime 沙箱 & Trait 钩子<br/>(Dynamic Plugin Engine)"]
+        end
+
+        Subsystems -.->|"依赖与调用"| CoreInfra
+    end
 ```
 
 ### 1.2 核心价值
@@ -107,18 +110,28 @@ foundry/                         # Monorepo 根目录
    - Redis 缓存隔离前缀：`foundry:{system_slug}:*`
    - 代码目录映射与 OpenAPI 分组
 
-```
-                        [ 客户端请求 ]
-                              │
-                  ┌───────────┴───────────┐
-                  ▼                       ▼
-        Path: /api/v1/s/:system_slug/...  Header: X-Foundry-System-ID
-                  │                       │
-                  └───────────┬───────────┘
-                              ▼
-                  [ Axum SystemContext ]
-                              │
-  ┌───────────────────────────┼───────────────────────────┐
-  ▼                           ▼                           ▼
-[ Auto-CRUD 动态接口 ]    [ 自定义扩展 API ]     [ 权限守卫 RBAC ]
+```mermaid
+flowchart TD
+    Req["🌐 传入客户端请求 (Incoming HTTP Request)"]
+    
+    Req -->|"URL 路径匹配"| Path["路径标识: /api/v1/s/:system_slug/..."]
+    Req -->|"请求头匹配"| Header["专属请求头: X-Foundry-System-ID"]
+
+    Path --> Extract["⚙️ Axum 提取中间件 (SystemContext Extractor)"]
+    Header --> Extract
+
+    Extract --> Ctx["📦 构造 SystemContext 上下文<br/>(system_id, system_slug, db_pool, redis_pool)"]
+
+    Ctx --> Router{"🔀 多系统分发与校验路由"}
+
+    Router -->|"1. 鉴权守卫"| RBAC["🛡️ Topic RBAC 鉴权拦截<br/>校验 allowed_systems 访问权限"]
+    Router -->|"2. 低代码模型"| AutoCRUD["⚡ Auto-CRUD 动态接口<br/>(动态表单、模型增删改查)"]
+    Router -->|"3. 自定义代码"| CustomAPI["🦀 原生 Rust 扩展路由<br/>(systems/src/:slug/controllers)"]
+
+    RBAC --> Exec["🚀 业务执行与存储持久化"]
+    AutoCRUD --> Exec
+    CustomAPI --> Exec
+
+    Exec --> PG[("🗄️ PostgreSQL 数据隔离<br/>model_records / system_configs<br/>按 system_id 物理与逻辑过滤")]
+    Exec --> Redis[("⚡ Redis 缓存隔离前缀<br/>foundry:{system_slug}:*")]
 ```

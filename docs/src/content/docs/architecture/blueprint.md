@@ -19,38 +19,41 @@ description: Complete architecture design and blueprint for Foundry multi-tenant
 
 Unlike single-project BaaS solutions (such as Strapi, Directus, PocketBase, or Supabase) which deploy one instance per content model scope, **Foundry is built from the ground up as a Monorepo product to manage multiple independent systems from a unified foundation.**
 
-```
-+-------------------------------------------------------------------------------------------------------+
-|                                        FOUNDRY PLATFORM ECOSYSTEM                                     |
-|                                                                                                       |
-|  +--------------------------------+  +-------------------------------------------------------------+  |
-|  |     Foundry Admin UI (SPA)     |  |         Client Layer (REST-First & OpenAPI-Native)          |  |
-|  |  - Visual System Builder       |  |  - Standard HTTP Clients (Fetch, Axios, Ktor, cURL, etc.)   |  |
-|  |  - Zero-DDL Dynamic Models     |  |  - Type-Safe Generated Clients via OpenAPI 3.0 Specs        |  |
-|  |  - Admin & Topic RBAC Manager  |  |  - Sub-System Custom Domain APIs                            |  |
-|  |  - Non-GET Audit Log Viewer    |  |                                                             |  |
-|  +---------------+----------------+  +------------------------------+------------------------------+  |
-|                  |                                                  |                                 |
-|                  +------------------------+-------------------------+                                 |
-|                                           | Standard RESTful / OpenAPI (Utoipa)                       |
-|                                           v                                                           |
-|  +-------------------------------------------------------------------------------------------------+  |
-|  |                              Foundry Server Engine (Rust Monorepo)                              |  |
-|  |                                                                                                 |  |
-|  |  +--------------------+  +--------------------+  +--------------------+  +-------------------+  |  |
-|  |  | Sub-System Alpha   |  | Sub-System Beta    |  | Sub-System Gamma   |  | Custom Backend N  |  |  |
-|  |  | (Configs, Models,  |  | (Configs, Models,  |  | (Custom Logic, DTO,|  | (Self-Contained   |  |  |
-|  |  |  Auto-CRUD APIs)   |  |  Auto-CRUD APIs)   |  |  Domain Models)    |  |  Business Logic)  |  |  |
-|  |  +--------------------+  +--------------------+  +--------------------+  +-------------------+  |  |
-|  |                                                                                                 |  |
-|  |  +-------------------------------------------------------------------------------------------+  |  |
-|  |  |                            Core Platform Infrastructure Services                          |  |  |
-|  |  |  - Multi-Tenant Router (`/api/v1/s/:slug`)   - Zero-DDL Storage Engine (Postgres JSONB/GIN)|  |  |
-|  |  |  - Admin IAM & Topic-Scoped RBAC             - Non-GET Write Operation Audit Interceptor   |  |  |
-|  |  |  - Wasmtime Dynamic Sandbox & Trait Hooks    - Compile-Time OpenAPI 3.0 Aggregator         |  |  |
-|  |  +-------------------------------------------------------------------------------------------+  |  |
-|  +-------------------------------------------------------------------------------------------------+  |
-+-------------------------------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph Presentation["🌐 Presentation & Client Layer"]
+        direction LR
+        AdminUI["🖥️ Foundry Admin UI (React SPA)<br/>• Visual System Builder<br/>• Zero-DDL Dynamic Models<br/>• Admin & Topic RBAC Manager<br/>• Non-GET Audit Log Viewer"]
+        Clients["📱 Client Layer (REST-First / OpenAPI)<br/>• Standard HTTP Clients (Fetch / Axios / cURL)<br/>• Type-Safe Clients via OpenAPI 3.0<br/>• Subsystem Custom Domain APIs / Apps"]
+    end
+
+    AdminUI -->|"Standard RESTful / OpenAPI (Utoipa)"| Router
+    Clients -->|"Standard RESTful / OpenAPI (Utoipa)"| Router
+
+    subgraph ServerEngine["⚡ Foundry Server Engine (Rust Monorepo)"]
+        direction TB
+        Router["🔀 Axum Multi-System Dynamic Router<br/>/api/v1/admin/* & /api/v1/s/:system_slug/*"]
+
+        subgraph Subsystems["📦 Multi-Tenant Subsystems Workspace"]
+            direction LR
+            SubAlpha["Subsystem Alpha<br/>• System Configs<br/>• Dynamic Models<br/>• Auto-CRUD APIs"]
+            SubBeta["Subsystem Beta<br/>• System Configs<br/>• Dynamic Models<br/>• Auto-CRUD APIs"]
+            SubGamma["Subsystem Gamma<br/>• Custom Rust Controller<br/>• Domain Logic & DTO<br/>• Extension Routes"]
+            SubN["Custom Backend N<br/>• Domain Logic<br/>• WASM Plugins<br/>• Isolated Schemas"]
+        end
+
+        Router --> Subsystems
+
+        subgraph CoreInfra["🛠️ Core Platform Infrastructure & Crates"]
+            direction LR
+            Storage["💾 Zero-DDL Storage Engine<br/>(Postgres JSONB/GIN)"]
+            Auth["🛡️ Admin IAM & Topic RBAC<br/>(Argon2id + JWT)"]
+            Audit["📋 Non-GET Audit Interceptor<br/>(State Mutation Logs)"]
+            Extension["🔌 Wasmtime Sandbox & Traits<br/>(Dynamic Plugin Pipeline)"]
+        end
+
+        Subsystems -.->|"Invoke & Depend"| CoreInfra
+    end
 ```
 
 ### 1.2 Core Value Propositions
@@ -149,30 +152,30 @@ To ensure reliable multi-tenant isolation, automated route mounting, code organi
      - **Observability / Tracing**: Structured logging, audit trails, and OpenTelemetry traces automatically attach `system_slug`.
 
 
-```
-                        [ Incoming Request ]
-                                 │
-                     ┌───────────┴───────────┐
-                     ▼                       ▼
-           Path: /api/v1/s/:system_slug/...  Header: X-Foundry-System-ID
-                     │                       │
-                     └───────────┬───────────┘
-                                 ▼
-                     [ Axum SystemContext ]
-                                 │
-     ┌───────────────────────────┼───────────────────────────┐
-     ▼                           ▼                           ▼
-[ Auto-CRUD Routes ]   [ Custom System Handlers ]   [ Topic RBAC / Guard ]
-(Dynamic Schema DB)    (systems/<system_slug>/...)    (allowed_systems check)
-     │                           │                           │
-     └───────────────────────────┼───────────────────────────┘
-                                 ▼
-                    [ Storage / Query Execution ]
-                                 │
-                 ┌───────────────┴───────────────┐
-                 ▼                               ▼
-       PostgreSQL Records / Configs       System Redis Namespace
-       (`model_records`/`system_configs`) (e.g., `foundry:alpha:*`)
+```mermaid
+flowchart TD
+    Req["🌐 Incoming Client Request"]
+    
+    Req -->|"URL Path Match"| Path["Path Slug: /api/v1/s/:system_slug/..."]
+    Req -->|"Header Match"| Header["Custom Header: X-Foundry-System-ID"]
+
+    Path --> Extract["⚙️ Axum SystemContext Extractor"]
+    Header --> Extract
+
+    Extract --> Ctx["📦 Construct SystemContext<br/>(system_id, system_slug, db_pool, redis_pool)"]
+
+    Ctx --> Router{"🔀 Multi-System Dispatcher"}
+
+    Router -->|"1. Permission Guard"| RBAC["🛡️ Topic RBAC Guard<br/>(allowed_systems check)"]
+    Router -->|"2. Low-Code Schema"| AutoCRUD["⚡ Auto-CRUD Routes<br/>(Dynamic Schema DB)"]
+    Router -->|"3. Custom Rust Handlers"| CustomAPI["🦀 Custom System Handlers<br/>(systems/src/:slug/controllers)"]
+
+    RBAC --> Exec["🚀 Storage & Query Execution Layer"]
+    AutoCRUD --> Exec
+    CustomAPI --> Exec
+
+    Exec --> PG[("🗄️ PostgreSQL Records / Configs<br/>(model_records / system_configs)")]
+    Exec --> Redis[("⚡ System Redis Cache Namespace<br/>(foundry:{system_slug}:*)")]
 ```
 
 ---
@@ -187,22 +190,32 @@ In enterprise production environments, applications operate under strict DBA gov
 - **One-Time Initialization**: All platform tables are deployed once via standard pre-audited DDL script ([`migrations/init.sql`](file:///home/panhy/src/foundkit/foundry/migrations/init.sql)).
 - **Zero-DDL Runtime Agility**: Administrators and developers can create unlimited sub-systems, models, and custom fields in the Admin UI without running any database DDL or requiring DBA intervention.
 
-```
-+───────────────────────────────────────────────────────────────────────────────────────────+
-|                           FOUNDRY ZERO-DDL STORAGE RUNTIME                                |
-|                                                                                           |
-|  [ 1. System Configs (Lightweight System Properties) ]                                    |
-|    └── `system_configs`: Key-Value config properties (banner, rules, times, toggles)      |
-|                                                                                           |
-|  [ 2. Business Data Models (Multi-Record Structured Data) ]                               |
-|    ├── `models` & `model_fields`: Schema metadata & form widget specifications            |
-|    └── `model_records`: Multi-tenant JSONB record storage + GIN Inverted Indexing         |
-|                                                                                           |
-|  [ Access Layer (Auto-CRUD & Programmatic ORM) ]                                          |
-|    ├── Configs REST API: `GET /api/v1/s/{slug}/configs` & `PUT /api/v1/s/{slug}/configs`   |
-|    ├── Auto-CRUD REST API: `/api/v1/s/{slug}/{model_slug}` (List, Detail, Create, Update) |
-|    └── Rust Logic: `ctx.configs()` & `ctx.model("{model_slug}")`                          |
-+───────────────────────────────────────────────────────────────────────────────────────────+
+```mermaid
+flowchart TD
+    subgraph StorageRuntime["💾 Foundry Zero-DDL Storage Runtime"]
+        direction TB
+        
+        subgraph Configs["1. System Configs (Lightweight Properties)"]
+            SysConf["system_configs: Key-Value JSONB properties<br/>(banner, rules, times, toggles)"]
+        end
+
+        subgraph Models["2. Business Data Models (Multi-Record Structured Data)"]
+            Meta["models & model_fields: Schema metadata & widget specs"]
+            Records["model_records: Multi-tenant JSONB record storage + GIN indexing"]
+            Meta --> Records
+        end
+
+        subgraph Access["Access Layer (Auto-CRUD & Programmatic ORM)"]
+            ConfAPI["Configs API: GET/PUT /api/v1/s/{slug}/configs"]
+            CRUDAPI["Auto-CRUD API: /api/v1/s/{slug}/{model_slug}"]
+            RustORM["Rust Logic: ctx.configs() & ctx.model('{slug}')"]
+        end
+
+        Configs -.-> ConfAPI
+        Configs -.-> RustORM
+        Models -.-> CRUDAPI
+        Models -.-> RustORM
+    end
 ```
 
 ---
@@ -211,17 +224,13 @@ In enterprise production environments, applications operate under strict DBA gov
 
 Foundry completely separates lightweight topic configurations from multi-record business data entities:
 
-```
-                                  [ Sub-System Storage ]
-                                             │
-                   ┌─────────────────────────┴─────────────────────────┐
-                   ▼                                                   ▼
-     [ 1. System Configs ]                               [ 2. Business Data Models ]
-     - Global lightweight config properties              - Independent multi-record business entities
-     - A handful of keys per sub-system                  - Stores thousands of structured rows
-     - Physical table: `system_configs`                  - Physical tables: `models` + `model_fields` + `model_records`
-     - API: Aggregated into single JSON object           - API: Standard Auto-CRUD (pagination/filters/sorting)
-       `GET/PUT /api/v1/s/{slug}/configs`                  `GET/POST/PUT/DELETE /api/v1/s/{slug}/{model}`
+```mermaid
+flowchart TD
+    Root["📦 Sub-System Storage"]
+
+    Root --> Configs["⚙️ 1. System Configs<br/>• Global lightweight config properties<br/>• A handful of keys per sub-system<br/>• Physical table: system_configs<br/>• API: Aggregated JSON (GET/PUT /configs)"]
+    
+    Root --> Models["📊 2. Business Data Models<br/>• Independent multi-record business entities<br/>• Stores thousands of structured rows<br/>• Physical tables: models + model_fields + model_records<br/>• API: Standard Auto-CRUD (GET/POST/PUT/DELETE /{model})"]
 ```
 
 ##### 1. System Configs
@@ -311,26 +320,23 @@ let banner = ctx.configs().get_string("banner_image").await?;
 
 Foundry implements an enterprise-grade administrative identity and audit system focused on security, tenant boundary enforcement, and complete state mutation tracking.
 
-```
-+───────────────────────────────────────────────────────────────────────────────────────────+
-|                         ADMIN IAM & NON-GET AUDIT SYSTEM ARCHITECTURE                     |
-|                                                                                           |
-|  [ Admin IAM & Three-Tier RBAC (`admins`) ]                                               |
-|    ├── 1. Super Admin (`role: super_admin`, `allowed_systems: ["*"]`)                      |
-|    │   └── Omnipotent platform privileges: Manage all systems, manage admins & IAM scopes  |
-|    ├── 2. General Admin (`role: admin`, `allowed_systems: ["*"]`)                          |
-|    │   └── Platform privileges across all systems, configs & audits (EXCEPT Admin IAM)    |
-|    └── 3. Topic Admin (`role: topic_admin`, `allowed_systems: ["carnival_2026", ...]`)    |
-|        └── Strictly scoped privileges: Overview partial view & assigned topics ONLY       |
-|                                                                                           |
-|  [ Non-GET Audit Interceptor Middleware (`audit_logs`) ]                                  |
-|    ├── Intercepts: All non-GET requests (POST, PUT, PATCH, DELETE, login)                |
-|    ├── Discrete Storage: headers, query_params, body_params stored in separate columns   |
-|    ├── Captures: admin_id, username, system_slug, method, path, action_name,             |
-|    │             headers, query_params, body_params, ip_address, ua, status, duration    |
-|    └── Dynamic Action Mapping: Flexible code-level route-to-action dictionary             |
-|        (e.g., `/admin/auth/login` -> "管理员登录", `/admin/s/:slug/configs` -> "修改专题配置值") |
-+───────────────────────────────────────────────────────────────────────────────────────────+
+```mermaid
+flowchart TD
+    subgraph IAM["🛡️ Admin IAM & Three-Tier RBAC (admins table)"]
+        direction TB
+        SuperAdmin["1. Super Admin (role: super_admin)<br/>allowed_systems: ['*']<br/>Omnipotent platform privileges & Admin IAM management"]
+        Admin["2. General Admin (role: admin)<br/>allowed_systems: ['*']<br/>All systems, configs & audits (except Admin IAM)"]
+        TopicAdmin["3. Topic Admin (role: topic_admin)<br/>allowed_systems: ['carnival_2026', ...]<br/>Strictly scoped to assigned topics only"]
+    end
+
+    subgraph Auditing["📋 Non-GET Audit Interceptor Middleware (audit_logs table)"]
+        direction TB
+        Intercept["Intercepts all write requests (POST, PUT, PATCH, DELETE, login)"]
+        StorageModel["Discrete Raw Storage:<br/>• headers (JSONB)<br/>• query_params (VARCHAR 2048)<br/>• body_params (Raw TEXT)"]
+        ActionMapping["Dynamic Action Mapping in Code:<br/>e.g. /admin/auth/login ➔ 'Admin Login'"]
+        Intercept --> StorageModel
+        Intercept --> ActionMapping
+    end
 ```
 
 #### 3.3.1 Admin IAM & Three-Tier Role Authorization Matrix
@@ -395,18 +401,20 @@ To guarantee strict compliance, security forensics, and operational traceability
 2. **Discrete & Raw Parameter Storage Model (`audit_logs`)**:
    Standard HTTP requests contain three distinct parameter dimensions. To accommodate non-JSON bodies (form-urlencoded, raw text, XML, etc.) and preserve original URL query strings without lossy transformations, query parameters and request bodies are stored in their **raw original text format**:
 
-   ```
-   [ Incoming Admin Non-GET Request ]
-   e.g. POST /admin/s/carnival_2026/users?page=1&limit=10
-        -H 'Content-Type: application/json' -H 'X-Request-ID: req_123'
-        -d '{"name": "Alice", "age": 30, "email": "alice@example.com"}'
-                    │
-                    ▼
-   [ audit_logs Table Record ]
-   ├── `headers`      : {"Content-Type": "application/json", "X-Request-ID": "req_123", ...} (JSONB)
-   ├── `query_params` : "page=1&limit=10" (VARCHAR(2048))
-   └── `body_params`  : "{\"name\": \"Alice\", \"age\": 30, \"email\": \"alice@example.com\"}" (Raw TEXT)
-   ```
+```mermaid
+flowchart LR
+    Req["📥 Incoming Admin Non-GET Request<br/>POST /admin/s/carnival_2026/users?page=1<br/>Header: Content-Type: application/json<br/>Body: {'name': 'Alice', 'age': 30}"]
+    
+    Req --> Intercept["⚙️ Audit Middleware"]
+    
+    Intercept --> H["headers (JSONB)<br/>{'Content-Type': 'application/json'}"]
+    Intercept --> Q["query_params (VARCHAR 2048)<br/>'page=1'"]
+    Intercept --> B["body_params (Raw TEXT)<br/>'{\&quot;name\&quot;: \&quot;Alice\&quot;, \&quot;age\&quot;: 30}'"]
+
+    H --> DB[("🗄️ audit_logs Table Record")]
+    Q --> DB
+    B --> DB
+```
 
    - `admin_id`: UUID of the acting administrator (nullable for login attempts prior to authentication).
    - `admin_username`: Username snapshot (`VARCHAR(48)`) for rapid rendering without repetitive joins.
@@ -559,27 +567,17 @@ foundry-cli system add logic <system_slug> <service_name>
 
 Foundry enables runtime and non-compiled customization through two complementary extension mechanisms:
 
-```
-                          [ Model Mutation Request ]
-                                       │
-                                       ▼
-                         [ Before Mutation Hook Pipeline ]
-                                       │
-                  ┌────────────────────┴────────────────────┐
-                  ▼                                         ▼
-      [ Native Rust Trait Plugin ]               [ Sandboxed WASM Plugin ]
-      - In-process execution                     - Out-of-process memory sandbox
-      - Zero overhead performance                - Hot-reloadable at runtime
-      - Low-level system access                  - Safe user/tenant customization
-                  │                                         │
-                  └────────────────────┬────────────────────┘
-                                       ▼
-                            [ Database Operation ]
-                                       │
-                                       ▼
-                         [ After Mutation Hook Pipeline ]
-                                       │
-                       (Audit Logs, Events, Webhooks)
+```mermaid
+flowchart TD
+    Req["📥 Model Mutation Request"] --> Before["⚡ Before Mutation Hook Pipeline"]
+    
+    Before -->|"Native Rust"| Rust["🦀 Native Rust Trait Plugin<br/>• In-process execution<br/>• Zero overhead performance<br/>• Low-level system access"]
+    Before -->|"Sandboxed WASM"| WASM["🧩 Sandboxed WASM Plugin<br/>• Memory isolated sandbox<br/>• Hot-reloadable at runtime<br/>• Safe user customization"]
+
+    Rust --> DB["💾 Database Operation (PostgreSQL JSONB)"]
+    WASM --> DB
+
+    DB --> After["🔔 After Mutation Hook Pipeline<br/>(Audit Logs, Events, Webhooks)"]
 ```
 
 1. **Native Rust Mutation Hooks**: In-process hooks (`before_create`, `after_update`, etc.) executing around database mutations for sub-systems.
@@ -591,18 +589,12 @@ Foundry enables runtime and non-compiled customization through two complementary
 
 Foundry supports complete internationalization across all layers:
 
-```
-[ Client App / Browser ] ───(Accept-Language: zh-CN)───> [ Axum Middleware ]
-                                                                │
-                                    ┌───────────────────────────┴───────────────────────────┐
-                                    ▼                                                       ▼
-                        [ Error / Status Response ]                                [ Admin SPA UI ]
-                        {                                                          - `apps/admin/src/locales`
-                          "code": 40001,                                           - `react-i18next`
-                          "message": "Resource not found",                         - Hot-swappable
-                          "i18n_key": "errors.resource_not_found",                   language packs
-                          "args": { "resource": "products" }
-                        }
+```mermaid
+flowchart TD
+    Client["🌐 Client App / Browser<br/>Accept-Language: zh-CN"] --> Middleware["⚙️ Axum Middleware (Locale Resolver)"]
+
+    Middleware --> Response["📦 Error / Status Response<br/>{ code: 40001, i18n_key: 'errors.not_found' }"]
+    Middleware --> AdminUI["🖥️ Admin SPA UI<br/>(react-i18next + dynamic language packs)"]
 ```
 
 - **Frontend i18n (`apps/admin/src/locales` + `react-i18next`)**: Embedded modular translation files (`en-US.json`, `zh-CN.json`, `ja-JP.json`), dynamic locale bundle loader, and translation verification tools.
@@ -623,29 +615,34 @@ Foundry supports complete internationalization across all layers:
 
 To maintain strict domain autonomy and clean separation of concerns, Foundry's visual Web Admin Panel is architected into two decoupled tiers:
 
-```
-+───────────────────────────────────────────────────────────────────────────────────────────+
-|                             FOUNDRY WEB ADMIN ARCHITECTURE                                |
-|                                                                                           |
-|  [ Level 1: Platform Control Plane (平台总控中台) ]                                       |
-|    - URL Scope: `/admin/dashboard`, `/admin/systems`, `/admin/admins`, `/admin/audit-logs`|
-|    - Responsibilities: Platform KPI summary, tenant provisioning, global write audit,     |
-|      hierarchical admin RBAC delegation, multi-attribute paginated search.                |
-|                                                                                           |
-|                                │ (Enter Subsystem / Switch System)                        |
-|                                ▼                                                          |
-|                                                                                           |
-|  [ Level 2: Subsystem Dedicated Workspaces (子系统独立工作台) ]                            |
-|    - URL Scope: `/admin/s/:system_slug/*`                                                 |
-|    - Responsibilities: Self-contained realm strictly scoped to that sub-system.           |
-|      ├── `/admin/s/:slug/overview`    -> Subsystem KPI stats, API integration guide       |
-|      ├── `/admin/s/:slug/configs`     -> Topic-scoped visual single-row property editor   |
-|      ├── `/admin/s/:slug/models`      -> Zero-DDL dynamic data schema builder             |
-|      ├── `/admin/s/:slug/data`        -> Dynamic data records browser & modal editor      |
-|      ├── `/admin/s/:slug/apis`        -> Auto-CRUD & custom Rust endpoints directory      |
-|      ├── `/admin/s/:slug/audit-logs`  -> Scoped mutation audit trail                      |
-|      └── `/admin/s/:slug/settings`    -> Subsystem lifecycle status & metadata editor     |
-+───────────────────────────────────────────────────────────────────────────────────────────+
+```mermaid
+flowchart TD
+    subgraph Level1["Level 1: Platform Control Plane (平台总控中台)"]
+        L1Desc["URL Scope: /admin/dashboard, /admin/systems, /admin/admins, /admin/audit-logs<br/>Responsibilities: Platform KPI summary, tenant provisioning, global write audit, hierarchical admin RBAC delegation."]
+    end
+
+    Level1 -->|"Enter Subsystem / Switch System"| Level2
+
+    subgraph Level2["Level 2: Subsystem Dedicated Workspaces (子系统独立工作台)"]
+        direction TB
+        L2Desc["URL Scope: /admin/s/:system_slug/* (Self-contained realm strictly scoped to sub-system)"]
+        
+        Overview["/overview: KPI stats & integration guide"]
+        Configs["/configs: Topic visual single-row property editor"]
+        Models["/models: Zero-DDL dynamic schema builder"]
+        Data["/data: Dynamic records browser & editor"]
+        APIs["/apis: Auto-CRUD & custom Rust endpoints directory"]
+        Audits["/audit-logs: Scoped mutation audit trail"]
+        Settings["/settings: Subsystem lifecycle & metadata editor"]
+
+        L2Desc --> Overview
+        L2Desc --> Configs
+        L2Desc --> Models
+        L2Desc --> Data
+        L2Desc --> APIs
+        L2Desc --> Audits
+        L2Desc --> Settings
+    end
 ```
 
 #### 3.7.1 Bidirectional URL Routing & State Persistence
@@ -696,19 +693,13 @@ A fundamental architectural tenet of Foundry is **REST-First and Zero-SDK Autono
 2. **Zero Vendor Lock-In**: Client applications (Web, iOS, Android, Desktop, Mini-Programs, Backend Microservices) **do not require an official SDK** to integrate with Foundry. Any standard HTTP client (`fetch`, `axios`, `Ktor`, `Retrofit`, `cURL`, `reqwest`) can directly consume the APIs.
 3. **Core Repository Decoupling**: Client SDKs do not belong to the Foundry core repository. Keeping the core monorepo strictly focused on engine services, admin UI, and CLI ensures maximum architectural clarity, minimal CI maintenance overhead, and language neutrality.
 
-```
-+─────────────────────────────────────────────────────────────────────────────────────────+
-|                                    CLIENT INTEGRATION MODES                             |
-|                                                                                         |
-|  [ Approach A: Direct REST / HTTP ] (Recommended / Native)                              |
-|    Any App ──(HTTP JSON / Headers)──> Foundry REST Endpoints (/api/v1/s/:slug/...)       |
-|                                                                                         |
-|  [ Approach B: Generated Typed Client via OpenAPI ]                                     |
-|    OpenAPI Spec (/api/v1/openapi.json) ──> OpenAPI Generator ──> Typed Client Code      |
-|                                                                                         |
-|  [ Approach C: External / Community SDKs ] (Out-of-Tree Repositories)                   |
-|    Separate community-maintained repositories (e.g. foundkit/foundry-sdk-*)             |
-+─────────────────────────────────────────────────────────────────────────────────────────+
+```mermaid
+flowchart TD
+    subgraph Modes["📱 Client Integration Modes"]
+        A["Approach A: Direct REST / HTTP (Recommended / Native)<br/>Any App ──(HTTP JSON / Headers)──> Foundry REST Endpoints (/api/v1/s/:slug/...)"]
+        B["Approach B: Generated Typed Client via OpenAPI<br/>OpenAPI Spec (/api/v1/openapi.json) ──> OpenAPI Generator ──> Typed Client Code"]
+        C["Approach C: External / Community SDKs (Out-of-Tree)<br/>Separate community-maintained repositories (e.g. foundkit/foundry-sdk-*)"]
+    end
 ```
 
 ### 4.2 OpenAPI-Native Integration & Type Generation
@@ -723,24 +714,19 @@ Foundry provides compile-time generated, real-time OpenAPI 3.0 specifications vi
 
 Foundry adopts a **Synchronous Core Release Train** for all first-party components maintained in the monorepo:
 
-```
-+───────────────────────────────────────────────────────────────────────────────────────────+
-|                               UNIFIED CORE RELEASE TRAIN                                  |
-|                                                                                           |
-|                           Foundry Core Engine (Rust Crates)                               |
-|                                        v1.0.0                                             |
-|                                          │                                                |
-|                   ┌──────────────────────┼──────────────────────┐                         |
-|                   ▼                      ▼                      ▼                         |
-|             Foundry Server           Admin SPA             Foundry CLI                    |
-|             (apps/server)           (apps/admin)            (apps/cli)                    |
-|                 v1.0.0                 v1.0.0                 v1.0.0                      |
-|                   │                      │                      │                         |
-|                   └──────────────────────┼──────────────────────┘                         |
-|                                          ▼                                                |
-|                                OpenAPI 3.0 Specification                                  |
-|                                  (/api/v1/openapi.json)                                   |
-+───────────────────────────────────────────────────────────────────────────────────────────+
+```mermaid
+flowchart TD
+    subgraph CoreEngine["⚡ Foundry Core Engine (Rust Crates) v1.0.0"]
+        direction TB
+    end
+
+    CoreEngine --> Server["🖥️ Foundry Server (apps/server) v1.0.0"]
+    CoreEngine --> Admin["📊 Admin SPA (apps/admin) v1.0.0"]
+    CoreEngine --> CLI["🛠️ Foundry CLI (apps/cli) v1.0.0"]
+
+    Server --> OpenAPI["📄 OpenAPI 3.0 Specification (/api/v1/openapi.json)"]
+    Admin --> OpenAPI
+    CLI --> OpenAPI
 ```
 
 1. **Version Parity**:
