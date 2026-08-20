@@ -56,6 +56,17 @@ function getMermaidConfig() {
   };
 }
 
+function extractCode(pre) {
+  const lines = pre.querySelectorAll('.ec-line');
+  if (lines.length > 0) {
+    return Array.from(lines)
+      .map(line => line.textContent || '')
+      .join('\n')
+      .trim();
+  }
+  return (pre.innerText || pre.textContent || '').trim();
+}
+
 async function renderMermaidCharts() {
   mermaid.initialize(getMermaidConfig());
 
@@ -63,7 +74,7 @@ async function renderMermaidCharts() {
   const pres = document.querySelectorAll('pre[data-language="mermaid"]');
   for (let i = 0; i < pres.length; i++) {
     const pre = pres[i];
-    const code = pre.textContent?.trim();
+    const code = extractCode(pre);
     if (!code) continue;
     const container = pre.closest('.expressive-code') || pre;
     const chartDiv = document.createElement('div');
