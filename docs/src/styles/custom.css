@@ -305,10 +305,32 @@ header.header {
 }
 
 /* Terminal token colors (fixed — terminal is always dark) */
+.tech-terminal-header { user-select: none; }
 .tech-terminal-body .t-comment { color: #64748b; }
-.tech-terminal-body .t-prompt { color: #22c55e; }
+.tech-terminal-body code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+.tech-terminal-body .t-prompt {
+  color: #22c55e;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.tech-terminal-body a {
+  color: inherit !important;
+  text-decoration: none !important;
+  pointer-events: none;
+}
 .tech-terminal-body .t-cmd { color: #38bdf8; }
-.tech-terminal-body .t-ok { color: #10b981; }
+.tech-terminal-body .t-ok {
+  color: #10b981;
+  user-select: none;
+  -webkit-user-select: none;
+}
 .tech-terminal-body .t-path { color: #94a3b8; }
 .tech-terminal-body .t-string { color: #fb923c; }
 
