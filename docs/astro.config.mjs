@@ -316,30 +316,61 @@ export default defineConfig({
     applyTransform();
   }
 
-  function openModal(svgElement) {
+  async function openModal(chartDiv, originalSvg) {
     ensureModal();
     if (!modalEl || !canvasEl || !viewportEl) return;
 
+    var chartCode = chartDiv ? chartDiv.dataset.mermaidSource : null;
+    
     canvasEl.innerHTML = '';
-    var clone = svgElement.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.style.maxWidth = 'none';
-    clone.style.width = '100%';
-    clone.style.height = '100%';
-    canvasEl.appendChild(clone);
+    
+    var svgNode = null;
+    if (chartCode) {
+      try {
+        var mermaid = await loadMermaid();
+        mermaid.initialize(getMermaidConfig());
+        var modalId = 'mermaid_modal_' + Math.random().toString(36).slice(2, 9);
+        var res = await mermaid.render(modalId, chartCode);
+        canvasEl.innerHTML = res.svg;
+        svgNode = canvasEl.querySelector('svg');
+      } catch (err) {
+        console.error('Modal mermaid re-render error:', err);
+      }
+    }
+    
+    if (!svgNode && originalSvg) {
+      svgNode = originalSvg.cloneNode(true);
+      canvasEl.appendChild(svgNode);
+    }
+    
+    if (!svgNode) return;
 
-    var viewBox = clone.getAttribute('viewBox');
+    svgNode.style.maxWidth = 'none';
+    svgNode.style.maxHeight = 'none';
+    svgNode.style.width = '100%';
+    svgNode.style.height = '100%';
+    svgNode.style.display = 'block';
+
+    var viewBox = svgNode.getAttribute('viewBox');
     var w = 0, h = 0;
     if (viewBox) {
-      var parts = viewBox.split(/[\s,]+/).map(parseFloat);
-      if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      var parts = viewBox.trim().split(/[\s,]+/).map(parseFloat);
+      if (parts.length >= 4 && parts[2] > 0 && parts[3] > 0) {
         w = parts[2];
         h = parts[3];
       }
     }
     if (!w || !h) {
-      w = parseFloat(clone.getAttribute('width')) || svgElement.getBoundingClientRect().width || 800;
-      h = parseFloat(clone.getAttribute('height')) || svgElement.getBoundingClientRect().height || 600;
+      var bBox = null;
+      try { bBox = svgNode.getBBox(); } catch (_) {}
+      if (bBox && bBox.width > 0 && bBox.height > 0) {
+        w = bBox.width;
+        h = bBox.height;
+      } else {
+        var rect = originalSvg ? originalSvg.getBoundingClientRect() : svgNode.getBoundingClientRect();
+        w = rect.width || 800;
+        h = rect.height || 600;
+      }
     }
 
     state.naturalWidth = w;
@@ -384,7 +415,7 @@ export default defineConfig({
       if (!svg) return;
       var selection = window.getSelection();
       if (selection && selection.toString().length > 0) return;
-      openModal(svg);
+      openModal(chartDiv, svg);
     });
   }
 

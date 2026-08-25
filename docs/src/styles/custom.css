@@ -521,9 +521,13 @@ body.mermaid-modal-open {
 .mermaid-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 15, 0.88);
+  background: rgba(7, 10, 17, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+:root:not([data-theme='dark']) .mermaid-modal-backdrop {
+  background: rgba(241, 245, 249, 0.92);
 }
 
 .mermaid-modal-container {
@@ -561,8 +565,11 @@ body.mermaid-modal-open {
 
 .mermaid-canvas svg {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  pointer-events: none;
 }
 
 /* Modal Toolbar */
@@ -580,13 +587,19 @@ body.mermaid-modal-open {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 9999px;
   padding: 0.25rem 0.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+:root:not([data-theme='dark']) .mermaid-toolbar-group {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
 }
 
 .mermaid-tb-btn {
@@ -599,15 +612,19 @@ body.mermaid-modal-open {
   color: #f8fafc;
   font-size: 0.8rem;
   font-weight: 500;
-  padding: 0.4rem 0.6rem;
+  padding: 0.4rem 0.65rem;
   border-radius: 9999px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
+:root:not([data-theme='dark']) .mermaid-tb-btn {
+  color: #0f172a;
+}
+
 .mermaid-tb-btn:hover {
   background: rgba(234, 88, 12, 0.25);
-  color: #fb923c;
+  color: #ea580c;
 }
 
 .mermaid-tb-btn svg {
@@ -624,11 +641,15 @@ body.mermaid-modal-open {
   user-select: none;
 }
 
+:root:not([data-theme='dark']) .mermaid-scale-badge {
+  color: #475569;
+}
+
 .mermaid-close-btn {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 9999px;
   padding: 0.55rem;
   color: #f8fafc;
@@ -637,10 +658,17 @@ body.mermaid-modal-open {
   transition: all 0.15s ease;
 }
 
+:root:not([data-theme='dark']) .mermaid-close-btn {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+}
+
 .mermaid-close-btn:hover {
   background: rgba(239, 68, 68, 0.25);
   border-color: rgba(239, 68, 68, 0.4);
-  color: #f87171;
+  color: #ef4444;
 }
 
 /* Modal Bottom Tips */
@@ -649,10 +677,10 @@ body.mermaid-modal-open {
   bottom: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 9999px;
   padding: 0.35rem 1rem;
   color: #94a3b8;
@@ -661,6 +689,13 @@ body.mermaid-modal-open {
   z-index: 20;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
+}
+
+:root:not([data-theme='dark']) .mermaid-modal-tips {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  color: #475569;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
 }
 
 @media (max-width: 48rem) {
