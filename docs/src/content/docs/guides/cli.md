@@ -12,8 +12,11 @@ Foundry provides a comprehensive command-line tool available as both `foundry` a
 ## 📦 Installation
 
 ```bash
-# Install directly from GitHub
+# Option 1: Install directly from GitHub repository (Pre-release)
 cargo install --git https://github.com/foundkit/foundry foundry_cli
+
+# Option 2: Install from local cloned repository
+cargo install --path crates/foundry_cli
 ```
 
 ---
@@ -24,6 +27,8 @@ cargo install --git https://github.com/foundkit/foundry foundry_cli
 |---|---|
 | `foundry new <name>` | Scaffold a brand new standalone application project |
 | `foundry system new <slug>` | Scaffold a new business subsystem within the current application |
+| `foundry system new-external <slug>` | Scaffold a standalone external file-based subsystem directory |
+| `foundry system list` | List all discovered code-first and external subsystems |
 | `foundry migrate` | Apply baseline schema and application database migrations |
 | `foundry admin create` | Create a new administrator account |
 | `foundry admin reset-password` | Reset the password of an existing administrator |
@@ -44,11 +49,16 @@ foundry new my-app --path /path/to/foundry/crates/foundry
 
 # Create pointing to specific git branch or tag
 foundry new my-app --git https://github.com/foundkit/foundry --branch feature/next
+
+# Create pinned to a specific crates.io version
+foundry new my-app --version 0.1.0
 ```
 
 ---
 
-## 2. Subsystem Scaffolding: `foundry system new`
+## 2. Subsystem Management: `foundry system`
+
+### Code-First Subsystem: `foundry system new`
 
 Scaffolds a new self-contained business domain directory inside `src/systems/<slug>/`:
 
@@ -62,6 +72,22 @@ Generates:
 * `src/systems/billing/logic/mod.rs` (Domain business logic)
 * `src/systems/billing/dto/mod.rs` (Validation structs)
 * `src/systems/billing/custom_pages/` (Custom Admin UI views)
+
+### External Standalone Subsystem: `foundry system new-external`
+
+Scaffolds a standalone file-based subsystem with a `subsystem.json` manifest:
+
+```bash
+foundry system new-external carnival_2026 --name "Carnival 2026"
+```
+
+### List Discovered Subsystems: `foundry system list`
+
+Scans and lists all code-first and external subsystems:
+
+```bash
+foundry system list
+```
 
 ---
 
@@ -83,19 +109,21 @@ foundry admin create \
   --username admin \
   --password mysecretpassword \
   --role super_admin \
+  --allowed "*" \
   --database-url postgres://postgres:postgrespassword@localhost:5432/foundry
 ```
 
 #### Roles Available:
 * `super_admin`: Full universal privileges across all subsystems and administrator management.
-* `admin`: Platform-level administrator privileges.
-* `topic_admin`: Scoped administrator restricted only to assigned subsystems.
+* `admin`: Platform-level administrator privileges across all subsystems.
+* `topic_admin`: Scoped administrator restricted only to assigned subsystems (specified via `--allowed "slug1,slug2"`).
 
 ### Resetting an Administrator's Password:
 ```bash
 foundry admin reset-password \
   --username admin \
-  --new-password newsecretpassword
+  --new-password newsecretpassword \
+  --database-url postgres://postgres:postgrespassword@localhost:5432/foundry
 ```
 
 ---

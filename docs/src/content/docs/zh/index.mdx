@@ -19,7 +19,7 @@ hero:
       icon: document
       variant: secondary
     - text: GitHub 仓库
-      link: https://github.com/FoundKit/foundry
+      link: https://github.com/foundkit/foundry
       icon: external
 ---
 
@@ -34,15 +34,17 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-dot dot-red"></span>
     <span class="tech-terminal-dot dot-yellow"></span>
     <span class="tech-terminal-dot dot-green"></span>
-    <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
+    <span class="tech-terminal-title">bash — foundry CLI v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># 1. 从 GitHub 安装 CLI 工具并创建独立应用工程</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> --git https://github.com/foundkit/foundry foundry_cli<br />
+    <span class="t-comment"># 1. 从 GitHub 仓库安装 CLI 工具</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install --git https://github.com/foundkit/foundry foundry_cli</span><br />
+    <span class="t-comment"># 2. 创建全新的独立业务应用工程</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">foundry new</span> my-app<br />
     <span class="t-ok">✔</span> 创建独立业务应用工程: <span class="t-path">my-app/</span><br />
+    <span class="t-comment"># 3. 进入项目目录并启动服务</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">cd</span> my-app && <span class="t-cmd">cargo run</span><br />
-    <span class="t-ok">✔</span> Foundry 应用成功监听于: <span class="t-path">http://127.0.0.1:8080</span><br />
+    <span class="t-ok">✔</span> Foundry 应用成功监听于: <span class="t-path">http://0.0.0.0:8080</span><br />
     <span class="t-ok">✔</span> REST API 统一接入点: <span class="t-path">/api/v1</span><br />
     <span class="t-ok">✔</span> 可视化 Admin 控制台: <span class="t-path">/admin</span>
   </div>

@@ -16,6 +16,7 @@ Foundry 是一个现代、模块化、完全解耦的 Rust 后端平台与开发
 通过 Cargo 直接从 GitHub 仓库安装 `foundry` CLI 命令行工具：
 
 ```bash
+# 从 GitHub 仓库安装
 cargo install --git https://github.com/foundkit/foundry foundry_cli
 ```
 
@@ -95,11 +96,11 @@ docker run -d --name foundry-postgres \
   -e POSTGRES_PASSWORD=postgrespassword \
   -e POSTGRES_DB=foundry \
   -p 5432:5432 \
-  postgres:18-alpine
+  postgres:17-alpine
 
 docker run -d --name foundry-redis \
   -p 6379:6379 \
-  redis:8-alpine
+  redis:7-alpine
 ```
 
 检查项目根目录下的 `.env` 配置是否与本地环境匹配：
@@ -127,7 +128,7 @@ cargo run
 1. 连接 PostgreSQL 数据库与 Redis 缓存。
 2. 自动执行基础元数据表的迁移（`AUTO_MIGRATE=true` 时）。
 3. 挂载已注册的所有业务子系统路由。
-4. 监听并在 `http://127.0.0.1:8080` 提供服务。
+4. 监听并在 `http://0.0.0.0:8080`（可通过 `http://localhost:8080` 访问）提供服务。
 
 ---
 

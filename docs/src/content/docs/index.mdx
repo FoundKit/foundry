@@ -19,7 +19,7 @@ hero:
       icon: document
       variant: secondary
     - text: GitHub Repository
-      link: https://github.com/FoundKit/foundry
+      link: https://github.com/foundkit/foundry
       icon: external
 ---
 
@@ -34,15 +34,17 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-dot dot-red"></span>
     <span class="tech-terminal-dot dot-yellow"></span>
     <span class="tech-terminal-dot dot-green"></span>
-    <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
+    <span class="tech-terminal-title">bash — foundry CLI v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># 1. Install CLI from GitHub & scaffold independent application</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> --git https://github.com/foundkit/foundry foundry_cli<br />
+    <span class="t-comment"># 1. Install CLI from GitHub repository</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install --git https://github.com/foundkit/foundry foundry_cli</span><br />
+    <span class="t-comment"># 2. Scaffold a brand-new independent user application</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">foundry new</span> my-app<br />
     <span class="t-ok">✔</span> Created independent application project: <span class="t-path">my-app/</span><br />
+    <span class="t-comment"># 3. Enter project directory & run</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">cd</span> my-app && <span class="t-cmd">cargo run</span><br />
-    <span class="t-ok">✔</span> Foundry Application listening on <span class="t-path">http://127.0.0.1:8080</span><br />
+    <span class="t-ok">✔</span> Foundry Application listening on <span class="t-path">http://0.0.0.0:8080</span><br />
     <span class="t-ok">✔</span> REST APIs available at <span class="t-path">/api/v1</span><br />
     <span class="t-ok">✔</span> Admin Shell connected at <span class="t-path">/admin</span>
   </div>

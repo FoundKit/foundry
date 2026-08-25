@@ -16,6 +16,7 @@ Foundry is a modern, modular Rust backend platform and framework. During the cur
 Install the `foundry` CLI directly from the GitHub repository using Cargo:
 
 ```bash
+# Install from GitHub repository
 cargo install --git https://github.com/foundkit/foundry foundry_cli
 ```
 
@@ -25,7 +26,7 @@ Verify your installation:
 foundry --help
 ```
 
-> **Tip (Local Development)**: If you have cloned the Foundry source repository locally, you can also compile and install it with:
+> **Tip (Local Development)**: If you have cloned the Foundry source repository locally, compile and install directly from the local path:
 > ```bash
 > cargo install --path crates/foundry_cli
 > ```
@@ -95,11 +96,11 @@ docker run -d --name foundry-postgres \
   -e POSTGRES_PASSWORD=postgrespassword \
   -e POSTGRES_DB=foundry \
   -p 5432:5432 \
-  postgres:18-alpine
+  postgres:17-alpine
 
 docker run -d --name foundry-redis \
   -p 6379:6379 \
-  redis:8-alpine
+  redis:7-alpine
 ```
 
 Check your `.env` file matches your local setup:
@@ -127,7 +128,7 @@ When the server starts, Foundry will automatically:
 1. Connect to PostgreSQL and Redis.
 2. Apply database migrations (when `AUTO_MIGRATE=true`).
 3. Mount all registered subsystems.
-4. Start listening on `http://127.0.0.1:8080`.
+4. Start listening on `http://0.0.0.0:8080` (accessible via `http://localhost:8080`).
 
 ---
 

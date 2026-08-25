@@ -80,7 +80,7 @@ impl ArticleService {
         .bind(&req.author)
         .fetch_one(db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(ArticleResponse {
             id: row.0,

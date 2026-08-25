@@ -10,8 +10,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/react-18%2B%20%2F%2019-61dafb.svg)](https://react.dev)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-18.6%2B-336791.svg)](https://www.postgresql.org)
-[![Redis](https://img.shields.io/badge/redis-8%2B-dc382d.svg)](https://redis.io)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-16%2B%20%2F%2017%2B-336791.svg)](https://www.postgresql.org)
+[![Redis](https://img.shields.io/badge/redis-7%2B%20%2F%208-dc382d.svg)](https://redis.io)
 
 </div>
 
@@ -59,8 +59,8 @@ User Application (Independent Git Repo)
 Creating and running a new Foundry project takes seconds:
 
 ```bash
-# 1. Install Foundry CLI
-cargo install foundry-cli
+# 1. Install Foundry CLI (from GitHub repository)
+cargo install --git https://github.com/foundkit/foundry foundry_cli
 
 # 2. Scaffold a brand new standalone application
 foundry new my-app

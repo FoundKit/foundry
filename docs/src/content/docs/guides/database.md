@@ -86,7 +86,7 @@ impl ArticleRepository {
         .bind(system_slug)
         .fetch_all(db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows)
     }
@@ -108,7 +108,7 @@ impl ArticleRepository {
         .bind(content)
         .fetch_one(db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(row.0)
     }
@@ -132,7 +132,7 @@ pub async fn transfer_balance(
 ) -> AppResult<()> {
     // 1. Begin transaction
     let mut tx = db.begin().await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
     // 2. Deduct from sender
     let deduct_res = sqlx::query(
@@ -142,7 +142,7 @@ pub async fn transfer_balance(
     .bind(from_user)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    .map_err(|e| AppError::Database(e.to_string()))?;
 
     if deduct_res.rows_affected() == 0 {
         return Err(AppError::BadRequest("Insufficient balance".to_string()));
@@ -156,11 +156,11 @@ pub async fn transfer_balance(
     .bind(to_user)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    .map_err(|e| AppError::Database(e.to_string()))?;
 
     // 4. Commit transaction
     tx.commit().await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
     Ok(())
 }
@@ -191,7 +191,7 @@ pub async fn save_dynamic_post(
     });
 
     // Automatically stored in `model_records` table partitioned by system_slug & model_slug
-    let record_id = RecordStore::create(
+    let record = RecordStore::create(
         db,
         &ctx.system_slug,
         "posts",
@@ -199,7 +199,7 @@ pub async fn save_dynamic_post(
     )
     .await?;
 
-    Ok(record_id)
+    Ok(record.id)
 }
 ```
 
@@ -247,12 +247,11 @@ pub async fn get_cached_item(
     // Generates key: "foundry:{system_slug}:items:{item_id}"
     let cache_key = ctx.redis_key(&format!("items:{}", item_id));
 
-    let mut conn = redis.get().await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let mut conn = redis.clone();
 
     let val: Option<String> = redis::cmd("GET")
         .arg(&cache_key)
-        .query_async(&mut *conn)
+        .query_async(&mut conn)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 

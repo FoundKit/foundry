@@ -86,7 +86,7 @@ impl ArticleRepository {
         .bind(system_slug)
         .fetch_all(db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(rows)
     }
@@ -108,7 +108,7 @@ impl ArticleRepository {
         .bind(content)
         .fetch_one(db)
         .await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
         Ok(row.0)
     }
@@ -132,7 +132,7 @@ pub async fn transfer_balance(
 ) -> AppResult<()> {
     // 1. 开启事务
     let mut tx = db.begin().await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
     // 2. 扣减转出方账户
     let deduct_res = sqlx::query(
@@ -142,7 +142,7 @@ pub async fn transfer_balance(
     .bind(from_user)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    .map_err(|e| AppError::Database(e.to_string()))?;
 
     if deduct_res.rows_affected() == 0 {
         return Err(AppError::BadRequest("账户余额不足".to_string()));
@@ -156,11 +156,11 @@ pub async fn transfer_balance(
     .bind(to_user)
     .execute(&mut *tx)
     .await
-    .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    .map_err(|e| AppError::Database(e.to_string()))?;
 
     // 4. 提交事务 (若中途出错函数返回 Err 则自动 Rollback)
     tx.commit().await
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| AppError::Database(e.to_string()))?;
 
     Ok(())
 }
@@ -191,7 +191,7 @@ pub async fn save_dynamic_post(
     });
 
     // 自动保存至 model_records 表，按 system_slug 与 model_slug 严格隔离
-    let record_id = RecordStore::create(
+    let record = RecordStore::create(
         db,
         &ctx.system_slug,
         "posts",
@@ -199,7 +199,7 @@ pub async fn save_dynamic_post(
     )
     .await?;
 
-    Ok(record_id)
+    Ok(record.id)
 }
 ```
 
@@ -247,12 +247,11 @@ pub async fn get_cached_item(
     // 自动生成带命名空间的 Key: "foundry:{system_slug}:items:{item_id}"
     let cache_key = ctx.redis_key(&format!("items:{}", item_id));
 
-    let mut conn = redis.get().await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let mut conn = redis.clone();
 
     let val: Option<String> = redis::cmd("GET")
         .arg(&cache_key)
-        .query_async(&mut *conn)
+        .query_async(&mut conn)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
