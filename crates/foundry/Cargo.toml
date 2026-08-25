@@ -1,0 +1,39 @@
+[package]
+name = "foundry"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Foundry - A modern, decoupled Rust backend platform and application framework"
+repository.workspace = true
+
+[features]
+default = ["server", "storage", "auth", "extension"]
+server = ["dep:foundry_engine", "dep:axum", "dep:tower", "dep:tower-http", "dep:tokio"]
+storage = ["dep:foundry_storage", "dep:sqlx"]
+auth = ["dep:foundry_auth"]
+extension = ["dep:foundry_extension"]
+
+[dependencies]
+foundry_core = { workspace = true }
+foundry_storage = { workspace = true, optional = true }
+foundry_auth = { workspace = true, optional = true }
+foundry_engine = { workspace = true, optional = true }
+foundry_extension = { workspace = true, optional = true }
+
+tokio = { workspace = true, optional = true }
+axum = { workspace = true, optional = true }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dotenvy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+http-body-util = "0.1"

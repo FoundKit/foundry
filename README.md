@@ -2,9 +2,9 @@
 
 <div align="center">
 
-**Build complete multi-tenant systems from a shared foundation.**
+**A modern, modular, decoupled Rust backend platform and application framework.**
 
-*Foundry is an open-source platform for building, isolating, and extending independent backend systems and admin panels.*
+*Build, isolate, and extend independent backend systems and admin control planes with zero upstream coupling.*
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
@@ -17,78 +17,170 @@
 
 ---
 
-## 🌟 Key Capabilities
+## 🧭 Overview & Core Positioning
 
-1. **Base Platform & Subsystems Complete Decoupling**: Complete physical and architectural isolation between the base infrastructure platform and custom business subsystems. Subsystem code can be hosted in an independent Git repository with zero upstream merge conflicts.
-2. **Self-Contained Subsystem Standard**: Each subsystem folder encapsulates its own API controllers, domain logic services, DTO validation schemas, custom admin UI pages (`custom_pages/`), and manifest (`subsystem.json`).
-3. **Zero-DDL Dynamic Storage Engine**: Visually define system configs and dynamic data models without database DDL migrations or metadata locks.
-4. **Automatic RESTful CRUD**: Instant REST APIs generated for all dynamic models (`/api/v1/s/{system_slug}/{model_slug}`).
-5. **Decoupled RESTful Route Architecture**: Standardized REST paths separating Admin API (`/api/v1/admin/*`), Auto-CRUD (`/api/v1/s/{slug}/*`), and Custom Extension APIs (`/api/v1/s/{slug}/ext/*`).
-6. **Subsystem Custom Admin UI Pages & SDK Bridge**: Register custom admin pages seamlessly integrated into the Foundry Admin UI shell with automatic JWT token and theme injection via `FoundryBridge`.
-7. **Hierarchical Admin IAM & Topic-Scoped RBAC**: Super Admin (`super_admin`) and scoped Topic Admins (`allowed_systems: ["carnival_demo"]`).
-8. **Unified Release Packaging Pipeline**: One-command release build script (`./scripts/build-release.sh`) and multi-stage Docker build merging base infra and custom subsystems into a single deployable artifact.
+Foundry is a **Rust Backend Platform & Framework** designed for building robust, multi-system backend services with an embedded administrative control plane.
+
+Unlike traditional boilerplate templates, Foundry separates the **Framework/Platform** from the **User Application**:
+
+```text
+Foundry Repository (Framework)
+    │
+    ├── crates/foundry             # Main facade crate (FoundryApp, Builder, prelude)
+    ├── crates/foundry_core        # Context, errors, responses, Subsystem trait
+    ├── crates/foundry_storage     # Zero-DDL dynamic models, configs, PostgreSQL, Redis
+    ├── crates/foundry_auth        # Admin IAM, Argon2id, JWT, Topic-scoped RBAC
+    ├── crates/foundry_engine      # Multi-system router, Auto-CRUD, Audit middleware
+    ├── crates/foundry_extension   # Mutation hooks & extension pipeline
+    ├── crates/foundry_cli         # `foundry` and `foundry-cli` tooling
+    ├── apps/admin                 # Decoupled React + Tailwind visual Admin Shell
+    └── examples/blog_platform     # Standalone application reference
+            │
+            │ cargo publish
+            ↓
+    Foundry Cargo Crates
+            │
+            ↓
+User Application (Independent Git Repo)
+    ├── Cargo.toml                 # [dependencies] foundry = "0.1"
+    ├── src/
+    │   ├── main.rs                # Bootstrap with FoundryApp::builder()
+    │   └── systems/               # User business subsystems
+    │       ├── blog/              # Controllers + Domain Logic + DTOs + Admin Views
+    │       └── newsletter/
+    ├── config/                    # Application configuration
+    └── migrations/                # Application database migrations
+```
 
 ---
 
-## 📁 Repository Structure
+## ⚡ Developer Experience
 
+Creating and running a new Foundry project takes seconds:
+
+```bash
+# 1. Install Foundry CLI
+cargo install foundry-cli
+
+# 2. Scaffold a brand new standalone application
+foundry new my-app
+
+# 3. Enter your project directory and start the server
+cd my-app
+cargo run
 ```
-foundry/
-├── apps/
-│   ├── server/           # Foundry Core Server (Axum binary)
-│   ├── admin/            # Visual Admin Dashboard SPA (React + TypeScript + Tailwind)
-│   └── cli/              # Developer CLI Tool (Subsystem scaffolding & repo validation)
-├── crates/
-│   ├── foundry_core/     # SystemContext, SubsystemModule, CustomAdminPageSpec
-│   ├── foundry_storage/  # PostgreSQL Zero-DDL storage & dynamic model ORM
-│   ├── foundry_auth/     # Admin IAM, Argon2id, JWT & Topic RBAC
-│   ├── foundry_engine/   # Multi-system router, Auto-CRUD, Audit middleware
-│   └── foundry_extension/# Mutation hooks & WASM extension pipeline
-├── systems/              # Sub-System workspace (Git Submodule mount point for custom repo)
-│   └── src/<slug>/       # Self-contained subsystem (API + Logic + DTO + Custom Admin UI)
-├── external_systems/     # Standalone external subsystem repositories
-├── scripts/              # Build & Packaging Tooling (build-release.sh)
-├── migrations/           # Baseline database initialization (`init.sql`)
-└── docker/               # Docker container configurations
+
+Your generated application is completely independent and consumes Foundry through standard Cargo dependencies:
+
+```toml
+[package]
+name = "my-app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+foundry = "0.1.0"
+tokio = { version = "1.44", features = ["full"] }
+axum = { version = "0.8" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+validator = { version = "0.20", features = ["derive"] }
+```
+
+```rust
+// src/main.rs
+pub mod systems;
+
+use foundry::prelude::*;
+use systems::SampleSubsystem;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let config = FoundryConfig::from_env();
+
+    let app = FoundryApp::builder()
+        .config(config)
+        .register_subsystem(SampleSubsystem)
+        .build()
+        .await?;
+
+    app.run().await?;
+    Ok(())
+}
 ```
 
 ---
 
-## 🚀 Quick Scaffolding & Packaging Commands
+## 🌟 Key Architectural Features
 
-### 1. Initialize a Standalone Custom Subsystems Git Repository
+1. **Framework & Application Total Decoupling**: Application developers build inside their own Git repository. Upgrading Foundry requires only `cargo update` with zero upstream git merge conflicts.
+2. **High-Level Facade (`foundry`) & Public APIs**: Intuitive `FoundryApp::builder()` API, type-safe error envelopes (`AppError`, `AppResult`), standardized response wrappers (`ApiResponse`), and rich re-exports in `foundry::prelude::*`.
+3. **Subsystem Architecture**: Organize business domains into self-contained subsystems implementing `SubsystemModule` (controllers, logic services, validation DTOs, and custom admin views).
+4. **Zero-DDL Dynamic Storage**: Define system configs and dynamic data models visually in the admin UI without raw database DDL migrations or schema locks.
+5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/v1/s/{system_slug}/{model_slug}`) with pagination and GIN JSON search.
+6. **Decoupled Admin Shell & SDK Bridge**: The Admin SPA (`apps/admin`) embeds subsystem custom pages (HTML, React, Vue) inside sandboxed views, injecting JWT authentication and theme settings automatically via `postMessage` protocol.
+7. **Hierarchical RBAC**: Fine-grained role-based access control with Super Admins (`super_admin`), Platform Admins (`admin`), and Topic-Scoped Admins (`topic_admin`).
+8. **Lifecycle Mutation Hooks**: Intercept entity lifecycle events (`before_create`, `after_create`, `before_update`, `after_update`, `before_delete`, `after_delete`) using `MutationHook`.
+
+---
+
+## 📦 Workspace Crates
+
+| Crate | Description |
+|---|---|
+| [`foundry`](crates/foundry) | Top-level facade crate providing `FoundryApp`, `FoundryBuilder`, and `prelude`. |
+| [`foundry_core`](crates/foundry_core) | Core primitives, `SystemContext`, `SubsystemModule`, `AppError`, and response models. |
+| [`foundry_storage`](crates/foundry_storage) | PostgreSQL connection pool, Redis cache, Zero-DDL dynamic models, and migrations. |
+| [`foundry_auth`](crates/foundry_auth) | Admin identities, Argon2id hashing, JWT token service, and Topic RBAC guards. |
+| [`foundry_engine`](crates/foundry_engine) | Unified Axum routing, Auto-CRUD handler engine, and audit logging middleware. |
+| [`foundry_extension`](crates/foundry_extension) | Lifecycle mutation hook pipelines and extension mechanisms. |
+| [`foundry_cli`](crates/foundry_cli) | Developer CLI binaries (`foundry` & `foundry-cli`) for project and subsystem scaffolding. |
+
+---
+
+## 🛠️ CLI Commands
 
 ```bash
-cargo run --bin foundry-cli -- system init-repo ../my-foundry-systems
+# Create a new standalone application
+foundry new <project-name>
+
+# Scaffold a new subsystem in an existing project
+foundry system new <slug> --name "Display Name"
+
+# Apply baseline database migrations
+foundry migrate --database-url postgres://...
+
+# Create an administrator account
+foundry admin create --username admin --password secret --role super_admin
+
+# Reset administrator password
+foundry admin reset-password --username admin --new-password newsecret
+
+# Validate application structure and manifests
+foundry validate
 ```
 
-### 2. Scaffold a Self-Contained Subsystem (Compiled Monorepo)
+---
 
-```bash
-cargo run --bin foundry-cli -- system new carnival_demo --name "Carnival Demo"
-```
+## 📚 Example Application
 
-### 3. Validate Subsystem Directory Integrity
-
-```bash
-cargo run --bin foundry-cli -- system validate
-```
-
-### 4. Build Unified Release Package (Infra + Custom Subsystems)
-
-```bash
-./scripts/build-release.sh
-```
+Explore [`examples/blog_platform`](examples/blog_platform) for a complete reference application demonstrating:
+- Application bootstrap with `FoundryApp::builder()`
+- Multiple custom subsystems (`blog` and `newsletter`)
+- Subsystem controllers, business logic services, and validation DTOs
+- Custom Admin UI Studio integration
+- Custom lifecycle mutation hooks (`BlogMutationHook`)
+- Comprehensive integration tests (`tests/integration_test.rs`)
 
 ---
 
 ## 📖 Documentation
 
-- 🌐 [Official Documentation (GitHub Pages)](https://foundkit.github.io/foundry/)
+- 🌐 [Official Documentation](https://foundkit.github.io/foundry/)
 - 📘 [Getting Started Guide](docs/src/content/docs/getting-started.md)
 - 🏗️ [Architecture Blueprint](docs/src/content/docs/architecture/blueprint.md)
-- 🔌 [Subsystem Extensions & Admin UI Guide](docs/src/content/docs/guides/extensions.md)
-- 🗺️ [Development Roadmap & TODO](docs/src/content/docs/roadmap.md)
+- 🔌 [Subsystems & Extensions Guide](docs/src/content/docs/guides/extensions.md)
+- 🗺️ [Development Roadmap](docs/src/content/docs/roadmap.md)
 
 ---
 

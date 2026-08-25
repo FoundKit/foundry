@@ -1,15 +1,89 @@
 use axum::{
+    Json, Router,
     body::Body,
+    extract::Extension,
     http::{Request, StatusCode},
+    routing::post,
 };
 use foundry_auth::JwtService;
-use foundry_core::response::ApiResponse;
+use foundry_core::{
+    CustomAdminPageSpec, SubsystemModule, context::SystemContext, error::AppResult,
+    response::ApiResponse,
+};
 use foundry_engine::{AppState, build_router};
 use foundry_extension::HookPipeline;
 use http_body_util::BodyExt;
+use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
-use systems::carnival_demo::dto::ParticipateResponse;
 use tower::ServiceExt;
+use validator::Validate;
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ParticipateRequest {
+    #[validate(length(min = 2, max = 32))]
+    pub nickname: String,
+    #[validate(range(min = 1, max = 100))]
+    pub lucky_number: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ParticipateResponse {
+    pub nickname: String,
+    pub lucky_number: u32,
+    pub is_winner: bool,
+    pub prize_name: Option<String>,
+}
+
+async fn handle_participate(
+    Extension(_ctx): Extension<SystemContext>,
+    Json(payload): Json<ParticipateRequest>,
+) -> AppResult<Json<ApiResponse<ParticipateResponse>>> {
+    payload.validate()?;
+    let is_winner = payload.lucky_number % 7 == 0;
+    let prize = if is_winner {
+        Some("Lucky 7 Grand Prize".to_string())
+    } else {
+        None
+    };
+
+    Ok(Json(ApiResponse::success(ParticipateResponse {
+        nickname: payload.nickname,
+        lucky_number: payload.lucky_number,
+        is_winner,
+        prize_name: prize,
+    })))
+}
+
+pub struct TestCarnivalSubsystemModule;
+
+impl SubsystemModule for TestCarnivalSubsystemModule {
+    fn slug(&self) -> &'static str {
+        "carnival_demo"
+    }
+
+    fn display_name(&self) -> &'static str {
+        "Carnival 2026 Demo Subsystem"
+    }
+
+    fn description(&self) -> &'static str {
+        "Test carnival subsystem for integration testing"
+    }
+
+    fn register_routes(&self, router: Router) -> Router {
+        router.route("/participate", post(handle_participate))
+    }
+
+    fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
+        vec![CustomAdminPageSpec {
+            key: "lottery_dashboard".to_string(),
+            title: "抽奖运营大屏".to_string(),
+            icon: "Gift".to_string(),
+            page_type: "iframe".to_string(),
+            entry: "/api/v1/s/carnival_demo/ext/custom-pages/lottery_dashboard.html".to_string(),
+            required_role: None,
+        }]
+    }
+}
 
 // Create dummy uninitialized pool for offline route testing
 fn dummy_app_state() -> AppState {
@@ -18,7 +92,7 @@ fn dummy_app_state() -> AppState {
         .unwrap();
     let jwt = JwtService::new("test_secret_key_1234567890", 24);
     let hooks = HookPipeline::new();
-    let subsystems = systems::register_subsystems();
+    let subsystems: Vec<Box<dyn SubsystemModule>> = vec![Box::new(TestCarnivalSubsystemModule)];
     AppState::new(pool, None, jwt, hooks, subsystems)
 }
 
@@ -156,7 +230,6 @@ async fn test_general_admin_forbidden_on_admins_management() {
 
     let app = build_router(state);
 
-    // General admin (admin) trying to GET /admin/admins should receive 403 FORBIDDEN
     let response = app
         .oneshot(
             Request::builder()
@@ -186,7 +259,6 @@ async fn test_topic_admin_forbidden_on_platform_summary() {
 
     let app = build_router(state);
 
-    // Topic admin trying to GET /admin/platform/summary should receive 403 FORBIDDEN
     let response = app
         .oneshot(
             Request::builder()
@@ -221,7 +293,6 @@ async fn test_topic_admin_forbidden_on_creating_subsystems() {
         "name": "New Subsystem"
     });
 
-    // Topic admin trying to POST /admin/systems should receive 403 FORBIDDEN
     let response = app
         .oneshot(
             Request::builder()
@@ -253,7 +324,6 @@ async fn test_topic_admin_forbidden_on_unauthorized_topic_access() {
 
     let app = build_router(state);
 
-    // Topic admin trying to access unauthorized topic details should receive 403 FORBIDDEN
     let response = app
         .oneshot(
             Request::builder()

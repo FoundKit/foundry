@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Foundry Unified Release Packaging Pipeline
-# Merges Foundry Core Base Infrastructure + Decoupled Custom Subsystems
+# Foundry Unified Release & Production Packaging Pipeline
+# Builds Foundry Platform Reference Server, CLI, Admin SPA & Examples
 # ==============================================================================
 set -e
 
@@ -14,24 +14,6 @@ echo "🚀 Starting Foundry Production Packaging Pipeline..."
 echo "======================================================================"
 echo "📂 Project Root: ${PROJECT_ROOT}"
 echo "📦 Output Target: ${OUTPUT_DIR}"
-
-# Parse CLI arguments
-CUSTOM_SYSTEMS_DIR="${CUSTOM_SYSTEMS_DIR:-}"
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --systems-dir)
-      CUSTOM_SYSTEMS_DIR="$2"
-      shift 2
-      ;;
-    *)
-      shift
-      ;;
-  esac
-done
-
-if [ -n "${CUSTOM_SYSTEMS_DIR}" ] && [ -d "${CUSTOM_SYSTEMS_DIR}" ]; then
-    echo "🔗 Using Custom Subsystems Repository at: ${CUSTOM_SYSTEMS_DIR}"
-fi
 
 # 1. Clean previous release artifacts
 rm -rf "${OUTPUT_DIR}"
@@ -56,50 +38,23 @@ if [ -d "${PROJECT_ROOT}/apps/admin" ]; then
     echo "✅ Admin SPA compiled into release bundle."
 fi
 
-# 3. Gather Decoupled Subsystems Custom Admin Pages & Manifests
-echo "📦 [2/4] Assembling Decoupled Subsystem Custom Admin UI Pages..."
-# From compiled systems
-if [ -d "${PROJECT_ROOT}/systems/src" ]; then
-    for sys_dir in "${PROJECT_ROOT}/systems/src"/*; do
-        if [ -d "${sys_dir}/custom_pages" ]; then
-            sys_slug=$(basename "${sys_dir}")
-            mkdir -p "${OUTPUT_DIR}/static/custom_pages/${sys_slug}"
-            cp -r "${sys_dir}/custom_pages/"* "${OUTPUT_DIR}/static/custom_pages/${sys_slug}/"
-            echo "   • Bundled compiled custom pages for '${sys_slug}'"
-        fi
-    done
-fi
-
-# From external standalone systems directory in foundry repo
+# 3. Gather Standalone Subsystem Pages & Manifests
+echo "📦 [2/4] Assembling External Subsystem Manifests & Pages..."
 if [ -d "${PROJECT_ROOT}/external_systems" ]; then
     cp -r "${PROJECT_ROOT}/external_systems/"* "${OUTPUT_DIR}/external_systems/"
     echo "   • Bundled standalone external subsystems from 'external_systems/'"
 fi
 
-# From dedicated custom subsystems repository (if passed via --systems-dir)
-if [ -n "${CUSTOM_SYSTEMS_DIR}" ] && [ -d "${CUSTOM_SYSTEMS_DIR}" ]; then
-    echo "   • Bundling subsystems from custom repository: ${CUSTOM_SYSTEMS_DIR}"
-    for sys_dir in "${CUSTOM_SYSTEMS_DIR}"/* "${CUSTOM_SYSTEMS_DIR}/systems"/* "${CUSTOM_SYSTEMS_DIR}/src"/*; do
-        if [ -d "${sys_dir}" ] && [ -f "${sys_dir}/subsystem.json" ]; then
-            sys_slug=$(basename "${sys_dir}")
-            mkdir -p "${OUTPUT_DIR}/external_systems/${sys_slug}"
-            cp -r "${sys_dir}"/* "${OUTPUT_DIR}/external_systems/${sys_slug}/"
-            if [ -d "${sys_dir}/custom_pages" ]; then
-                mkdir -p "${OUTPUT_DIR}/static/custom_pages/${sys_slug}"
-                cp -r "${sys_dir}/custom_pages/"* "${OUTPUT_DIR}/static/custom_pages/${sys_slug}/"
-            fi
-            echo "     -> Integrated custom subsystem '${sys_slug}'"
-        fi
-    done
-fi
-
 # 4. Build Release Rust Binaries
-echo "📦 [3/4] Compiling Rust Platform Binaries (foundry-server, foundry-cli)..."
+echo "📦 [3/4] Compiling Rust Platform Binaries (foundry-server, foundry-cli, blog-platform)..."
 cd "${PROJECT_ROOT}"
-cargo build --release --bin foundry-server --bin foundry-cli
+cargo build --release --bin foundry-server --bin foundry-cli --bin blog_platform
 
 cp "${PROJECT_ROOT}/target/release/foundry-server" "${OUTPUT_DIR}/bin/"
 cp "${PROJECT_ROOT}/target/release/foundry-cli" "${OUTPUT_DIR}/bin/"
+if [ -f "${PROJECT_ROOT}/target/release/blog_platform" ]; then
+    cp "${PROJECT_ROOT}/target/release/blog_platform" "${OUTPUT_DIR}/bin/"
+fi
 echo "✅ Server & CLI release binaries compiled."
 
 # 5. Copy Database Migrations & Scaffolding

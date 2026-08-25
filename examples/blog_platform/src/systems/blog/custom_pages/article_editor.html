@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article Editor - Custom Admin View</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div>
+        <h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">📝 Blog Article Studio</h1>
+        <p class="text-xs text-slate-500">Decoupled Subsystem Admin UI Extension</p>
+      </div>
+      <span class="text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+        Subsystem: <code class="font-mono font-bold">blog</code>
+      </span>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Article Title</label>
+        <input type="text" class="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2" placeholder="Enter title..." />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Markdown Body</label>
+        <textarea rows="6" class="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 font-mono" placeholder="Write article content..."></textarea>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener('message', function(event) {
+      if (event.data?.type === 'FOUNDRY_INIT') {
+        const p = event.data.payload;
+        if (p.theme === 'dark') document.documentElement.classList.add('dark');
+      }
+    });
+  </script>
+</body>
+</html>

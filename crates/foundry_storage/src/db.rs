@@ -18,7 +18,7 @@ pub async fn init_db_pool(database_url: &str, max_connections: u32) -> AppResult
 /// Run initial database migration script from `migrations/init.sql`
 pub async fn run_migrations(pool: &DbPool) -> AppResult<()> {
     info!("Running database initialization migrations...");
-    let init_sql = include_str!("../../../migrations/init.sql");
+    let init_sql = include_str!("../migrations/init.sql");
     sqlx::raw_sql(init_sql)
         .execute(pool)
         .await

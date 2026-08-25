@@ -2,11 +2,11 @@
 title: Foundry
 head:
   - tag: title
-    content: Foundry — 基于 Rust 的高性能下一代多系统基础设施引擎
-description: 基于统一的 Rust 高性能底座，构建、隔离与扩展独立的多租户后端系统与现代化管理后台。
+    content: Foundry — 基于 Rust 的现代多系统后端平台与应用框架
+description: 基于 Rust 高性能底座构建、隔离与扩展独立多系统后端与管理控制台。
 template: splash
 hero:
-  tagline: 基于 Rust、Axum 与 React 构建的高性能开源多系统基础设施平台与管理控制中心。基建与业务子系统完全解耦。
+  tagline: 基于 Rust、Axum 与 React 构建的高性能、开源多系统后端框架与可视化 Admin 控制台。平台框架与用户业务工程完全解耦。
   image:
     file: ../../../assets/hero.svg
   actions:
@@ -26,7 +26,7 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-badge not-content">
-  <span>⚡</span> 下一代 Rust 高性能多租户平台 · 基建与子系统完全解耦
+  <span>⚡</span> 现代 Rust 后端应用框架 · 完全解耦的子系统架构
 </div>
 
 <div class="tech-terminal not-content">
@@ -37,37 +37,37 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># 初始化独立私有子系统代码仓库 & 创建自包含子系统</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system init-repo ../my-foundry-systems<br />
-    <span class="t-ok">✔</span> 初始化独立子系统 Git 仓库模板: <span class="t-path">../my-foundry-systems/</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
-    <span class="t-ok">✔</span> 初始化自包含子系统 (API + 逻辑 + DTO + 自定义 Admin 页面): <span class="t-path">systems/src/carnival_demo/</span><br />
-    <span class="t-ok">✔</span> 自动挂载原生扩展路由: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
-    <span class="t-ok">✔</span> 自动挂载自定义后台大屏: <span class="t-path">/api/v1/s/carnival_demo/ext/custom-pages/*</span><br />
-    <span class="t-ok">✔</span> 独立分配 Redis 缓存隔离前缀: <span class="t-path">foundry:carnival_demo:*</span>
+    <span class="t-comment"># 1. 安装 CLI 工具并创建独立应用工程</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> foundry-cli<br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">foundry new</span> my-app<br />
+    <span class="t-ok">✔</span> 创建独立业务应用工程: <span class="t-path">my-app/</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cd</span> my-app && <span class="t-cmd">cargo run</span><br />
+    <span class="t-ok">✔</span> Foundry 应用成功监听于: <span class="t-path">http://127.0.0.1:8080</span><br />
+    <span class="t-ok">✔</span> REST API 统一接入点: <span class="t-path">/api/v1</span><br />
+    <span class="t-ok">✔</span> 可视化 Admin 控制台: <span class="t-path">/admin</span>
   </div>
 </div>
 
 ## 🌟 核心架构支柱
 
 <CardGrid>
-  <Card title="基建与子系统完全解耦" icon="puzzle">
-    平台基础设施与业务子系统代码彻底物理隔离。所有子系统代码可单独存放于专属私有 Git 仓库，平台升级零代码冲突。
+  <Card title="框架与业务完全解耦" icon="puzzle">
+    Foundry 作为标准 Cargo 依赖提供 (`foundry = "0.1"`)。用户拥有独立 Git 仓库，上游框架升级零合并冲突。
   </Card>
-  <Card title="自包含子系统标准" icon="document">
-    每个子系统目录下自包含其专属的控制器、业务服务、DTO 校验、自定义后台大屏（HTML/React）与元数据清单。
+  <Card title="高内聚业务子系统" icon="document">
+    子系统封装自定义 API 控制器、业务领域服务、DTO 校验与 Admin 扩展页面，结构清晰内聚。
   </Card>
   <Card title="Zero-DDL 动态存储引擎" icon="setting">
-    可视化定义系统参数配置与动态数据模型，无需数据库 DDL 迁移、表锁或停机维护。
+    可视化配置系统参数与动态数据模型，无需编写数据库 DDL 迁移，避免元数据锁与停机维护。
   </Card>
-  <Card title="自动化 RESTful CRUD" icon="rocket">
-    为所有动态模型即时生成高性能 RESTful API（`GET`, `POST`, `PUT`, `DELETE`），并支持细粒度公开/鉴权开关。
+  <Card title="自动生成 RESTful CRUD" icon="rocket">
+    所有动态模型即刻获得开箱即用的高并发 RESTful CRUD 接口（`GET`, `POST`, `PUT`, `DELETE`）。
   </Card>
-  <Card title="分级 IAM 与 Topic 范围 RBAC" icon="open-book">
-    内置超级管理员（`super_admin`）全局权限，支持为普通管理员精细化划分特定子系统管理权限（`allowed_systems`）。
+  <Card title="分级权限与专题 RBAC" icon="open-book">
+    超级管理员 (`super_admin`)、普通管理员 (`admin`) 与专属专题管理员 (`topic_admin`)，支持细粒度权限控制。
   </Card>
-  <Card title="一键合并打包发布流水线" icon="laptop">
-    统一构建流水线（`build-release.sh` / Dockerfile），在发布打包时自动将基建与私有子系统合并为单一可执行产物。
+  <Card title="统一交付与打包流水线" icon="laptop">
+    自动化构建脚本 (`build-release.sh` / Dockerfile) 一键将服务二进制、Admin 前端与扩展页面打包为单一部署制品。
   </Card>
 </CardGrid>
 
@@ -78,22 +78,22 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 <div class="tech-pipeline not-content">
   <div class="tech-pipeline-node">
     <div class="node-icon">🌐</div>
-    <div class="node-title">客户端请求层</div>
-    <div class="node-desc">Admin SPA / 小程序 / HTTP 客户端</div>
+    <div class="node-title">客户端请求</div>
+    <div class="node-desc">Admin 控制台 / 移动端 / HTTP 客户端</div>
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">⚡</div>
     <div class="node-title">Axum 路由引擎</div>
-    <div class="node-desc">上下文提取 & Topic RBAC 鉴权</div>
+    <div class="node-desc">上下文解析、鉴权与专题 RBAC 校验</div>
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">⚙️</div>
     <div class="node-title">子系统运行时</div>
-    <div class="node-desc">Auto-CRUD + 自包含 Rust + Admin UI</div>
+    <div class="node-desc">Auto-CRUD + Rust 原生业务 + Admin 扩展页面</div>
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">💾</div>
     <div class="node-title">Zero-DDL 存储</div>
-    <div class="node-desc">Postgres JSONB/GIN + Redis 缓存</div>
+    <div class="node-desc">PostgreSQL JSONB/GIN + Redis 租户隔离缓存</div>
   </div>
 </div>

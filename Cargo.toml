@@ -1,14 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
-    "apps/server",
-    "apps/cli",
-    "systems",
+    "crates/foundry",
     "crates/foundry_core",
     "crates/foundry_storage",
     "crates/foundry_auth",
     "crates/foundry_engine",
     "crates/foundry_extension",
+    "crates/foundry_cli",
+    "apps/server",
+    "examples/blog_platform",
 ]
 
 [workspace.package]
@@ -17,15 +18,19 @@ edition = "2024"
 authors = ["FoundKit Team <dev@foundkit.org>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/foundkit/foundry"
+homepage = "https://foundkit.org"
+documentation = "https://docs.foundkit.org"
 
 [workspace.dependencies]
+# Main facade crate
+foundry = { path = "crates/foundry" }
+
 # Internal workspace crates
 foundry_core = { path = "crates/foundry_core" }
 foundry_storage = { path = "crates/foundry_storage" }
 foundry_auth = { path = "crates/foundry_auth" }
 foundry_engine = { path = "crates/foundry_engine" }
 foundry_extension = { path = "crates/foundry_extension" }
-systems = { path = "systems" }
 
 # Async & HTTP
 tokio = { version = "1.44", features = ["full"] }

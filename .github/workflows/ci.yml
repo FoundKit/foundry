@@ -1,0 +1,75 @@
+name: Foundry CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-check:
+    name: Rust Crates Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format Check
+        run: cargo fmt --all --check
+
+      - name: Clippy Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run Workspace Tests
+        run: cargo test --workspace
+
+      - name: Run CLI Smoke Test
+        run: cargo test -p foundry_cli --test cli_smoke_test
+
+  frontend-check:
+    name: Admin SPA Frontend Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: 'apps/admin/pnpm-lock.yaml'
+
+      - name: Install Dependencies
+        working-directory: apps/admin
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier Format Check
+        working-directory: apps/admin
+        run: pnpm format:check
+
+      - name: ESLint Check
+        working-directory: apps/admin
+        run: pnpm lint
+
+      - name: TypeScript Type Check
+        working-directory: apps/admin
+        run: pnpm typecheck
+
+      - name: Production Build Check
+        working-directory: apps/admin
+        run: pnpm build

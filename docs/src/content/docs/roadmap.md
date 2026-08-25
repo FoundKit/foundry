@@ -1,104 +1,86 @@
 ---
-title: Development Roadmap
-description: Foundry development milestones, completed features, and upcoming roadmap.
+title: Development Roadmap & Versioning
+description: Foundry development milestones, completed features, versioning strategy, and upcoming roadmap.
 ---
 
-# Foundry Development Roadmap & TODO List
+# Foundry Roadmap & Versioning Strategy
 
 > **Project**: `foundry`  
 > **Organization**: [foundkit](https://github.com/foundkit)  
-> **Repository**: Monorepo (Rust Engine + Sub-Systems Workspace + Web Admin UI + CLI)
 
 ---
 
-## 📌 Legend & Status Tracker
+## 📌 Status Legend
 - [ ] **Pending**
 - [/] **In Progress**
 - [x] **Completed**
 
 ---
 
-## Milestone 0: Monorepo Foundation & Workspace Setup
+## Milestone 1: Framework Decoupling & Facade Architecture (`v0.1.0`)
 
-- [x] **0.1 Repository & Project Scaffolding**
-  - [x] Initialize Cargo Workspace for Rust backend crates and `systems/` workspace (`Cargo.toml`).
-  - [x] Apply baseline database schema migration from `migrations/init.sql` (Zero-DDL tables).
-  - [x] Initialize frontend project for Admin SPA in `apps/admin` (React + Vite + TypeScript + Tailwind CSS).
-  - [x] Configure GitHub Actions CI for linting, testing, and formatting.
-  - [x] Setup `docker/` container configurations (`docker-compose.yml` for PostgreSQL 18.6+ + Redis 8+).
+- [x] **1.1 Core Platform & Application Decoupling**
+  - [x] Create facade crate `foundry` with `FoundryApp::builder()` and unified prelude.
+  - [x] Full separation between framework runtime and independent user applications.
+  - [x] Package and distribute via standard Cargo dependencies (`foundry = "0.1"`).
 
----
+- [x] **1.2 Subsystem Standard & Dynamic Routing**
+  - [x] `SubsystemModule` trait for registering business modules, custom routes, and admin pages.
+  - [x] Static and dynamic external subsystem discovery engine.
+  - [x] Topic-scoped RBAC and Context extraction.
 
-## Milestone 1: Core Engine & Multi-System Isolation (Backend MVP)
+- [x] **1.3 Storage & Admin Control Plane**
+  - [x] PostgreSQL Zero-DDL dynamic model schema engine.
+  - [x] Auto-generated RESTful CRUD endpoints (`/api/v1/s/{system_slug}/{model_slug}`).
+  - [x] Embedded Admin SPA Shell with iframe sandbox bridge (`FoundryBridge`).
 
-- [x] **1.1 System Context & Tenant Routing (`crates/foundry_core` & `crates/foundry_engine`)**
-  - [x] Implement Sub-System metadata primitives: `system_id` (UUID) and immutable unique `system_slug`.
-  - [x] Build Axum middleware to extract and validate `SystemContext`.
-  - [x] Parse `Accept-Language` header into `SystemContext.locale`.
-  - [x] Implement global error handling with i18n JSON envelope.
+- [x] **1.4 Developer CLI Tooling (`foundry-cli`)**
+  - [x] `foundry new <project>`: Scaffold standalone user application.
+  - [x] `foundry system new <slug>`: Scaffold business subsystem.
+  - [x] `foundry migrate`: Apply baseline migrations.
+  - [x] `foundry admin create` / `reset-password`: Administrator IAM tooling.
 
-- [x] **1.2 Zero-DDL Storage Engine & Model Runtime (`crates/foundry_storage`)**
-  - [x] Implement System Configs engine (`system_configs`).
-  - [x] Implement Dynamic Data Models engine (`models` & `model_fields`).
-  - [x] Build Data Model runtime ORM on `model_records` (`ctx.model("{model_slug}")`).
-  - [x] Programmatic Configs API (`ctx.configs()`).
-  - [x] Tenant namespace Redis caching (`foundry:{system_slug}:*`).
-
-- [x] **1.3 Auto-CRUD & System Configs API Engine (`crates/foundry_engine`)**
-  - [x] Dynamic Data Model Auto-CRUD endpoints.
-  - [x] System Configs endpoints.
-
-- [x] **1.4 Admin IAM & Topic-Scoped RBAC (`crates/foundry_auth`)**
-  - [x] Admin identity and Argon2id password hashing.
-  - [x] Super Admin (`super_admin`) and scoped Topic Admins (`admin`).
-  - [x] JWT token lifecycle.
+- [x] **1.5 Reference Example & Automated Testing**
+  - [x] `examples/blog_platform`: Full-featured standalone reference application.
+  - [x] End-to-end integration and CLI smoke tests in CI.
 
 ---
 
-## Milestone 2: Web Admin Dashboard (`apps/admin`)
+## Milestone 2: Extensibility & Developer Experience (`v0.2.0`)
 
-- [x] **2.1 Dashboard Infrastructure & i18n**
-  - [x] React + Vite + Tailwind CSS design system.
-  - [x] Multilingual dictionary support (`react-i18next`).
-  - [x] Two-tier layout: Platform Control Plane vs. Subsystem Dedicated Workspaces.
-  - [x] Bidirectional URL route persistence and deep linking.
+- [/] **2.1 Sandboxed WebAssembly (Wasmtime) Plugin Runtime**
+  - [ ] Hot-reloadable WASM subsystem modules.
+  - [ ] Safe sandbox boundary for multi-tenant extensions.
 
----
+- [/] **2.2 OpenAPI 3.0 & Swagger UI Integration**
+  - [ ] Auto-generate OpenAPI schemas for dynamically created data models and subsystem routes.
+  - [ ] Embedded Swagger UI explorer in Admin Shell.
 
-## Milestone 3: Non-GET Write Audit Engine
-
-- [x] **3.1 Non-GET Audit Interceptor Middleware (`crates/foundry_engine`)**
-  - [x] Intercept state-mutating requests (POST, PUT, PATCH, DELETE, login).
-  - [x] Discrete storage: `headers`, raw `query_params`, raw `body_params`.
-  - [x] Dynamic action name resolver.
+- [ ] **2.3 Multi-Database Support (MySQL, SQLite)**
+  - [ ] Pluggable SQL dialect adapters for Zero-DDL dynamic models.
 
 ---
 
-## Milestone 4: Subsystem Complete Decoupling & Unified Release Packaging
+## Milestone 3: Enterprise & High-Availability (`v1.0.0`)
 
-- [x] **4.1 Decoupled Two-Repository Architecture**
-  - [x] Complete separation between base infrastructure platform and custom subsystem repositories.
-  - [x] Self-contained subsystem standard: Controllers, Domain Logic, DTOs, Custom Admin Pages (`custom_pages`), and Manifest (`subsystem.json`).
-  - [x] Zero merge conflicts during upstream base engine updates (`git pull upstream`).
+- [ ] **3.1 Cluster Orchestration & Distributed Pub/Sub**
+  - [ ] Real-time WebSocket event streaming.
+  - [ ] Multi-node cache synchronization via Redis Pub/Sub.
 
-- [x] **4.2 Subsystem Custom Admin UI Pages & SDK Bridge**
-  - [x] Automatic static custom page hosting at `/api/v1/s/{slug}/ext/custom-pages/*`.
-  - [x] `FoundryBridge` postMessage protocol for token and theme sync.
-  - [x] Granular role access enforcement (`required_role`).
-
-- [x] **4.3 Developer CLI Scaffolding & Validation Tools (`apps/cli`)**
-  - [x] `foundry-cli system init-repo`: Initialize standalone subsystem Git repository.
-  - [x] `foundry-cli system new`: Scaffold self-contained subsystem.
-  - [x] `foundry-cli system validate`: Validate directory structure and manifest integrity.
-
-- [x] **4.4 Unified Production Release Packaging Pipeline**
-  - [x] `scripts/build-release.sh` automated release script.
-  - [x] Multi-stage Dockerfile combining base platform and custom subsystems.
+- [ ] **3.2 Dynamic Webhook Dispatcher**
+  - [ ] Configurable webhook endpoints triggered on entity mutations.
+  - [ ] Retry queue with exponential backoff.
 
 ---
 
-## 🔮 Upcoming Roadmap
+## 🏷️ Versioning Strategy & Upgrade Guide
 
-- [/] **Wasmtime Sandboxed Plugin Support**
-- [/] **Live OpenAPI 3.0 Aggregator & Swagger UI**
-- [ ] **High-Availability Multi-Node Cluster Orchestration**
+Foundry follows **Semantic Versioning (SemVer)**:
+- **Major versions (`1.x.x`)**: Breaking changes to public APIs with automated migration guides.
+- **Minor versions (`0.x.x`, `1.x.0`)**: New feature additions, builder extensions, and backward-compatible trait defaults.
+- **Patch versions (`0.1.x`)**: Backward-compatible bug fixes and internal performance enhancements.
+
+Upgrading in a user application:
+```bash
+cargo update -p foundry
+```

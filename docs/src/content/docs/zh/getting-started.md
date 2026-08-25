@@ -1,104 +1,152 @@
 ---
 title: 快速入门
-description: Foundry 快速上手与本地开发指南。
+description: 使用 Foundry 框架创建、构建和运行独立应用程序的快速入门指南。
 ---
 
 # Foundry 快速入门
 
-Foundry 是一个基于 Rust、PostgreSQL、Redis 与 React 构建的高性能开源多子系统后端平台，支持基础架构与业务子系统完全解耦。
-
-## 环境要求
-
-在开始前，请确保本地已安装以下环境：
-
-- **Rust 1.85+ / 2024 edition**
-- **Node.js 20+** 与 **pnpm 9+**
-- **Docker 与 Docker Compose**（用于本地 PostgreSQL 与 Redis）
+Foundry 是一个现代、模块化、彻底解耦的 Rust 后端平台与开发框架。通过将平台底层能力（运行时、路由、存储、鉴权、Admin 外壳）与业务应用彻底分离，使开发者能够使用 Cargo 依赖快速构建具备完整后台管理能力的现代化业务服务。
 
 ---
 
-## 1. 启动本地基础设施
+## ⚡ 5 分钟上手
 
-使用 Docker Compose 启动本地 PostgreSQL 与 Redis：
+### 1. 安装 Foundry CLI
+
+使用 Cargo 全局安装 `foundry-cli` 工具：
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+cargo install foundry-cli
 ```
 
-服务端口：
-- PostgreSQL: `localhost:5432`（数据库名: `foundry`, 用户: `postgres`, 密码: `postgrespassword`）
-- Redis: `localhost:6379`
-
----
-
-## 2. 初始化数据库
-
-执行基线数据表结构初始化：
+验证安装是否成功：
 
 ```bash
-cargo run --bin foundry-cli -- migrate
+foundry --help
 ```
 
 ---
 
-## 3. 启动 Foundry 后端服务
+### 2. 创建独立应用项目
 
-启动 Axum 后端核心服务：
+使用 `foundry new` 创建全新的独立应用项目：
 
 ```bash
-cargo run --bin foundry-server
+foundry new my-app
+cd my-app
 ```
 
-服务默认监听在 `http://127.0.0.1:8080`。
+生成的项目为一个完全独立的 Rust 应用程序：
 
----
-
-## 4. 启动管理后台 SPA (Admin UI)
-
-进入 `apps/admin` 目录并启动 Vite 开发服务器：
-
-```bash
-pnpm --dir apps/admin install
-pnpm --dir apps/admin dev
-```
-
-在浏览器中打开 `http://localhost:5173`。默认超级管理员账号：
-
-- **用户名**: `admin`
-- **密码**: `admin123456`
-
----
-
-## 5. 脚手架创建自包含子系统
-
-使用 `foundry-cli` 快速创建包含 API、逻辑、DTO 与自定义后台页面的完整自包含子系统：
-
-```bash
-cargo run --bin foundry-cli -- system new carnival_demo --name "Carnival Demo"
-```
-
-或者初始化独立的私有子系统 Git 仓库：
-
-```bash
-cargo run --bin foundry-cli -- system init-repo ../my-foundry-systems
+```text
+my-app/
+├── Cargo.toml                # 依赖 foundry = "0.1"
+├── src/
+│   ├── main.rs               # 应用启动入口 (FoundryApp::builder)
+│   └── systems/
+│       ├── mod.rs
+│       └── sample/           # 默认初始业务子系统
+│           ├── controllers/  # 自定义 Axum 路由 (/api/v1/s/sample/ext/*)
+│           ├── logic/        # 业务领域服务
+│           ├── dto/          # 请求 DTO 与字段校验
+│           ├── custom_pages/ # 自定义 Admin 运营看板 (HTML/React)
+│           └── mod.rs
+├── migrations/               # 业务专属数据库迁移脚本
+├── .env                      # 本地环境配置
+└── README.md
 ```
 
 ---
 
-## 6. 一键合并打包生产产物
+### 3. 启动数据库与缓存服务
 
-使用统一发布脚本合并基座引擎与所有自定义子系统：
+使用 Docker 快速启动本地 PostgreSQL 与 Redis：
 
 ```bash
-./scripts/build-release.sh
+docker run -d --name foundry-postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry -p 5432:5432 postgres:18-alpine
+docker run -d --name foundry-redis -p 6379:6379 redis:8-alpine
 ```
-
-打包产物将输出至 `dist/release/`，包含独立运行的 `start.sh`、二进制与静态后台资源。
 
 ---
 
-## 后续阅读
+### 4. 运行应用程序
 
-- 阅读 [架构蓝图设计](../architecture/blueprint/) 深入了解 Foundry 解耦架构原理。
-- 阅读 [子系统与扩展开发](../guides/extensions/) 学习如何编写自定义 Rust API 与管理后台页面。
-- 查看 [开发路线图](../roadmap/) 了解功能排期与进度。
+```bash
+cargo run
+```
+
+Foundry 将自动连接数据库，初始化基础元数据表，自动挂载已注册的业务子系统路由，并在 `http://127.0.0.1:8080` 启动监听。
+
+---
+
+## 🏗️ 应用程序如何使用 Foundry
+
+在用户应用的 `Cargo.toml` 中：
+
+```toml
+[dependencies]
+foundry = "0.1"
+tokio = { version = "1.44", features = ["full"] }
+axum = { version = "0.8" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+validator = { version = "0.20", features = ["derive"] }
+```
+
+在 `src/main.rs` 中：
+
+```rust
+pub mod systems;
+
+use foundry::prelude::*;
+use systems::SampleSubsystem;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // 1. 读取环境配置
+    let config = FoundryConfig::from_env();
+
+    // 2. 构造 Foundry 运行时并注册子系统
+    let app = FoundryApp::builder()
+        .config(config)
+        .register_subsystem(SampleSubsystem)
+        .build()
+        .await?;
+
+    // 3. 启动服务
+    app.run().await?;
+    Ok(())
+}
+```
+
+---
+
+## 🧩 扩展业务子系统
+
+在项目中快速脚手架一个新的业务子系统：
+
+```bash
+foundry system new blog --name "博客与内容发布"
+```
+
+在 `src/main.rs` 中注册：
+
+```rust
+use systems::BlogSubsystem;
+
+let app = FoundryApp::builder()
+    .register_subsystem(BlogSubsystem)
+    // ...
+    .build()
+    .await?;
+```
+
+新子系统的接口即刻在 `/api/v1/s/blog/ext/*` 生效。
+
+---
+
+## 📦 下一步
+
+- 阅读 [架构设计蓝图](../architecture/blueprint/) 理解 Framework 与 Application 的物理隔离设计。
+- 查阅 [子系统与扩展开发](../guides/extensions/) 学习如何编写自定义控制器、领域服务和 Admin 扩展大屏。
+- 查阅 [路线图与版本策略](../roadmap/) 了解 SemVer 版本演进与升级方法。

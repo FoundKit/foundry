@@ -2,11 +2,11 @@
 title: Foundry
 head:
   - tag: title
-    content: Foundry — Next-Gen Multi-System Backend Engine in Rust
+    content: Foundry — Next-Gen Multi-System Backend Platform & Framework in Rust
 description: Build, isolate, and extend independent multi-tenant systems from a shared high-performance Rust foundation.
 template: splash
 hero:
-  tagline: High-performance, open-source multi-system infrastructure platform & admin control plane built with Rust, Axum, and React. Base infra and subsystems are completely decoupled.
+  tagline: High-performance, open-source multi-system backend framework & admin control plane built with Rust, Axum, and React. Framework and user applications are completely decoupled.
   image:
     file: ../../assets/hero.svg
   actions:
@@ -26,7 +26,7 @@ hero:
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <div class="tech-badge not-content">
-  <span>⚡</span> Next-Gen Rust Multi-Tenant Platform · Decoupled Subsystem Architecture
+  <span>⚡</span> Next-Gen Rust Backend Framework · Decoupled Subsystem Architecture
 </div>
 
 <div class="tech-terminal not-content">
@@ -37,37 +37,37 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># Initialize standalone subsystem Git repository & scaffold subsystem</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system init-repo ../my-foundry-systems<br />
-    <span class="t-ok">✔</span> Initialized standalone Subsystems Git repo: <span class="t-path">../my-foundry-systems/</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo run</span> --bin foundry-cli -- system new carnival_demo --name <span class="t-string">"Carnival Demo"</span><br />
-    <span class="t-ok">✔</span> Initialized self-contained subsystem (API + Logic + DTO + Custom Admin UI): <span class="t-path">systems/src/carnival_demo/</span><br />
-    <span class="t-ok">✔</span> Bound Custom Extension routes: <span class="t-path">/api/v1/s/carnival_demo/ext/*</span><br />
-    <span class="t-ok">✔</span> Bound Custom Admin Pages: <span class="t-path">/api/v1/s/carnival_demo/ext/custom-pages/*</span><br />
-    <span class="t-ok">✔</span> Isolated Redis cache prefix: <span class="t-path">foundry:carnival_demo:*</span>
+    <span class="t-comment"># 1. Install CLI & scaffold independent application</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> foundry-cli<br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">foundry new</span> my-app<br />
+    <span class="t-ok">✔</span> Created independent application project: <span class="t-path">my-app/</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cd</span> my-app && <span class="t-cmd">cargo run</span><br />
+    <span class="t-ok">✔</span> Foundry Application listening on <span class="t-path">http://127.0.0.1:8080</span><br />
+    <span class="t-ok">✔</span> REST APIs available at <span class="t-path">/api/v1</span><br />
+    <span class="t-ok">✔</span> Admin Shell connected at <span class="t-path">/admin</span>
   </div>
 </div>
 
 ## 🌟 Core Architecture Pillars
 
 <CardGrid>
-  <Card title="Base & Subsystems Complete Decoupling" icon="puzzle">
-    Platform infrastructure is completely decoupled from custom business subsystems. Subsystem custom code lives in a separate Git repository with zero upstream merge conflicts.
+  <Card title="Framework & Application Separation" icon="puzzle">
+    Foundry is distributed as a Cargo dependency (`foundry = "0.1"`). Applications maintain their own independent Git repository with 0 upstream merge conflicts.
   </Card>
-  <Card title="Self-Contained Subsystem Standard" icon="document">
-    Each subsystem folder self-contains its custom API controllers, business services, DTO validation, custom admin pages (HTML/React), and manifest.
+  <Card title="Self-Contained Subsystems" icon="document">
+    Subsystems encapsulate custom API controllers, business services, DTO validation, and Admin UI pages in clean, cohesive modules.
   </Card>
   <Card title="Zero-DDL Dynamic Storage" icon="setting">
-    Visually define system configs and dynamic data models without database DDL migrations, locks, or downtime.
+    Visually define system configs and dynamic data models without database DDL migrations, schema locks, or downtime.
   </Card>
   <Card title="Automatic RESTful CRUD" icon="rocket">
-    Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access switches.
+    Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access control.
   </Card>
   <Card title="Hierarchical IAM & Topic RBAC" icon="open-book">
-    Super Admin (`super_admin`) with universal privileges, and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
+    Super Admin (`super_admin`), Platform Admin (`admin`), and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
   </Card>
-  <Card title="Unified Release Packaging Pipeline" icon="laptop">
-    Automated build pipeline (`build-release.sh` / Dockerfile) merging base infra and custom subsystems into a single production binary or container.
+  <Card title="Unified Release Packaging" icon="laptop">
+    Automated build pipeline (`build-release.sh` / Dockerfile) merging the server binary, Admin SPA, and custom pages into a single production bundle.
   </Card>
 </CardGrid>
 

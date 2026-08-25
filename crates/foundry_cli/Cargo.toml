@@ -1,0 +1,30 @@
+[package]
+name = "foundry_cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Foundry CLI - Scaffolding, migrations, and developer tooling for Foundry applications"
+repository.workspace = true
+
+[[bin]]
+name = "foundry"
+path = "src/bin/foundry.rs"
+
+[[bin]]
+name = "foundry-cli"
+path = "src/bin/foundry_cli.rs"
+
+[dependencies]
+foundry = { workspace = true }
+foundry_core = { workspace = true }
+foundry_storage = { workspace = true }
+foundry_auth = { workspace = true }
+sqlx = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+dotenvy = { workspace = true }

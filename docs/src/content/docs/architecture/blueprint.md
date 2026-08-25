@@ -1,163 +1,166 @@
 ---
 title: Architecture Blueprint
-description: Complete architecture design and blueprint for Foundry multi-tenant platform and decoupled two-repository model.
+description: Complete architectural design and blueprint for the Foundry Backend Platform & Framework.
 ---
 
 # Foundry Architecture Blueprint
 
 > **Organization**: [foundkit](https://github.com/foundkit)  
 > **Project**: `foundry`  
-> **Tagline**: *Build complete systems from a common foundation.*  
-> **Repository Description**: *Foundry is an open-source platform for building and running multiple independent backend systems from a shared foundation.*
+> **Positioning**: *A modern, modular, decoupled Rust backend platform and application framework.*
 
 ---
 
-## 1. Product Vision & Positioning
+## 1. Core Architecture Vision
 
-### 1.1 What is Foundry?
-**Foundry** is a complete, self-contained, open-source **Multi-System Backend Platform & Management Product** (Backend-as-a-Service / Multi-Tenant Infrastructure Engine).
+Foundry is designed from the ground up as a **reusable, versioned Rust Framework & Platform** distributed via Cargo packages.
 
-Foundry adopts a **"Base Infrastructure Engine + Unified Custom Systems Repository"** two-repository decoupled architecture:
-- **Base Infrastructure Repository (`foundry`)**: Provides pure generic platform infrastructure (Axum server engine, PostgreSQL Zero-DDL storage, Redis tenant namespace caching, Admin IAM, non-GET operation audit trail, React Admin control plane SPA, release packaging tooling).
-- **Unified Custom Systems Repository (`foundry-custom` / `foundry-systems`)**: **A single repository containing ALL custom subsystem code for the user or organization** (custom APIs + domain services + custom Admin UI views + manifests).
+Application developers do **not** fork or clone the Foundry repository to build business applications. Instead, application developers create completely independent Git repositories and consume Foundry as a standard Cargo dependency:
 
 ```mermaid
-flowchart LR
-    subgraph Repo1["🏛️ Repo 1: Foundry Base Engine (Open Source / Upstream)"]
+flowchart TD
+    subgraph FrameworkRepo["🏛️ Foundry Platform (Upstream Repository)"]
         direction TB
-        R1A["crates/* (Core Storage, IAM, Audit, Router, Hooks)"]
-        R1B["apps/server (Axum Server Engine Entry Point)"]
-        R1C["apps/admin (React Admin Control Plane Shell)"]
-        R1D["apps/cli & scripts/ (Scaffolding & Release Tools)"]
+        F_Facade["crates/foundry (High-level facade crate: FoundryApp, Builder, prelude)"]
+        F_Core["crates/foundry_core (Context, SubsystemModule, Error, Response)"]
+        F_Storage["crates/foundry_storage (Zero-DDL dynamic storage, PostgreSQL, Redis)"]
+        F_Auth["crates/foundry_auth (Admin IAM, Argon2id, JWT, Topic-scoped RBAC)"]
+        F_Engine["crates/foundry_engine (Axum router, Auto-CRUD, Audit logging)"]
+        F_Ext["crates/foundry_extension (Mutation hook pipelines)"]
+        F_CLI["crates/foundry_cli (foundry & foundry-cli developer tooling)"]
+        F_Admin["apps/admin (Decoupled React + Tailwind Admin SPA Shell)"]
     end
 
-    subgraph Repo2["🏢 Repo 2: Unified Custom Systems Repo (User's Single Custom Git Repository)"]
+    FrameworkRepo -->|"cargo publish / release"| CratesIO["📦 Foundry Cargo Crates (crates.io)"]
+
+    subgraph UserApp["🏢 User Application (Independent Git Repository)"]
         direction TB
-        R2A["carnival_demo/ (Subsystem A: Custom API + Logic + Custom Admin UI)"]
-        R2B["vip_mall/ (Subsystem B: Custom API + Logic + Custom Admin UI)"]
-        R2C["order_center/ (Subsystem C: Custom API + Logic + Custom Admin UI)"]
-        R2D["payment_gateway/ (Subsystem D: Custom API + Logic + Custom Admin UI)"]
+        App_Cargo["Cargo.toml (depends on: foundry = '0.1')"]
+        App_Main["src/main.rs (FoundryApp::builder()...)"]
+        App_Systems["src/systems/* (User business subsystems: APIs, logic, DTOs)"]
+        App_Admin["custom_pages/* (User custom admin iframe views)"]
+        App_Config["config/ & migrations/ (Application configs & migrations)"]
     end
 
-    Repo1 -.->|"Upstream base upgrades (git pull upstream main)<br/>100% Zero Code Conflicts"| Repo1
-    Repo2 -.->|"Team business iteration (git commit & push)<br/>Maintain only custom code"| Repo2
-
-    Repo1 --> Pipeline["⚙️ Unified Packaging Pipeline (build-release.sh / Dockerfile)"]
-    Repo2 --> Pipeline
-
-    Pipeline --> Output["🚀 Production Artifact: Unified Binary + Admin SPA + Custom Admin Views"]
-```
-
-### 1.2 Core Value Propositions
-1. **Single Custom Repository Maintenance**: Users and teams only need to maintain ONE Git repository containing all their business subsystems, where each subsystem is an isolated directory.
-2. **0-Conflict Upgrades**: Core platform code is maintained by the Foundry open-source team. Upgrading the base engine (`git pull upstream main` or updating the Docker base image) never causes merge conflicts with your private business logic.
-3. **Self-Contained Subsystem Directory Standard**: Each subsystem folder self-contains its custom API controllers, domain logic services, DTO validation schemas, custom admin UI pages (`custom_pages/`), and manifest (`subsystem.json`).
-4. **Multi-Tenant System Engine**: Run $N$ independent apps within a single deployed Foundry instance with strict tenant data and cache isolation.
-5. **Visual One-Click System & Model Generation (Admin UI + Auto-CRUD)**: Modern Web Admin Panel to graphically create subsystems, define dynamic data schemas, and automatically expose RESTful APIs.
-6. **Hierarchical Admin IAM & Topic-Scoped RBAC**: Super Admin (`super_admin`) and scoped Topic Admins (`allowed_systems: ["carnival_demo"]`).
-7. **Comprehensive Non-GET Operation Audit Trail**: Security-first middleware recording every state-mutating request (POST, PUT, PATCH, DELETE, login).
-8. **Unified Release Packaging Pipeline**: Merge base infrastructure and your single custom systems repo into a production binary or container in one step.
-
----
-
-## 2. Repository Layout & Decoupling Standard
-
-### 2.1 Base Platform Repository (`foundry`)
-
-```
-foundry/                         # Base Platform Repository (Open-Source / Upstream)
-├── README.md                    # Product overview & getting started guide
-├── docs/                        # Architecture & development documentation
-│   ├── astro.config.mjs         # Starlight documentation config
-│   ├── package.json             # Documentation dependencies
-│   └── src/content/docs/        # Multilingual documentation
-├── migrations/                  # Baseline database initialization (`init.sql`)
-├── apps/                        # Executable Applications
-│   ├── server/                  # Foundry Core Server (Rust / Axum binary entry point)
-│   ├── admin/                   # Visual Web Admin Dashboard SPA (React / Vite / Tailwind)
-│   └── cli/                     # Developer CLI Tool (System scaffolding, repo validation)
-├── crates/                      # Modular Backend Core Crates (Rust Workspace)
-│   ├── foundry_core/            # SystemContext, SubsystemModule, CustomAdminPageSpec
-│   ├── foundry_storage/         # Dynamic schema engine, ORM abstraction (SQLx)
-│   ├── foundry_auth/            # Admin IAM, Argon2id, JWT & Topic RBAC
-│   ├── foundry_engine/          # Multi-system router, Auto-CRUD API generator, Audit Interceptor
-│   └── foundry_extension/       # Mutation hooks & WASM extension pipeline
-├── systems/                     # Sub-System workspace (Git Submodule mount point for custom repo)
-│   └── src/                     # Sub-system registry & static/dynamic router loader
-├── external_systems/            # Standalone external subsystem directory
-├── scripts/                     # Build & Packaging Tooling (build-release.sh)
-└── docker/                      # Containerization & Deployment
-    ├── Dockerfile               # Production multi-stage build (Server + Admin UI + Subsystems)
-    └── docker-compose.yml       # Local dev setup (Foundry + PostgreSQL 18.6+ + Redis 8+)
+    CratesIO -->|"cargo add foundry / cargo update"| UserApp
 ```
 
 ---
 
-### 2.2 User's Unified Custom Systems Repository (`foundry-systems`)
+## 2. Responsibilities Separation
 
-A single Git repository maintained internally by the team containing all custom subsystems:
+| Dimension | Foundry Platform / Framework | User Application |
+|---|---|---|
+| **Runtime & HTTP** | Axum server engine, TCP listener, graceful shutdown, CORS | Port/host binding configuration, endpoint consumption |
+| **Routing** | Unified `/api/v1` tree, Admin APIs, Auto-CRUD, `/ext/*` subsystem mounting | Custom route handlers, middleware integration |
+| **Storage Engine** | PostgreSQL connection pool, Redis cache namespace isolation, Zero-DDL dynamic model schema | Business entity definitions, custom domain queries |
+| **Authentication & RBAC** | Argon2id hashing, JWT validation, Super/Platform/Topic Admin role verification | User domain auth logic, topic assignment |
+| **Admin Control Plane** | React Admin Shell SPA, model explorer, config forms, iframe sandbox bridge | Custom subsystem operational views (HTML, React, Vue) |
+| **Extensibility** | `SubsystemModule` trait, `MutationHook` lifecycle pipeline | Custom business subsystems, domain event listeners |
+| **Developer Tooling** | `foundry` CLI (`new`, `system new`, `migrate`, `admin`) | Application project scripts, business migrations |
 
+---
+
+## 3. Subsystem Standard
+
+A **Subsystem** in Foundry is a cohesive unit of business capabilities. Subsystems implement the `SubsystemModule` trait:
+
+```rust
+use axum::Router;
+use foundry::prelude::*;
+
+pub struct BlogSubsystem;
+
+impl SubsystemModule for BlogSubsystem {
+    fn slug(&self) -> &'static str {
+        "blog"
+    }
+
+    fn display_name(&self) -> &'static str {
+        "Content Management & Blog"
+    }
+
+    fn description(&self) -> &'static str {
+        "Articles, publishing workflow, and audience engagement"
+    }
+
+    fn register_routes(&self, router: Router) -> Router {
+        // Mounts custom handlers under /api/v1/s/blog/ext/*
+        router.merge(controllers::build_routes())
+    }
+
+    fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
+        vec![
+            CustomAdminPageSpec {
+                key: "article_editor".to_string(),
+                title: "Article Studio".to_string(),
+                icon: "FileEdit".to_string(),
+                page_type: "iframe".to_string(),
+                entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+                required_role: None,
+            }
+        ]
+    }
+}
 ```
-foundry-systems/                 # User's Single Custom Systems Git Repository
-├── Cargo.toml                   # Systems workspace definition
-├── README.md                    # Business documentation
-├── carnival_demo/               # Subsystem A: Campaign (Self-contained)
-│   ├── mod.rs                   # Entry & SubsystemModule trait implementation
-│   ├── subsystem.json           # Subsystem manifest & custom admin page specifications
-│   ├── controllers/             # Custom HTTP Controllers (Axum Handlers)
-│   ├── logic/                   # Domain business services
-│   ├── dto/                     # Request/Response DTOs & Validation schemas
-│   └── custom_pages/            # Custom Admin UI views (HTML/React)
-│       ├── lottery_dashboard.html
-│       └── wheel_control.html
-├── vip_mall/                    # Subsystem B: VIP Mall (Self-contained)
-│   ├── mod.rs
-│   ├── subsystem.json
-│   ├── controllers/
-│   ├── logic/
-│   ├── dto/
-│   └── custom_pages/
-│       └── overview.html
-├── order_center/                # Subsystem C: Orders (Self-contained)
-│   └── ...
-└── payment_gateway/             # Subsystem D: Payments (Self-contained)
-    └── ...
+
+---
+
+## 4. Application Bootstrap Pipeline
+
+Foundry provides a fluent `FoundryApp::builder()` API:
+
+```mermaid
+sequenceDiagram
+    participant Main as Application main()
+    participant Builder as FoundryBuilder
+    participant DB as PostgreSQL & Redis
+    participant Engine as Axum Router Engine
+    participant Listener as Tokio TCP Listener
+
+    Main->>Builder: FoundryApp::builder().config(...).register_subsystem(...)
+    Main->>Builder: .build().await
+    Builder->>DB: Initialize DB Pool & execute migrations (AUTO_MIGRATE)
+    Builder->>DB: Connect Redis cache (optional)
+    Builder->>Engine: Mount Admin APIs, Auto-CRUD, and Subsystem /ext/* routes
+    Builder->>Engine: Apply AuditInterceptor & SystemContext layers
+    Builder-->>Main: Return FoundryApp instance
+    Main->>Listener: app.run() -> Bind socket & start serving
 ```
 
 ---
 
-## 3. Decoupled Architecture & Development Workflow
+## 5. Admin UI Decoupling & Bridge Protocol
 
-### 3.1 Self-Contained Subsystem Directory Standard
+The **Foundry Admin Shell** (`apps/admin`) is built with React and Tailwind CSS. It communicates with custom subsystem pages through the **FoundryBridge** postMessage protocol:
 
-Each subsystem directory is self-contained with five core dimensions:
-1. **API & Controllers (`controllers/`)**: Axum route handlers mounted under `/api/v1/s/{slug}/ext/*`.
-2. **Domain Business Logic (`logic/`)**: Pure business logic, transactions, state machines.
-3. **Contracts & DTOs (`dto/`)**: Request inputs and response payloads with `validator` declarative constraints.
-4. **Custom Admin UI Pages (`custom_pages/`)**: Dedicated operational views (HTML / React) mounted under `/api/v1/s/{slug}/ext/custom-pages/*` and communicating with the Foundry Admin UI shell via `FoundryBridge`.
-5. **Manifest Metadata (`subsystem.json`)**: Declares slug, name, version, and custom page specs.
-
----
-
-### 3.2 Local Development Modes
-
-| Mode | Configuration | Best For |
-| :--- | :--- | :--- |
-| **Mode A: Git Submodule (Recommended)** | Mount `foundry-systems` as submodule at `foundry/systems/` | Native Cargo Workspace compilation, cross-crate IDE navigation, maximum performance |
-| **Mode B: Environment Pointer** | `export FOUNDRY_SYSTEMS_DIR=/path/to/foundry-systems` | Fast setup without altering repository worktree |
-| **Mode C: Symlink** | `ln -s /path/to/foundry-systems external_systems/my_systems` | Multi-repo local rapid prototyping |
+1. The Admin Shell loads the custom page inside an `<iframe>`.
+2. When the iframe finishes loading, the shell dispatches a `FOUNDRY_INIT` message:
+   ```json
+   {
+     "type": "FOUNDRY_INIT",
+     "payload": {
+       "token": "eyJhbGciOi...",
+       "subsystemSlug": "blog",
+       "admin": { "username": "admin", "role": "super_admin" },
+       "theme": "dark"
+     }
+   }
+   ```
+3. The custom page receives authentication credentials and theme tokens without needing custom login forms or cross-origin hacks.
 
 ---
 
-## 4. Unified Production Release Packaging
+## 6. Versioning and Upgrade Strategy
 
+Foundry follows **Semantic Versioning (SemVer)**:
+
+- **Patch Releases (`0.1.1` -> `0.1.2`)**: Backward-compatible bug fixes and internal performance enhancements.
+- **Minor Releases (`0.1.0` -> `0.2.0`)**: New features, new builders, backward-compatible trait extensions.
+- **Major Releases (`1.0.0` -> `2.0.0`)**: Breaking API changes with structured migration guides.
+
+To upgrade Foundry in a user application:
 ```bash
-# 1. Run release packaging script with custom systems repository path
-./scripts/build-release.sh --systems-dir /path/to/foundry-systems
-
-# 2. Or build production Docker container
-docker build -t foundry-app:latest -f docker/Dockerfile .
+cargo update -p foundry
 ```
-
-Produces a single deployment bundle in `dist/release/` containing the compiled server binary (`foundry-server`), the React Admin SPA, and all custom subsystem pages.
-
+No upstream repository merge conflicts, rebasing, or monorepo entanglement.
