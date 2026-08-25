@@ -1,11 +1,11 @@
 ---
 title: Getting Started
-description: Quick start guide to creating, building, and running applications with the Foundry Framework.
+description: Quick start guide to creating, building, and running standalone applications using the Foundry Framework via Git.
 ---
 
 # Getting Started with Foundry
 
-Foundry is a modern, modular Rust backend platform and framework that empowers developers to build scalable multi-system backends with embedded admin control planes.
+Foundry is a modern, modular Rust backend platform and framework. During the current development and testing phase (prior to official publication on crates.io), developers consume Foundry as a **Git Dependency** in their own independent repositories.
 
 ---
 
@@ -13,10 +13,10 @@ Foundry is a modern, modular Rust backend platform and framework that empowers d
 
 ### 1. Install the Foundry CLI
 
-Install the `foundry` CLI binary using Cargo:
+Install the `foundry` CLI directly from the GitHub repository using Cargo:
 
 ```bash
-cargo install foundry-cli
+cargo install --git https://github.com/foundkit/foundry foundry_cli
 ```
 
 Verify your installation:
@@ -25,9 +25,14 @@ Verify your installation:
 foundry --help
 ```
 
+> **Tip (Local Development)**: If you have cloned the Foundry source repository locally, you can also compile and install it with:
+> ```bash
+> cargo install --path crates/foundry_cli
+> ```
+
 ---
 
-### 2. Scaffold a New Project
+### 2. Scaffold a New Application
 
 Create a brand new standalone user application:
 
@@ -36,117 +41,146 @@ foundry new my-app
 cd my-app
 ```
 
-This generates a clean, self-contained project:
+The CLI generates a clean, self-contained Rust project with a pre-configured Git dependency:
 
 ```text
 my-app/
-├── Cargo.toml                # Depends on `foundry = "0.1"`
+├── Cargo.toml                # Pre-configured with: foundry = { git = "...", branch = "main" }
 ├── src/
-│   ├── main.rs               # Application bootstrap
+│   ├── main.rs               # Application bootstrap with FoundryApp::builder()
 │   └── systems/
 │       ├── mod.rs
-│       └── sample/           # Default starter subsystem
+│       └── sample/           # Starter business subsystem
 │           ├── controllers/  # Axum routes (/api/v1/s/sample/ext/*)
 │           ├── logic/        # Domain business logic
-│           ├── dto/          # Validation schemas
-│           ├── custom_pages/ # Custom Admin UI
+│           ├── dto/          # Request validation schemas
+│           ├── custom_pages/ # Custom Admin UI Studio
 │           └── mod.rs
 ├── migrations/               # User database migrations
-├── .env                      # Local configuration
+├── .env                      # Local environment configuration
 └── README.md
+```
+
+#### Inside `Cargo.toml`:
+
+```toml
+[package]
+name = "my-app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
+tokio = { version = "1.44", features = ["full"] }
+axum = { version = "0.8", features = ["macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+validator = { version = "0.20", features = ["derive"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+async-trait = "0.1"
 ```
 
 ---
 
 ### 3. Start Database Services
 
-Start local PostgreSQL and Redis instances:
+Start local PostgreSQL and Redis containers:
 
 ```bash
-docker run -d --name foundry-postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry -p 5432:5432 postgres:18-alpine
-docker run -d --name foundry-redis -p 6379:6379 redis:8-alpine
+docker run -d --name foundry-postgres \
+  -e POSTGRES_PASSWORD=postgrespassword \
+  -e POSTGRES_DB=foundry \
+  -p 5432:5432 \
+  postgres:18-alpine
+
+docker run -d --name foundry-redis \
+  -p 6379:6379 \
+  redis:8-alpine
+```
+
+Check your `.env` file matches your local setup:
+
+```bash
+HOST=0.0.0.0
+PORT=8080
+DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
 ```
 
 ---
 
 ### 4. Run the Application
 
+Start the backend server:
+
 ```bash
 cargo run
 ```
 
-Foundry will automatically connect to PostgreSQL, run baseline schema migrations, mount all registered subsystems, and start listening on `http://127.0.0.1:8080`.
+When the server starts, Foundry will automatically:
+1. Connect to PostgreSQL and Redis.
+2. Apply database migrations (when `AUTO_MIGRATE=true`).
+3. Mount all registered subsystems.
+4. Start listening on `http://127.0.0.1:8080`.
 
 ---
 
-## 🏗️ How Applications Consume Foundry
+### 5. Access the Admin Control Plane
 
-In your application's `Cargo.toml`:
+Open your browser and navigate to:
 
-```toml
-[dependencies]
-foundry = "0.1"
-tokio = { version = "1.44", features = ["full"] }
-axum = { version = "0.8" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-validator = { version = "0.20", features = ["derive"] }
+```text
+http://localhost:8080/admin
 ```
 
-In `src/main.rs`:
+#### Default Administrator Credentials:
+* **Username**: `admin`
+* **Password**: `admin123456`
+* **Role**: `super_admin`
 
-```rust
-pub mod systems;
-
-use foundry::prelude::*;
-use systems::SampleSubsystem;
-
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // 1. Load config from .env or environment variables
-    let config = FoundryConfig::from_env();
-
-    // 2. Build the application with subsystems and hooks
-    let app = FoundryApp::builder()
-        .config(config)
-        .register_subsystem(SampleSubsystem)
-        .build()
-        .await?;
-
-    // 3. Serve traffic
-    app.run().await?;
-    Ok(())
-}
-```
-
----
-
-## 🧩 Adding a Custom Subsystem
-
-Scaffold a new business subsystem inside your project:
+#### Creating Custom Administrators via CLI:
+You can create new administrator accounts anytime using the CLI:
 
 ```bash
-foundry system new blog --name "Blog & Publishing"
+foundry admin create --username developer --password devsecret --role super_admin
 ```
-
-Register it in `src/main.rs`:
-
-```rust
-use systems::BlogSubsystem;
-
-let app = FoundryApp::builder()
-    .register_subsystem(BlogSubsystem)
-    // ...
-    .build()
-    .await?;
-```
-
-Your new subsystem endpoints will be immediately accessible under `/api/v1/s/blog/ext/*`.
 
 ---
 
-## 📦 Next Steps
+### 6. Verify APIs
 
-- Explore the [Architecture Blueprint](../architecture/blueprint/) to understand how Framework and Application code are isolated.
-- Read the [Subsystems & Extensions Guide](../guides/extensions/) for advanced controllers, services, and Admin UI pages.
-- Check out the [Roadmap & Versioning](../roadmap/) for upgrade policies and release lifecycles.
+#### Health Check:
+```bash
+curl http://localhost:8080/api/v1/health
+# Response: OK
+```
+
+#### Subsystem Extension Endpoint:
+```bash
+curl -X POST http://localhost:8080/api/v1/s/sample/ext/greet \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice"}'
+
+# Response:
+# {
+#   "code": 0,
+#   "message": "success",
+#   "data": {
+#     "message": "Hello, Alice! Welcome to Foundry Framework."
+#   }
+# }
+```
+
+---
+
+## 🧩 Next Steps
+
+- **[Database & Custom Storage Guide](../guides/database/)**: Learn how to write custom SQL queries, transactions, dynamic models, and migrations.
+- **[Subsystems & Custom Features](../guides/extensions/)**: Learn the 3-Layer pattern and how to build Admin UI extensions.
+- **[CLI Reference Guide](../guides/cli/)**: Master all CLI scaffolding and admin management commands.

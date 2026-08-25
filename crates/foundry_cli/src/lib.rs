@@ -25,9 +25,15 @@ enum Commands {
         /// Optional path to local foundry crate (useful for local development or monorepos)
         #[arg(long)]
         path: Option<String>,
-        /// Optional foundry crate version override
-        #[arg(long, default_value = "0.1.0")]
-        version: String,
+        /// Optional git repository URL (defaults to https://github.com/foundkit/foundry)
+        #[arg(long)]
+        git: Option<String>,
+        /// Optional git branch (defaults to main)
+        #[arg(long)]
+        branch: Option<String>,
+        /// Optional crates.io version override (e.g. 0.1.0)
+        #[arg(long)]
+        version: Option<String>,
     },
     /// Sub-system management and scaffolding within an existing application
     System {
@@ -114,9 +120,19 @@ pub async fn run_cli() -> anyhow::Result<()> {
         Commands::New {
             name,
             path,
+            git,
+            branch,
             version,
         } => {
-            scaffold_project(&name, path.as_deref(), &version)?;
+            scaffold_project(
+                &name,
+                ProjectOptions {
+                    local_path: path.as_deref(),
+                    git: git.as_deref(),
+                    branch: branch.as_deref(),
+                    version: version.as_deref(),
+                },
+            )?;
         }
         Commands::System { action } => match action {
             SystemCommands::New {
@@ -205,12 +221,17 @@ pub async fn run_cli() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Project scaffolding options
+#[derive(Debug, Clone, Default)]
+pub struct ProjectOptions<'a> {
+    pub local_path: Option<&'a str>,
+    pub git: Option<&'a str>,
+    pub branch: Option<&'a str>,
+    pub version: Option<&'a str>,
+}
+
 /// Create a new standalone user application
-pub fn scaffold_project(
-    name: &str,
-    local_path: Option<&str>,
-    version: &str,
-) -> anyhow::Result<PathBuf> {
+pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<PathBuf> {
     let project_dir = PathBuf::from(name);
     let pkg_name = project_dir
         .file_name()
@@ -230,10 +251,14 @@ pub fn scaffold_project(
     fs::create_dir_all(project_dir.join("config"))?;
 
     // 1. Cargo.toml
-    let foundry_dep = if let Some(p) = local_path {
+    let foundry_dep = if let Some(p) = opts.local_path {
         format!(r#"foundry = {{ path = "{}" }}"#, p)
+    } else if let Some(v) = opts.version {
+        format!(r#"foundry = "{}"#, v)
     } else {
-        format!(r#"foundry = "{}"#, version)
+        let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
+        let branch = opts.branch.unwrap_or("main");
+        format!(r#"foundry = {{ git = "{}", branch = "{}" }}"#, repo, branch)
     };
 
     let cargo_toml = format!(
@@ -829,8 +854,14 @@ mod tests {
             std::env::temp_dir().join(format!("foundry_test_cli_{}", uuid::Uuid::new_v4()));
         let project_name = temp_dir.to_string_lossy().to_string();
 
-        let path =
-            scaffold_project(&project_name, Some("../../../crates/foundry"), "0.1.0").unwrap();
+        let path = scaffold_project(
+            &project_name,
+            ProjectOptions {
+                local_path: Some("../../../crates/foundry"),
+                ..Default::default()
+            },
+        )
+        .unwrap();
         assert!(path.join("Cargo.toml").exists());
         assert!(path.join("src/main.rs").exists());
         assert!(path.join("src/systems/sample/mod.rs").exists());

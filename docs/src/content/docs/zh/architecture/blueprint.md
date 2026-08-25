@@ -31,18 +31,18 @@ flowchart TD
         F_Admin["apps/admin (解耦的 React + Tailwind Admin SPA 外壳)"]
     end
 
-    FrameworkRepo -->|"发布至 crates.io / release"| CratesIO["📦 Foundry Cargo 包"]
+    FrameworkRepo -->|"测试阶段: Git 依赖<br/>发布阶段: crates.io"| CratesIO["📦 Foundry Cargo 包 (Git / crates.io)"]
 
     subgraph UserApp["🏢 用户独立业务应用 (Independent Git Repository)"]
         direction TB
-        App_Cargo["Cargo.toml (仅依赖: foundry = '0.1')"]
+        App_Cargo["Cargo.toml (foundry = { git = '...' } / '0.1.0')"]
         App_Main["src/main.rs (FoundryApp::builder()...)"]
         App_Systems["src/systems/* (业务子系统: API 控制器, 领域服务, DTO 校验)"]
         App_Admin["custom_pages/* (业务自定义 Admin 运营大屏页面)"]
         App_Config["config/ 与 migrations/ (业务配置与迁移)"]
     end
 
-    CratesIO -->|"cargo add foundry / cargo update"| UserApp
+    CratesIO -->|"cargo update"| UserApp
 ```
 
 ---

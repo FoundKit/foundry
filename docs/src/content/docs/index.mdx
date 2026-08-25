@@ -37,8 +37,8 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     <span class="tech-terminal-title">bash — foundry-cli v0.1.0</span>
   </div>
   <div class="tech-terminal-body">
-    <span class="t-comment"># 1. Install CLI & scaffold independent application</span><br />
-    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> foundry-cli<br />
+    <span class="t-comment"># 1. Install CLI from GitHub & scaffold independent application</span><br />
+    <span class="t-prompt">➜</span> <span class="t-cmd">cargo install</span> --git https://github.com/foundkit/foundry foundry_cli<br />
     <span class="t-prompt">➜</span> <span class="t-cmd">foundry new</span> my-app<br />
     <span class="t-ok">✔</span> Created independent application project: <span class="t-path">my-app/</span><br />
     <span class="t-prompt">➜</span> <span class="t-cmd">cd</span> my-app && <span class="t-cmd">cargo run</span><br />

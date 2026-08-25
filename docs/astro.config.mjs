@@ -182,11 +182,25 @@ export default defineConfig({
           },
           items: [
             {
-              label: 'Subsystems & Extensions',
+              label: 'Subsystems & Custom Features',
               translations: {
-                'zh-CN': '子系统与扩展开发',
+                'zh-CN': '子系统与自定义功能开发',
               },
               link: '/guides/extensions/',
+            },
+            {
+              label: 'Database & Custom Storage',
+              translations: {
+                'zh-CN': '数据库与自定义存储开发',
+              },
+              link: '/guides/database/',
+            },
+            {
+              label: 'CLI Tooling Reference',
+              translations: {
+                'zh-CN': 'CLI 命令行工具指南',
+              },
+              link: '/guides/cli/',
             },
           ],
         },

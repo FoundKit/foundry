@@ -31,18 +31,18 @@ flowchart TD
         F_Admin["apps/admin (Decoupled React + Tailwind Admin SPA Shell)"]
     end
 
-    FrameworkRepo -->|"cargo publish / release"| CratesIO["📦 Foundry Cargo Crates (crates.io)"]
+    FrameworkRepo -->|"Pre-release: Git dependency<br/>Release: crates.io"| CratesIO["📦 Foundry Packages (Git / crates.io)"]
 
     subgraph UserApp["🏢 User Application (Independent Git Repository)"]
         direction TB
-        App_Cargo["Cargo.toml (depends on: foundry = '0.1')"]
+        App_Cargo["Cargo.toml (foundry = { git = '...' } / '0.1.0')"]
         App_Main["src/main.rs (FoundryApp::builder()...)"]
         App_Systems["src/systems/* (User business subsystems: APIs, logic, DTOs)"]
         App_Admin["custom_pages/* (User custom admin iframe views)"]
         App_Config["config/ & migrations/ (Application configs & migrations)"]
     end
 
-    CratesIO -->|"cargo add foundry / cargo update"| UserApp
+    CratesIO -->|"cargo update"| UserApp
 ```
 
 ---

@@ -13,8 +13,10 @@ fn test_cli_new_project_compilation_smoke_test() {
     println!("Scaffolding smoke test application at {:?}", temp_dir);
     foundry_cli::scaffold_project(
         &project_name,
-        Some(foundry_crate_path.canonicalize().unwrap().to_str().unwrap()),
-        "0.1.0",
+        foundry_cli::ProjectOptions {
+            local_path: Some(foundry_crate_path.canonicalize().unwrap().to_str().unwrap()),
+            ..Default::default()
+        },
     )
     .expect("Failed to scaffold new project");
 

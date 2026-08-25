@@ -1,11 +1,11 @@
 ---
-title: Subsystems & Extensions Guide
-description: Learn how to develop modular business subsystems, custom endpoints, Admin UI extensions, and mutation lifecycle hooks with Foundry.
+title: Subsystems & Custom Features Guide
+description: Learn how to develop modular business subsystems, custom endpoints, database integration, Admin UI extensions, and mutation hooks with Foundry.
 ---
 
-# Subsystems & Extensions Guide
+# Subsystems & Custom Features Guide
 
-Foundry empowers developers to build modular, maintainable backend applications by breaking business logic into **Subsystems** and **Lifecycle Hooks**.
+Foundry empowers developers to build modular, maintainable backend applications by organizing business capabilities into **Subsystems** and **Lifecycle Hooks**.
 
 ---
 
@@ -18,17 +18,17 @@ src/systems/blog/
 ├── mod.rs               # SubsystemModule trait implementation
 ├── controllers/         # Axum HTTP handlers mounted at /api/v1/s/blog/ext/*
 │   └── mod.rs
-├── logic/               # Pure business domain services
+├── logic/               # Pure domain services with database access
 │   └── mod.rs
 ├── dto/                 # Request/response structs and validator rules
 │   └── mod.rs
-└── custom_pages/        # Custom Admin UI Studio (HTML, React, Vue)
+└── custom_pages/        # Custom Admin UI views (HTML, React, Vue)
     └── article_editor.html
 ```
 
 ---
 
-## 2. Implementing a Subsystem Step-by-Step
+## 2. Implementing a Subsystem (Three-Layer Architecture)
 
 ### Step 1: Define DTOs & Validation (`dto/mod.rs`)
 
@@ -47,14 +47,14 @@ pub struct CreateArticleRequest {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ArticleResponse {
-    pub id: u64,
+    pub id: i64,
     pub title: String,
     pub content: String,
     pub author: String,
 }
 ```
 
-### Step 2: Implement Domain Business Logic (`logic/mod.rs`)
+### Step 2: Implement Domain Business Logic with Database Access (`logic/mod.rs`)
 
 ```rust
 use crate::systems::blog::dto::{CreateArticleRequest, ArticleResponse};
@@ -64,12 +64,26 @@ pub struct ArticleService;
 
 impl ArticleService {
     pub async fn create_article(
-        _ctx: &SystemContext,
+        ctx: &SystemContext,
+        db: &DbPool,
         req: CreateArticleRequest,
     ) -> AppResult<ArticleResponse> {
-        // Execute business logic, database mutations, or external API calls
+        // Execute database query or business transactions
+        let row: (i64,) = sqlx::query_as(
+            "INSERT INTO articles (system_slug, title, content, author, created_at)
+             VALUES ($1, $2, $3, $4, NOW())
+             RETURNING id"
+        )
+        .bind(&ctx.system_slug)
+        .bind(&req.title)
+        .bind(&req.content)
+        .bind(&req.author)
+        .fetch_one(db)
+        .await
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
         Ok(ArticleResponse {
-            id: 101,
+            id: row.0,
             title: req.title,
             content: req.content,
             author: req.author,
@@ -93,10 +107,11 @@ pub fn build_routes() -> Router {
 
 pub async fn handle_create_article(
     Extension(ctx): Extension<SystemContext>,
+    Extension(db): Extension<DbPool>,
     Json(payload): Json<CreateArticleRequest>,
 ) -> AppResult<Json<ApiResponse<ArticleResponse>>> {
     payload.validate()?;
-    let article = ArticleService::create_article(&ctx, payload).await?;
+    let article = ArticleService::create_article(&ctx, &db, payload).await?;
     Ok(Json(ApiResponse::success(article)))
 }
 ```
@@ -146,7 +161,7 @@ impl SubsystemModule for BlogSubsystem {
             icon: "FileEdit".to_string(),
             page_type: "iframe".to_string(),
             entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
-            required_role: None,
+            required_role: None, // e.g. Some("super_admin".to_string())
         }]
     }
 }
@@ -194,14 +209,25 @@ Custom subsystem pages embedded in the Foundry Admin Shell automatically receive
     <p id="admin-badge" class="text-xs text-slate-500">Connecting to Foundry Admin Shell...</p>
   </div>
   <script>
+    let authContext = null;
+
+    // 1. Receive context from Foundry Admin Shell
     window.addEventListener('message', function(event) {
       if (event.data?.type === 'FOUNDRY_INIT') {
-        const { token, admin, theme, subsystemSlug } = event.data.payload;
-        if (theme === 'dark') document.documentElement.classList.add('dark');
+        authContext = event.data.payload;
+        if (authContext.theme === 'dark') document.documentElement.classList.add('dark');
         document.getElementById('admin-badge').innerText =
-          `Authenticated as: ${admin.username} (${admin.role}) for subsystem: ${subsystemSlug}`;
+          `Authenticated as: ${authContext.admin.username} (${authContext.admin.role}) for subsystem: ${authContext.subsystemSlug}`;
       }
     });
+
+    // 2. Send toast notifications back to parent Admin Shell
+    function showToast(message, level = 'success') {
+      window.parent.postMessage({
+        type: 'FOUNDRY_TOAST',
+        payload: { message, level }
+      }, '*');
+    }
   </script>
 </body>
 </html>
@@ -211,7 +237,7 @@ Custom subsystem pages embedded in the Foundry Admin Shell automatically receive
 
 ## 5. Lifecycle Mutation Hooks
 
-Foundry supports intercepting dynamic model mutations through the `MutationHook` trait:
+Intercept dynamic model mutations through the `MutationHook` trait:
 
 ```rust
 use foundry::prelude::*;
