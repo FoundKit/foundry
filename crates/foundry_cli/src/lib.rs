@@ -249,6 +249,7 @@ pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<
     fs::create_dir_all(project_dir.join("src/systems/sample/custom_pages"))?;
     fs::create_dir_all(project_dir.join("migrations"))?;
     fs::create_dir_all(project_dir.join("config"))?;
+    fs::create_dir_all(project_dir.join("dev"))?;
 
     // 1. Cargo.toml
     let foundry_dep = if let Some(p) = opts.local_path {
@@ -476,39 +477,225 @@ AUTO_MIGRATE=true
     fs::write(project_dir.join(".env.example"), env_example)?;
     fs::write(project_dir.join(".env"), env_example)?;
 
-    // 10. .gitignore
+    // 10. dev/docker-compose.yml
+    let docker_compose = format!(
+        r#"services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: {pkg_name}-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: foundry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: {pkg_name}-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+"#,
+        pkg_name = pkg_name
+    );
+    fs::write(project_dir.join("dev/docker-compose.yml"), docker_compose)?;
+
+    // 11. .gitignore
     let gitignore = r#"/target
 .env
 *.log
 .DS_Store
+
+# Local development resources
+dev/
 "#;
     fs::write(project_dir.join(".gitignore"), gitignore)?;
 
-    // 11. README.md
+    // 12. README.md
     let readme = format!(
         r#"# {name}
 
-A standalone backend application powered by [Foundry Platform & Framework](https://github.com/foundkit/foundry).
+基于 [Foundry](https://github.com/foundkit/foundry) 现代模块化后端框架构建的独立业务应用。
 
-## Quick Start
+---
 
-1. Start database dependencies:
+## ⚡ 快速上手
+
+### 1. 启动本地开发数据库
+项目在 `dev/` 目录中预置了本地专用的 PostgreSQL 17 与 Redis 7 容器编排配置（已在 `.gitignore` 中配置忽略，专门用于存放本地开发资源，不污染代码仓库）：
+
 ```bash
-docker compose up -d # if you have a local docker compose
+# 启动本地开发数据库与缓存
+docker compose -f dev/docker-compose.yml up -d
+
+# 查看运行状态
+docker compose -f dev/docker-compose.yml ps
+
+# 停止数据库与缓存
+docker compose -f dev/docker-compose.yml down
 ```
 
-2. Run the application:
+> **默认连接配置**（与 `.env` 保持一致）：
+> - PostgreSQL: `postgres://postgres:postgrespassword@localhost:5432/foundry`
+> - Redis: `redis://127.0.0.1:6379`
+
+### 2. 运行应用服务
 ```bash
 cargo run
 ```
+服务启动后将监听 `http://localhost:8080`：
+- 健康检查：`curl http://localhost:8080/api/v1/health`
+- 管理后台：`http://localhost:8080/admin`（默认超管账号：`admin` / `admin123456`）
 
-The server will be available at `http://localhost:8080`.
+---
 
-## Adding a Subsystem
+## 🧩 子项目 / 子系统管理
 
-To scaffold a new business subsystem:
+Foundry 采用高内聚的子系统架构，支持以下操作：
+
+### 1. 创建代码优先子系统（内聚在工程内）
 ```bash
-foundry system new <slug> --name "My Subsystem"
+# 创建新子系统骨架（位于 src/systems/<slug>/）
+foundry system new <slug> --name "子系统显示名称"
+# 示例：
+foundry system new billing --name "账单与支付中心"
+```
+**注册步骤**：
+1. 在 `src/systems/mod.rs` 导出：
+   ```rust
+   pub mod billing;
+   pub use billing::BillingSubsystem;
+   ```
+2. 在 `src/main.rs` 中注册到 App 构建器：
+   ```rust
+   let app = FoundryApp::builder()
+       .config(config)
+       .register_subsystem(SampleSubsystem)
+       .register_subsystem(BillingSubsystem) // 新增注册
+       .build()
+       .await?;
+   ```
+
+### 2. 创建独立外部文件式子系统
+```bash
+# 生成包含 subsystem.json 与 custom_pages 的独立目录
+foundry system new-external carnival --name "嘉年华运营活动"
+```
+
+### 3. 查看当前工程所有已识别子系统
+```bash
+foundry system list
+```
+
+---
+
+## 🗄️ 数据模型创建与管理
+
+Foundry 提供两种模型开发范式：
+
+### 方式一：Zero-DDL 动态数据模型（免迁移、即写即用）
+无需手写 SQL DDL 与数据库表变更，自动按 `system_slug` 和 `model_slug` 隔离，并自动提供 RESTful CRUD 接口。
+
+- **代码中快速写入与读取**：
+```rust
+use foundry_storage::models::RecordStore;
+use serde_json::json;
+
+// 插入动态模型记录
+let record = RecordStore::create(
+    &db,
+    &ctx.system_slug,  // 所属子系统 slug
+    "articles",         // 模型 slug
+    json!({{
+        "title": "Hello Foundry",
+        "content": "动态模型无需执行 DDL 迁移",
+        "views": 100
+    }})
+).await?;
+
+// 按 ID 查询
+let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
+
+// 分页列表查询
+let list = RecordStore::list(&db, &ctx.system_slug, "articles", 1, 20).await?;
+```
+- **自动 RESTful 接口**：
+  - `GET/POST /api/v1/s/{{system_slug}}/{{model_slug}}`
+  - `GET/PUT/DELETE /api/v1/s/{{system_slug}}/{{model_slug}}/{{id}}`
+- **后台可视化配置**：
+  可在 Admin 控制台 (`/admin`) 可视化添加模型定义与动态字段。
+
+### 方式二：原生 SQL 迁移与强类型模型（高并发、事务、复杂 Join）
+1. **编写迁移脚本**：在 `migrations/` 目录下添加 `001_create_articles.sql`：
+   ```sql
+   CREATE TABLE IF NOT EXISTS articles (
+       id BIGSERIAL PRIMARY KEY,
+       system_slug VARCHAR(64) NOT NULL,
+       title VARCHAR(255) NOT NULL,
+       content TEXT NOT NULL,
+       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+   );
+   CREATE INDEX IF NOT EXISTS idx_articles_system_slug ON articles(system_slug);
+   ```
+2. **应用迁移**：
+   ```bash
+   foundry migrate
+   # 或在 .env 中设置 AUTO_MIGRATE=true，应用启动时会自动执行
+   ```
+3. **在子系统业务逻辑中使用 SQLx 强类型查询**：
+   ```rust
+   #[derive(Debug, sqlx::FromRow, serde::Serialize)]
+   pub struct Article {{
+       pub id: i64,
+       pub system_slug: String,
+       pub title: String,
+       pub content: String,
+   }}
+
+   let rows = sqlx::query_as::<_, Article>(
+       "SELECT * FROM articles WHERE system_slug = $1"
+   )
+   .bind(&ctx.system_slug)
+   .fetch_all(&db)
+   .await?;
+   ```
+
+---
+
+## 🛠️ 常用 CLI 运维命令
+
+```bash
+# 1. 校验当前工程规范
+foundry validate
+
+# 2. 手动执行数据库迁移
+foundry migrate
+
+# 3. 创建管理员账号
+foundry admin create --username admin --password secret --role super_admin
+
+# 4. 重置管理员密码
+foundry admin reset-password --username admin --new-password newsecret
 ```
 "#,
         name = name
@@ -521,6 +708,7 @@ foundry system new <slug> --name "My Subsystem"
     );
     println!("👉 Next steps:");
     println!("   cd {}", name);
+    println!("   docker compose -f dev/docker-compose.yml up -d");
     println!("   cargo run");
 
     Ok(project_dir)
@@ -826,6 +1014,7 @@ fn validate_project(path: &str) -> anyhow::Result<()> {
 
     let cargo_toml = p.join("Cargo.toml");
     let main_rs = p.join("src/main.rs");
+    let dev_compose = p.join("dev/docker-compose.yml");
 
     if !cargo_toml.exists() {
         println!("  ⚠️ Warning: Cargo.toml not found at {:?}", cargo_toml);
@@ -837,6 +1026,12 @@ fn validate_project(path: &str) -> anyhow::Result<()> {
         println!("  ⚠️ Warning: src/main.rs not found at {:?}", main_rs);
     } else {
         println!("  ✅ src/main.rs present");
+    }
+
+    if !dev_compose.exists() {
+        println!("  ℹ️ Note: dev/docker-compose.yml not found (optional local dev environment)");
+    } else {
+        println!("  ✅ dev/docker-compose.yml present");
     }
 
     list_subsystems(path)?;
@@ -864,6 +1059,10 @@ mod tests {
         .unwrap();
         assert!(path.join("Cargo.toml").exists());
         assert!(path.join("src/main.rs").exists());
+        assert!(path.join("dev/docker-compose.yml").exists());
+        assert!(path.join(".gitignore").exists());
+        let gitignore = fs::read_to_string(path.join(".gitignore")).unwrap();
+        assert!(gitignore.contains("dev/"));
         assert!(path.join("src/systems/sample/mod.rs").exists());
         assert!(path.join("src/systems/sample/controllers/mod.rs").exists());
 

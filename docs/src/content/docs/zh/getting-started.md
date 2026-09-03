@@ -47,6 +47,8 @@ cd my-app
 ```text
 my-app/
 ├── Cargo.toml                # 预先配置了 foundry = { git = "...", branch = "main" }
+├── dev/                      # 本地开发专用资源目录 (.gitignore 忽略)
+│   └── docker-compose.yml    # 本地 PostgreSQL 17 与 Redis 7 容器编排
 ├── src/
 │   ├── main.rs               # 应用启动入口 (FoundryApp::builder)
 │   └── systems/
@@ -89,18 +91,10 @@ async-trait = "0.1"
 
 ### 3. 启动数据库与缓存服务
 
-使用 Docker 快速启动本地 PostgreSQL 与 Redis 实例：
+使用工程预置的 `dev/docker-compose.yml` 快速启动本地 PostgreSQL 与 Redis 实例（该目录已被 `.gitignore` 忽略，专门隔离本地开发环境）：
 
 ```bash
-docker run -d --name foundry-postgres \
-  -e POSTGRES_PASSWORD=postgrespassword \
-  -e POSTGRES_DB=foundry \
-  -p 5432:5432 \
-  postgres:17-alpine
-
-docker run -d --name foundry-redis \
-  -p 6379:6379 \
-  redis:7-alpine
+docker compose -f dev/docker-compose.yml up -d
 ```
 
 检查项目根目录下的 `.env` 配置是否与本地环境匹配：

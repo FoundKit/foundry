@@ -43,6 +43,8 @@ Foundry Repository (Framework)
             ↓
 User Application (Independent Git Repo)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
+    ├── dev/                       # Local development resources (.gitignore'd)
+    │   └── docker-compose.yml     # PostgreSQL 17 + Redis 7 local stack
     ├── src/
     │   ├── main.rs                # Bootstrap with FoundryApp::builder()
     │   └── systems/               # User business subsystems
@@ -64,9 +66,12 @@ cargo install --git https://github.com/foundkit/foundry foundry_cli
 
 # 2. Scaffold a brand new standalone application
 foundry new my-app
-
-# 3. Enter your project directory and start the server
 cd my-app
+
+# 3. Start local development database (PostgreSQL 17 + Redis 7)
+docker compose -f dev/docker-compose.yml up -d
+
+# 4. Start the server
 cargo run
 ```
 
@@ -138,26 +143,102 @@ async fn main() -> anyhow::Result<()> {
 
 ---
 
-## 🛠️ CLI Commands
+## 🛠️ CLI Commands & Core Workflows
+
+Foundry provides a streamlined developer CLI (`foundry` / `foundry-cli`) to manage applications, subsystems, and models.
+
+### 1. Local Development Database
+
+Scaffolded projects include a dedicated `dev/docker-compose.yml` (ignored by `.gitignore` to keep repositories clean):
 
 ```bash
-# Create a new standalone application
-foundry new <project-name>
+# Start local PostgreSQL 17 and Redis 7
+docker compose -f dev/docker-compose.yml up -d
 
-# Scaffold a new subsystem in an existing project
-foundry system new <slug> --name "Display Name"
+# Check service status
+docker compose -f dev/docker-compose.yml ps
 
-# Apply baseline database migrations
-foundry migrate --database-url postgres://...
+# Stop local database
+docker compose -f dev/docker-compose.yml down
+```
+
+### 2. Subsystem (Subproject) Operations
+
+Organize business capabilities into high-cohesion, isolated subsystems:
+
+```bash
+# 1. Create a code-first subsystem inside src/systems/<slug>/
+foundry system new billing --name "Billing Center"
+
+# 2. Register it in src/systems/mod.rs:
+#    pub mod billing;
+#    pub use billing::BillingSubsystem;
+
+# 3. Register it in src/main.rs:
+#    .register_subsystem(BillingSubsystem)
+
+# 4. Create an external standalone subsystem (with subsystem.json & custom pages)
+foundry system new-external carnival --name "Carnival 2026"
+
+# 5. List all discovered subsystems
+foundry system list
+```
+
+### 3. Data Model Creation & Storage
+
+Choose between Zero-DDL dynamic models and strongly-typed SQLx schemas:
+
+#### Option A: Zero-DDL Dynamic Models (Instant RESTful Auto-CRUD)
+No SQL DDL migrations needed. Define models dynamically via the Admin UI (`/admin`) or manipulate records directly in code:
+
+```rust
+use foundry_storage::models::RecordStore;
+use serde_json::json;
+
+// Create dynamic record (strictly tenant-isolated by system_slug & model_slug)
+let record = RecordStore::create(
+    &db,
+    &ctx.system_slug,  // subsystem slug
+    "articles",         // model slug
+    json!({ "title": "First Post", "views": 10 })
+).await?;
+
+// Retrieve by ID or query paginated list
+let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
+let list = RecordStore::list(&db, &ctx.system_slug, "articles", 1, 20).await?;
+```
+Dynamic models automatically receive REST endpoints at `/api/v1/s/{system_slug}/{model_slug}`.
+
+#### Option B: Native SQL Migrations & Typed Models (High-concurrency & Transactions)
+1. Add migration in `migrations/001_create_orders.sql`:
+   ```sql
+   CREATE TABLE IF NOT EXISTS orders (
+       id BIGSERIAL PRIMARY KEY,
+       system_slug VARCHAR(64) NOT NULL,
+       order_no VARCHAR(64) NOT NULL UNIQUE,
+       amount BIGINT NOT NULL,
+       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+   );
+   CREATE INDEX IF NOT EXISTS idx_orders_system_slug ON orders(system_slug);
+   ```
+2. Apply migration:
+   ```bash
+   foundry migrate
+   # Or set AUTO_MIGRATE=true in .env to auto-apply on startup
+   ```
+3. Query via SQLx with `#[derive(sqlx::FromRow)]`.
+
+### 4. Admin IAM & Project Validation
+
+```bash
+# Validate project structure and manifest integrity
+foundry validate
 
 # Create an administrator account
 foundry admin create --username admin --password secret --role super_admin
 
 # Reset administrator password
 foundry admin reset-password --username admin --new-password newsecret
-
-# Validate application structure and manifests
-foundry validate
 ```
 
 ---

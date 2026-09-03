@@ -47,6 +47,8 @@ The CLI generates a clean, self-contained Rust project with a pre-configured Git
 ```text
 my-app/
 ├── Cargo.toml                # Pre-configured with: foundry = { git = "...", branch = "main" }
+├── dev/                      # Dedicated local dev resources (.gitignore'd)
+│   └── docker-compose.yml    # Local PostgreSQL 17 & Redis 7 stack
 ├── src/
 │   ├── main.rs               # Application bootstrap with FoundryApp::builder()
 │   └── systems/
@@ -89,18 +91,10 @@ async-trait = "0.1"
 
 ### 3. Start Database Services
 
-Start local PostgreSQL and Redis containers:
+Start local PostgreSQL and Redis containers using the pre-configured `dev/docker-compose.yml` (the `dev/` directory is ignored by `.gitignore` to keep user repositories clean):
 
 ```bash
-docker run -d --name foundry-postgres \
-  -e POSTGRES_PASSWORD=postgrespassword \
-  -e POSTGRES_DB=foundry \
-  -p 5432:5432 \
-  postgres:17-alpine
-
-docker run -d --name foundry-redis \
-  -p 6379:6379 \
-  redis:7-alpine
+docker compose -f dev/docker-compose.yml up -d
 ```
 
 Check your `.env` file matches your local setup:
