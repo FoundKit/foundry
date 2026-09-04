@@ -481,7 +481,7 @@ AUTO_MIGRATE=true
     let docker_compose = format!(
         r#"services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: {pkg_name}-postgres
     restart: unless-stopped
     environment:
@@ -542,7 +542,7 @@ dev/
 ## ⚡ 快速上手
 
 ### 1. 启动本地开发数据库
-项目在 `dev/` 目录中预置了本地专用的 PostgreSQL 17 与 Redis 7 容器编排配置（已在 `.gitignore` 中配置忽略，专门用于存放本地开发资源，不污染代码仓库）：
+项目在 `dev/` 目录中预置了本地专用的 PostgreSQL 18 与 Redis 7 容器编排配置（已在 `.gitignore` 中配置忽略，专门用于存放本地开发资源，不污染代码仓库）：
 
 ```bash
 # 启动本地开发数据库与缓存
@@ -1060,6 +1060,8 @@ mod tests {
         assert!(path.join("Cargo.toml").exists());
         assert!(path.join("src/main.rs").exists());
         assert!(path.join("dev/docker-compose.yml").exists());
+        let compose = fs::read_to_string(path.join("dev/docker-compose.yml")).unwrap();
+        assert!(compose.contains("postgres:18-alpine"));
         assert!(path.join(".gitignore").exists());
         let gitignore = fs::read_to_string(path.join(".gitignore")).unwrap();
         assert!(gitignore.contains("dev/"));

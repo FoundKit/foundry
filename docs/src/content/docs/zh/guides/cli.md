@@ -54,7 +54,7 @@ foundry new my-app --git https://github.com/foundkit/foundry --branch feature/ne
 foundry new my-app --version 0.1.0
 ```
 
-> **本地开发资源目录**：新工程预置了 `dev/docker-compose.yml` 配置（已被 `.gitignore` 忽略以隔离本地环境），支持一键启动本地专用的 PostgreSQL 17 与 Redis 7：
+> **本地开发资源目录**：新工程预置了 `dev/docker-compose.yml` 配置（已被 `.gitignore` 忽略以隔离本地环境），支持一键启动本地专用的 PostgreSQL 18 与 Redis 7：
 > ```bash
 > cd my-app
 > docker compose -f dev/docker-compose.yml up -d

@@ -48,7 +48,7 @@ cd my-app
 my-app/
 ├── Cargo.toml                # 预先配置了 foundry = { git = "...", branch = "main" }
 ├── dev/                      # 本地开发专用资源目录 (.gitignore 忽略)
-│   └── docker-compose.yml    # 本地 PostgreSQL 17 与 Redis 7 容器编排
+│   └── docker-compose.yml    # 本地 PostgreSQL 18 与 Redis 7 容器编排
 ├── src/
 │   ├── main.rs               # 应用启动入口 (FoundryApp::builder)
 │   └── systems/

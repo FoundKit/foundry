@@ -10,7 +10,7 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/react-18%2B%20%2F%2019-61dafb.svg)](https://react.dev)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-16%2B%20%2F%2017%2B-336791.svg)](https://www.postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-16%2B%20%2F%2018%2B-336791.svg)](https://www.postgresql.org)
 [![Redis](https://img.shields.io/badge/redis-7%2B%20%2F%208-dc382d.svg)](https://redis.io)
 
 </div>
@@ -44,7 +44,7 @@ Foundry Repository (Framework)
 User Application (Independent Git Repo)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
     ├── dev/                       # Local development resources (.gitignore'd)
-    │   └── docker-compose.yml     # PostgreSQL 17 + Redis 7 local stack
+    │   └── docker-compose.yml     # PostgreSQL 18 + Redis 7 local stack
     ├── src/
     │   ├── main.rs                # Bootstrap with FoundryApp::builder()
     │   └── systems/               # User business subsystems
@@ -68,7 +68,7 @@ cargo install --git https://github.com/foundkit/foundry foundry_cli
 foundry new my-app
 cd my-app
 
-# 3. Start local development database (PostgreSQL 17 + Redis 7)
+# 3. Start local development database (PostgreSQL 18 + Redis 7)
 docker compose -f dev/docker-compose.yml up -d
 
 # 4. Start the server
@@ -152,7 +152,7 @@ Foundry provides a streamlined developer CLI (`foundry` / `foundry-cli`) to mana
 Scaffolded projects include a dedicated `dev/docker-compose.yml` (ignored by `.gitignore` to keep repositories clean):
 
 ```bash
-# Start local PostgreSQL 17 and Redis 7
+# Start local PostgreSQL 18 and Redis 7
 docker compose -f dev/docker-compose.yml up -d
 
 # Check service status

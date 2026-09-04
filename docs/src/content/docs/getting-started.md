@@ -48,7 +48,7 @@ The CLI generates a clean, self-contained Rust project with a pre-configured Git
 my-app/
 ├── Cargo.toml                # Pre-configured with: foundry = { git = "...", branch = "main" }
 ├── dev/                      # Dedicated local dev resources (.gitignore'd)
-│   └── docker-compose.yml    # Local PostgreSQL 17 & Redis 7 stack
+│   └── docker-compose.yml    # Local PostgreSQL 18 & Redis 7 stack
 ├── src/
 │   ├── main.rs               # Application bootstrap with FoundryApp::builder()
 │   └── systems/
