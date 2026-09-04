@@ -34,6 +34,7 @@ serde_json = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+tinyvec = { workspace = true }
 
 [dev-dependencies]
 http-body-util = "0.1"

@@ -55,6 +55,7 @@ jsonwebtoken = "9.3"
 thiserror = "2.0"
 anyhow = "1.0"
 async-trait = "0.1"
+tinyvec = ">=1.0, <1.13.0"
 
 # Logging & Tracing
 tracing = "0.1"

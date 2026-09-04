@@ -16,7 +16,6 @@ name = "foundry-cli"
 path = "src/bin/foundry_cli.rs"
 
 [dependencies]
-foundry = { workspace = true }
 foundry_core = { workspace = true }
 foundry_storage = { workspace = true }
 foundry_auth = { workspace = true }
@@ -28,3 +27,4 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 anyhow = { workspace = true }
 dotenvy = { workspace = true }
+tinyvec = { workspace = true }
