@@ -160,6 +160,9 @@ docker compose -f dev/docker-compose.yml ps
 
 # Stop local database
 docker compose -f dev/docker-compose.yml down
+
+# Reset local database and volumes (clean re-initialization)
+docker compose -f dev/docker-compose.yml down -v
 ```
 
 ### 2. Subsystem (Subproject) Operations

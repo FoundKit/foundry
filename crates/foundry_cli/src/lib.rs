@@ -491,7 +491,7 @@ AUTO_MIGRATE=true
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -553,6 +553,9 @@ docker compose -f dev/docker-compose.yml ps
 
 # 停止数据库与缓存
 docker compose -f dev/docker-compose.yml down
+
+# 重置并清空本地开发数据库（重新初始化数据卷）
+docker compose -f dev/docker-compose.yml down -v
 ```
 
 > **默认连接配置**（与 `.env` 保持一致）：
@@ -1062,6 +1065,7 @@ mod tests {
         assert!(path.join("dev/docker-compose.yml").exists());
         let compose = fs::read_to_string(path.join("dev/docker-compose.yml")).unwrap();
         assert!(compose.contains("postgres:18-alpine"));
+        assert!(compose.contains("postgres_data:/var/lib/postgresql\n"));
         assert!(path.join(".gitignore").exists());
         let gitignore = fs::read_to_string(path.join(".gitignore")).unwrap();
         assert!(gitignore.contains("dev/"));

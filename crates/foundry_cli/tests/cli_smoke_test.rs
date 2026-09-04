@@ -25,6 +25,7 @@ fn test_cli_new_project_compilation_smoke_test() {
     assert!(temp_dir.join("dev/docker-compose.yml").exists());
     let compose = fs::read_to_string(temp_dir.join("dev/docker-compose.yml")).unwrap();
     assert!(compose.contains("postgres:18-alpine"));
+    assert!(compose.contains("postgres_data:/var/lib/postgresql\n"));
     assert!(temp_dir.join(".gitignore").exists());
     let gitignore = fs::read_to_string(temp_dir.join(".gitignore")).unwrap();
     assert!(gitignore.contains("dev/"));
