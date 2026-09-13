@@ -1,0 +1,18 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Foundry Platform Reference Server"
+repository.workspace = true
+
+[[bin]]
+name = "foundry-server"
+path = "src/main.rs"
+
+[dependencies]
+foundry = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }

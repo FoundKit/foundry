@@ -1,0 +1,18 @@
+[package]
+name = "foundry_auth"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+foundry_core = { workspace = true }
+foundry_storage = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+argon2 = { workspace = true }
+jsonwebtoken = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,223 @@
+use crate::handlers::*;
+use crate::middleware::{
+    audit_interceptor, extract_system_context, require_admin_auth, require_topic_access,
+};
+use crate::state::AppState;
+use axum::{
+    Router,
+    middleware::from_fn_with_state,
+    routing::{get, post, put},
+};
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
+
+pub fn build_router(state: AppState) -> Router {
+    // 1. Admin Control Plane APIs (/api/v1/admin/*)
+    let admin_public_routes = Router::new().route("/auth/login", post(auth::login_handler));
+
+    let admin_protected_routes = Router::new()
+        .route("/auth/me", get(auth::me_handler))
+        .route(
+            "/platform/summary",
+            get(systems::get_platform_summary_handler),
+        )
+        .route(
+            "/systems",
+            get(systems::list_systems_handler).post(systems::create_system_handler),
+        )
+        .route(
+            "/systems/{id}",
+            get(systems::get_system_handler).put(systems::update_system_handler),
+        )
+        .route(
+            "/admins",
+            get(admins::list_admins_handler).post(admins::create_admin_handler),
+        )
+        .route("/admins/{id}", put(admins::update_admin_handler))
+        .route("/audit-logs", get(audit::list_audit_logs_handler))
+        // Topic-scoped admin routes
+        .route(
+            "/s/{system_slug}/details",
+            get(systems::get_system_by_slug_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/stats",
+            get(systems::get_system_stats_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/configs/schema",
+            get(configs::list_config_schema_handler)
+                .post(configs::upsert_config_schema_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models",
+            get(models::list_models_handler)
+                .post(models::create_model_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models/{id}/fields",
+            get(models::list_model_fields_handler)
+                .post(models::add_model_field_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/custom-pages",
+            get(systems::list_subsystem_custom_pages_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route_layer(from_fn_with_state(state.clone(), require_admin_auth));
+
+    let admin_api = Router::new()
+        .merge(admin_public_routes)
+        .merge(admin_protected_routes);
+
+    // 2. Auto-generated Dynamic REST CRUD APIs (/api/v1/s/{system_slug}/{model_slug})
+    let autocrud_api = Router::new()
+        .route(
+            "/s/{system_slug}/configs",
+            get(configs::get_aggregated_configs_handler)
+                .put(configs::update_aggregated_configs_handler),
+        )
+        .route(
+            "/s/{system_slug}/{model_slug}",
+            get(autocrud::list_records_handler).post(autocrud::create_record_handler),
+        )
+        .route(
+            "/s/{system_slug}/{model_slug}/{id}",
+            get(autocrud::get_record_handler)
+                .put(autocrud::update_record_handler)
+                .patch(autocrud::update_record_handler)
+                .delete(autocrud::delete_record_handler),
+        );
+
+    // 3. Custom Sub-system Extension APIs (/api/v1/s/{system_slug}/ext/*)
+    let mut custom_ext_api = Router::new();
+    for sub in state.subsystems.iter() {
+        tracing::info!(
+            "Mounting custom subsystem extension API: {} ({}) under /api/v1/s/{}/ext",
+            sub.display_name(),
+            sub.slug(),
+            sub.slug()
+        );
+        let sub_router = sub.register_routes(Router::new());
+        custom_ext_api = custom_ext_api.nest_service(&format!("/s/{}/ext", sub.slug()), sub_router);
+    }
+
+    // Combine into uniform RESTful API tree (/api/v1)
+    let api_v1 = Router::new()
+        .route("/health", get(health_check))
+        .nest("/admin", admin_api)
+        .merge(autocrud_api)
+        .merge(custom_ext_api);
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    let mut router = Router::new()
+        .nest("/api/v1", api_v1)
+        .layer(from_fn_with_state(state.clone(), audit_interceptor))
+        .layer(from_fn_with_state(state.clone(), extract_system_context))
+        .layer(cors)
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    // Root redirect to Admin UI (/ -> /admin/)
+    router = router.route(
+        "/",
+        get(|| async { axum::response::Redirect::temporary("/admin/") }),
+    );
+
+    // If static Admin SPA build exists on disk, serve it under /admin; otherwise fall back to embedded SPA
+    let admin_static_dirs = [
+        std::path::PathBuf::from("static/admin"),
+        std::path::PathBuf::from("apps/admin/dist"),
+        std::path::PathBuf::from("../apps/admin/dist"),
+    ];
+
+    let mut mounted_disk_admin = false;
+    for dir in admin_static_dirs {
+        if dir.exists() {
+            let index_file = dir.join("index.html");
+            if index_file.exists() {
+                let serve_dir = tower_http::services::ServeDir::new(dir.clone())
+                    .not_found_service(tower_http::services::ServeFile::new(index_file));
+                router = router.nest_service("/admin", serve_dir);
+                mounted_disk_admin = true;
+                break;
+            }
+        }
+    }
+
+    if !mounted_disk_admin {
+        tracing::info!("Mounting embedded Admin UI SPA assets under /admin");
+        router = router
+            .route(
+                "/admin",
+                get(|| async { axum::response::Redirect::temporary("/admin/") }),
+            )
+            .route("/admin/", get(admin_embedded_handler))
+            .route("/admin/{*path}", get(admin_embedded_handler));
+    }
+
+    // Also mount /assets fallback for direct asset requests
+    router = router.route("/assets/{*path}", get(assets_embedded_handler));
+
+    router
+}
+
+#[derive(rust_embed::Embed)]
+#[folder = "admin_dist"]
+struct EmbeddedAdminAssets;
+
+async fn serve_embedded_file(path: &str) -> axum::response::Response {
+    use axum::http::{HeaderValue, StatusCode, header};
+    use axum::response::IntoResponse;
+
+    let clean_path = path.trim_start_matches('/');
+    let target = if clean_path.is_empty() {
+        "index.html"
+    } else {
+        clean_path
+    };
+
+    if let Some(file) = EmbeddedAdminAssets::get(target) {
+        let mime = mime_guess::from_path(target).first_or_octet_stream();
+        let content_type = HeaderValue::from_str(mime.as_ref())
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
+        return ([(header::CONTENT_TYPE, content_type)], file.data).into_response();
+    }
+
+    // SPA client-side fallback: return index.html
+    if let Some(index) = EmbeddedAdminAssets::get("index.html") {
+        return (
+            [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            )],
+            index.data,
+        )
+            .into_response();
+    }
+
+    (StatusCode::NOT_FOUND, "Admin UI assets not found").into_response()
+}
+
+async fn admin_embedded_handler(uri: axum::http::Uri) -> axum::response::Response {
+    let path = uri.path();
+    let relative = path.strip_prefix("/admin").unwrap_or(path);
+    serve_embedded_file(relative).await
+}
+
+async fn assets_embedded_handler(uri: axum::http::Uri) -> axum::response::Response {
+    serve_embedded_file(uri.path()).await
+}
+
+async fn health_check() -> &'static str {
+    "OK"
+}

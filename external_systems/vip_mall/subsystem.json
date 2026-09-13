@@ -1,0 +1,23 @@
+{
+  "slug": "vip_mall",
+  "display_name": "VIP 尊享商城子系统",
+  "description": "独立托管的 VIP 尊享商城与会员积分控制台",
+  "version": "1.0.0",
+  "custom_pages": [
+    {
+      "key": "vip_overview",
+      "title": "VIP 运营概览大屏",
+      "icon": "Crown",
+      "type": "iframe",
+      "entry": "/api/v1/s/vip_mall/ext/custom-pages/overview.html"
+    },
+    {
+      "key": "point_grants",
+      "title": "会员积分发放规则",
+      "icon": "Coins",
+      "type": "iframe",
+      "entry": "/api/v1/s/vip_mall/ext/custom-pages/point_grants.html"
+    }
+  ]
+}
+

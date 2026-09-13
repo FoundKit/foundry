@@ -1,0 +1,34 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+
+# Node / Frontend
+node_modules/
+/dist/
+docs/dist/
+!apps/admin/dist/**
+.astro/
+*.tsbuildinfo
+.prettiercache
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Database / Local volumes
+postgres_data/
+redis_data/
+tmp/
+scratch/

@@ -1,0 +1,101 @@
+---
+title: Foundry
+head:
+  - tag: title
+    content: Foundry — 基于 Rust 的现代多系统后端平台与应用框架
+description: 基于 Rust 高性能底座构建、隔离与扩展独立多系统后端与管理控制台。
+template: splash
+hero:
+  tagline: 基于 Rust、Axum 与 React 构建的高性能、开源多系统后端框架与可视化 Admin 控制台。平台框架与用户业务工程完全解耦。
+  image:
+    file: ../../../assets/hero.svg
+  actions:
+    - text: 快速入门
+      link: ./getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: 架构设计蓝图
+      link: ./architecture/blueprint/
+      icon: document
+      variant: secondary
+    - text: GitHub 仓库
+      link: https://github.com/foundkit/foundry
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="tech-badge not-content">
+  <span>⚡</span> 现代 Rust 后端应用框架 · 完全解耦的子系统架构
+</div>
+
+<div class="tech-terminal not-content">
+  <div class="tech-terminal-header">
+    <span class="tech-terminal-dot dot-red"></span>
+    <span class="tech-terminal-dot dot-yellow"></span>
+    <span class="tech-terminal-dot dot-green"></span>
+    <span class="tech-terminal-title">bash — foundry CLI v0.1.0</span>
+  </div>
+  <div class="tech-terminal-body">
+    <span class="t-comment"># 1. 从 GitHub 仓库安装 CLI 工具</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'cargo install --git https://github.com/foundkit/foundry foundry_cli'}</code><br />
+    <span class="t-comment"># 2. 创建全新的独立业务应用工程</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'foundry new my-app'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'创建独立业务应用工程: my-app/'}</code><br />
+    <span class="t-comment"># 3. 进入项目目录并启动服务</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'cd my-app && cargo run'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'Foundry 应用成功监听于: http://0.0.0.0:8080'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'REST API 统一接入点: /api/v1'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'可视化 Admin 控制台: /admin'}</code>
+  </div>
+</div>
+
+## 🌟 核心架构支柱
+
+<CardGrid>
+  <Card title="框架与业务完全解耦" icon="puzzle">
+    Foundry 作为标准 Cargo 依赖提供 (`foundry = "0.1"`)。用户拥有独立 Git 仓库，上游框架升级零合并冲突。
+  </Card>
+  <Card title="高内聚业务子系统" icon="document">
+    子系统封装自定义 API 控制器、业务领域服务、DTO 校验与 Admin 扩展页面，结构清晰内聚。
+  </Card>
+  <Card title="Zero-DDL 动态存储引擎" icon="setting">
+    可视化配置系统参数与动态数据模型，无需编写数据库 DDL 迁移，避免元数据锁与停机维护。
+  </Card>
+  <Card title="自动生成 RESTful CRUD" icon="rocket">
+    所有动态模型即刻获得开箱即用的高并发 RESTful CRUD 接口（`GET`, `POST`, `PUT`, `DELETE`）。
+  </Card>
+  <Card title="分级权限与专题 RBAC" icon="open-book">
+    超级管理员 (`super_admin`)、普通管理员 (`admin`) 与专属专题管理员 (`topic_admin`)，支持细粒度权限控制。
+  </Card>
+  <Card title="统一交付与打包流水线" icon="laptop">
+    自动化构建脚本 (`build-release.sh` / Dockerfile) 一键将服务二进制、Admin 前端与扩展页面打包为单一部署制品。
+  </Card>
+</CardGrid>
+
+---
+
+## 🏗️ 架构流转流水线
+
+<div class="tech-pipeline not-content">
+  <div class="tech-pipeline-node">
+    <div class="node-icon">🌐</div>
+    <div class="node-title">客户端请求</div>
+    <div class="node-desc">Admin 控制台 / 移动端 / HTTP 客户端</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">⚡</div>
+    <div class="node-title">Axum 路由引擎</div>
+    <div class="node-desc">上下文解析、鉴权与专题 RBAC 校验</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">⚙️</div>
+    <div class="node-title">子系统运行时</div>
+    <div class="node-desc">Auto-CRUD + Rust 原生业务 + Admin 扩展页面</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">💾</div>
+    <div class="node-title">Zero-DDL 存储</div>
+    <div class="node-desc">PostgreSQL JSONB/GIN + Redis 租户隔离缓存</div>
+  </div>
+</div>

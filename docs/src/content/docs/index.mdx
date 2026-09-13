@@ -1,0 +1,101 @@
+---
+title: Foundry
+head:
+  - tag: title
+    content: Foundry — Next-Gen Multi-System Backend Platform & Framework in Rust
+description: Build, isolate, and extend independent multi-tenant systems from a shared high-performance Rust foundation.
+template: splash
+hero:
+  tagline: High-performance, open-source multi-system backend framework & admin control plane built with Rust, Axum, and React. Framework and user applications are completely decoupled.
+  image:
+    file: ../../assets/hero.svg
+  actions:
+    - text: Getting Started
+      link: ./getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Architecture Blueprint
+      link: ./architecture/blueprint/
+      icon: document
+      variant: secondary
+    - text: GitHub Repository
+      link: https://github.com/foundkit/foundry
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="tech-badge not-content">
+  <span>⚡</span> Next-Gen Rust Backend Framework · Decoupled Subsystem Architecture
+</div>
+
+<div class="tech-terminal not-content">
+  <div class="tech-terminal-header">
+    <span class="tech-terminal-dot dot-red"></span>
+    <span class="tech-terminal-dot dot-yellow"></span>
+    <span class="tech-terminal-dot dot-green"></span>
+    <span class="tech-terminal-title">bash — foundry CLI v0.1.0</span>
+  </div>
+  <div class="tech-terminal-body">
+    <span class="t-comment"># 1. Install CLI from GitHub repository</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'cargo install --git https://github.com/foundkit/foundry foundry_cli'}</code><br />
+    <span class="t-comment"># 2. Scaffold a brand-new independent user application</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'foundry new my-app'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'Created independent application project: my-app/'}</code><br />
+    <span class="t-comment"># 3. Enter project directory & run</span><br />
+    <span class="t-prompt">➜ </span><code class="t-cmd">{'cd my-app && cargo run'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'Foundry Application listening on http://0.0.0.0:8080'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'REST APIs available at /api/v1'}</code><br />
+    <span class="t-ok">✔ </span><code class="t-path">{'Admin Shell connected at /admin'}</code>
+  </div>
+</div>
+
+## 🌟 Core Architecture Pillars
+
+<CardGrid>
+  <Card title="Framework & Application Separation" icon="puzzle">
+    Foundry is distributed as a Cargo dependency (`foundry = "0.1"`). Applications maintain their own independent Git repository with 0 upstream merge conflicts.
+  </Card>
+  <Card title="Self-Contained Subsystems" icon="document">
+    Subsystems encapsulate custom API controllers, business services, DTO validation, and Admin UI pages in clean, cohesive modules.
+  </Card>
+  <Card title="Zero-DDL Dynamic Storage" icon="setting">
+    Visually define system configs and dynamic data models without database DDL migrations, schema locks, or downtime.
+  </Card>
+  <Card title="Automatic RESTful CRUD" icon="rocket">
+    Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access control.
+  </Card>
+  <Card title="Hierarchical IAM & Topic RBAC" icon="open-book">
+    Super Admin (`super_admin`), Platform Admin (`admin`), and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
+  </Card>
+  <Card title="Unified Release Packaging" icon="laptop">
+    Automated build pipeline (`build-release.sh` / Dockerfile) merging the server binary, Admin SPA, and custom pages into a single production bundle.
+  </Card>
+</CardGrid>
+
+---
+
+## 🏗️ Architecture Pipeline
+
+<div class="tech-pipeline not-content">
+  <div class="tech-pipeline-node">
+    <div class="node-icon">🌐</div>
+    <div class="node-title">Client Requests</div>
+    <div class="node-desc">Admin SPA / Mobile Apps / HTTP Clients</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">⚡</div>
+    <div class="node-title">Axum Routing Engine</div>
+    <div class="node-desc">Context Extraction & Topic RBAC</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">⚙️</div>
+    <div class="node-title">Subsystem Runtime</div>
+    <div class="node-desc">Auto-CRUD + Self-Contained Rust + Admin UI</div>
+  </div>
+  <div class="tech-pipeline-node">
+    <div class="node-icon">💾</div>
+    <div class="node-title">Zero-DDL Storage</div>
+    <div class="node-desc">Postgres JSONB/GIN + Redis Cache</div>
+  </div>
+</div>
