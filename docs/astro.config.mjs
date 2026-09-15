@@ -528,6 +528,77 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Codebase Deep Dive',
+          translations: {
+            'zh-CN': '源码深度理解',
+          },
+          items: [
+            {
+              label: 'Overview & Learning Guide',
+              translations: {
+                'zh-CN': '学习指南与代码总览',
+              },
+              link: '/code-analysis/',
+            },
+            {
+              label: '01. Core Types & Interfaces',
+              translations: {
+                'zh-CN': '01. 核心类型与接口定义 (Core)',
+              },
+              link: '/code-analysis/01-core/',
+            },
+            {
+              label: '02. Storage Layer & Engine',
+              translations: {
+                'zh-CN': '02. 存储层与模型引擎 (Storage)',
+              },
+              link: '/code-analysis/02-storage/',
+            },
+            {
+              label: '03. Authentication & RBAC',
+              translations: {
+                'zh-CN': '03. 认证与权限控制 (Auth)',
+              },
+              link: '/code-analysis/03-auth/',
+            },
+            {
+              label: '04. Extension System & Hooks',
+              translations: {
+                'zh-CN': '04. 扩展系统与生命周期钩子 (Extension)',
+              },
+              link: '/code-analysis/04-extension/',
+            },
+            {
+              label: '05. Request Engine & Auto-CRUD',
+              translations: {
+                'zh-CN': '05. 请求引擎与自动 CRUD (Engine)',
+              },
+              link: '/code-analysis/05-engine/',
+            },
+            {
+              label: '06. Facade Layer & Assembly',
+              translations: {
+                'zh-CN': '06. 门面层与应用组装 (Foundry)',
+              },
+              link: '/code-analysis/06-foundry/',
+            },
+            {
+              label: '07. Blog Platform Example',
+              translations: {
+                'zh-CN': '07. 博客实战示例应用 (Blog Platform)',
+              },
+              link: '/code-analysis/07-blog-platform/',
+            },
+            {
+              label: '08. Admin Frontend Console',
+              translations: {
+                'zh-CN': '08. 前端管理后台深度剖析 (Admin)',
+              },
+              link: '/code-analysis/08-admin-frontend/',
+            },
+          ],
+        },
+        {
           label: 'Guides',
           translations: {
             'zh-CN': '开发指南',
