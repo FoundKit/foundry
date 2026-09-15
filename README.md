@@ -6,6 +6,10 @@
 
 *Build, isolate, and extend independent backend systems and admin control planes with zero upstream coupling.*
 
+<p align="center">
+  <b>English</b> | <a href="README_zh.md">简体中文</a>
+</p>
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE-APACHE)
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
