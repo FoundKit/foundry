@@ -56,8 +56,15 @@ description: Foundry 平台与框架的开发里程碑、已实现特性、版�
   - [ ] 自动聚合动态数据模型与子系统接口的 OpenAPI Schema。
   - [ ] Admin 外壳内嵌实时交互式 API 文档。
 
-- [ ] **2.3 多数据库驱动扩展 (MySQL, SQLite)**
-  - [ ] 支持可插拔的 Zero-DDL 动态存储 SQL 方言适配器。
+- [ ] **2.3 多数据库驱动扩展与插件化存储架构 (MySQL, MariaDB, MongoDB, Oracle, 预留 SQLite/MSSQL)**
+  - [ ] 详细设计与改造计划参见：[`ROADMAP_STORAGE_ENGINES.md`](file:///home/panhy/src/foundkit/foundry/ROADMAP_STORAGE_ENGINES.md)。
+  - [ ] **存储引擎 SPI 机制**：抽象 `StorageDriverProvider` 与 `StorageRegistry` 注册中心，支持零核心代码修改接入新数据库。
+  - [ ] **方法调用解耦**：开发者只调用 `db.records()` 等统一方法，底层驱动全面内聚。
+  - [ ] **多引擎策略特化**：
+    - PostgreSQL：保持 `JSONB` + GIN 倒排 + 部分索引。
+    - MySQL / MariaDB：99% 代码复用，支持原生 JSON 列与事务内插入返回。
+    - MongoDB：原生 BSON 文档免 Schema 动态存储与 Wildcard 索引。
+    - Oracle：Identity 主键方言支持与阻塞驱动的独立线程池隔离。
 
 ---
 
