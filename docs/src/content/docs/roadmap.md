@@ -56,8 +56,16 @@ description: Foundry development milestones, completed features, versioning stra
   - [ ] Auto-generate OpenAPI schemas for dynamically created data models and subsystem routes.
   - [ ] Embedded Swagger UI explorer in Admin Shell.
 
-- [ ] **2.3 Multi-Database Support (MySQL, SQLite)**
-  - [ ] Pluggable SQL dialect adapters for Zero-DDL dynamic models.
+- [ ] **2.3 Multi-Database Support & Pluggable Storage SPI (MySQL first, then MongoDB, then Oracle)**
+  - [ ] Complete architecture design & implementation roadmap: [Storage Engines & Multi-Database Architecture](/architecture/storage-engines/).
+  - [ ] **Storage Engine SPI & Smart Detection**: Abstract `StorageDriverProvider` and `StorageRegistry`, supporting protocol sniffing from `DATABASE_URL` and explicit selection via `DATABASE_TYPE`.
+  - [ ] **Method-Based Decoupling**: Encapsulate raw pools completely within the `Database` facade (`db.records()`, etc.).
+  - [ ] **Phased Implementation Matrix**:
+    - **Phase 0 (Foundation)**: Core SPI & Trait abstraction; refactor PostgreSQL into `PostgresProvider` with 100% backward compatibility.
+    - **Phase 1 (Priority 0 - Immediate)**: MySQL 8.0+ / MariaDB unified strategy with auto-increment, `DATETIME(6)`, and transaction re-query without `RETURNING`.
+    - **Phase 2 (Priority 1 - Secondary)**: MongoDB 6.0+ native document strategy with BSON mapping, `i64` sequence compatibility, and Wildcard indexing.
+    - **Phase 3 (Priority 2 - Enterprise)**: Oracle 19c/21c/23ai engine with `IDENTITY` dialect and dedicated `spawn_blocking` thread pool for C ODPI-C isolation.
+    - **Phase 4 (Production-Readiness & Release)**: Upgrade `foundry migrate` for dialect-aware migrations and release multi-database guides.
 
 ---
 

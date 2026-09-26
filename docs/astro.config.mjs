@@ -525,6 +525,13 @@ export default defineConfig({
               },
               link: '/architecture/blueprint/',
             },
+            {
+              label: 'Storage Engines & Multi-Database',
+              translations: {
+                'zh-CN': '存储引擎架构与多数据库规划',
+              },
+              link: '/architecture/storage-engines/',
+            },
           ],
         },
         {
