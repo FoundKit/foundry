@@ -5,6 +5,14 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
+[features]
+default = ["postgres"]
+postgres = ["sqlx/postgres"]
+mysql = ["sqlx/mysql"]
+
 [dependencies]
 foundry_core = { workspace = true }
 sqlx = { workspace = true }

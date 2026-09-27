@@ -6,7 +6,6 @@ use axum::{
 use foundry_auth::{AdminClaims, verify_password};
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
-use foundry_storage::AdminStore;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -39,7 +38,10 @@ pub async fn login_handler(
 ) -> AppResult<Json<ApiResponse<LoginResponse>>> {
     payload.validate()?;
 
-    let admin = AdminStore::get_by_username(&state.db, &payload.username)
+    let admin = state
+        .db
+        .admins()
+        .get_by_username(&payload.username)
         .await
         .map_err(|_| AppError::Unauthorized("Invalid username or password".to_string()))?;
 
@@ -79,7 +81,7 @@ pub async fn me_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
 ) -> AppResult<Json<ApiResponse<AdminProfile>>> {
-    let admin = AdminStore::get_by_id(&state.db, claims.sub).await?;
+    let admin = state.db.admins().get_by_id(claims.sub).await?;
 
     let profile = AdminProfile {
         id: admin.id,

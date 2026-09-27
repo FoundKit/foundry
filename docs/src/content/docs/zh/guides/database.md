@@ -1,290 +1,238 @@
 ---
-title: 数据库与自定义存储开发
-description: Foundry 数据库与自定义存储开发完整指南，涵盖原生 SQLx 查询、事务控制、Zero-DDL 动态模型读写与业务迁移。
+title: 数据库与存储引擎开发指南
+description: Foundry 多数据库 SPI 架构、PostgreSQL 与 MySQL 配置、Zero-DDL 动态模型引擎与容器化快速起步。
 ---
 
-# 数据库与自定义存储开发指南
+# 数据库与存储引擎开发指南
 
-在 Foundry 应用开发中，开发者可以根据业务场景自由选择 **原生 SQLx 关系型存储** 或 **Zero-DDL 动态模型引擎 (RecordStore)**。
+Foundry 采用全新的 **多数据库 SPI (Service Provider Interface) 插件化存储架构**。业务层、领域逻辑服务、AutoCRUD 引擎与 Axum 状态统一依赖 `Database` 门面与标准 Store Traits，**彻底实现底层网络驱动零泄露**。
 
----
-
-## 1. 存储选型与场景对比
-
-| 存储模式 | 适用场景 | 开发实现方式 |
-|---|---|---|
-| **原生业务表 (SQLx)** | 复杂业务关联关系、高并发结构化 Join 查询、财务级事务 | 在 `migrations/` 编写 SQL DDL + 使用 `sqlx` 强类型查询 |
-| **Zero-DDL 动态模型** | 后台可视化配置字段、快速原型迭代、无锁免停机加字段、自动 RESTful CRUD | 使用内置的 `model_records` 引擎与 `RecordStore` API |
+系统原生支持 **PostgreSQL (14+)** 与 **MySQL (8.0+) / MariaDB (10.5+)**，并能根据连接串协议自动自适应路由驱动。
 
 ---
 
-## 2. 在自定义代码中获取数据库连接池 (`DbPool`)
+## 1. 核心架构与设计原则
 
-在业务子系统的控制器函数中，可以通过 Axum 的 `Extension(db)` 提取器直接注入数据库连接池：
+```mermaid
+flowchart TD
+    subgraph AppLayer ["业务层 / AutoCRUD 引擎 / 控制器"]
+        Handler["Axum Handler (Extension<AppState>)"]
+        Call["纯方法调用: db.records() / db.models() / db.configs() / db.systems()"]
+        Handler --> Call
+    end
 
-```rust
-use axum::{extract::Extension, routing::get, Json, Router};
-use foundry::prelude::*;
+    subgraph FacadeLayer ["统一门面与 SPI 抽象 (foundry_storage)"]
+        Call --> Facade["Database 门面"]
+        Facade --> Registry["StorageRegistry (驱动路由)"]
+    end
 
-pub fn build_routes() -> Router {
-    Router::new().route("/stats", get(handle_get_stats))
-}
-
-pub async fn handle_get_stats(
-    Extension(ctx): Extension<SystemContext>,
-    Extension(db): Extension<DbPool>,
-) -> AppResult<Json<ApiResponse<StatsResponse>>> {
-    let stats = StatsService::calculate(&ctx, &db).await?;
-    Ok(Json(ApiResponse::success(stats)))
-}
+    subgraph Engines ["底层驱动实现 (按需编译)"]
+        Registry -->|"postgres:// / postgresql://"| PgEngine["PostgresProvider (JSONB + GIN 倒排索引)"]
+        Registry -->|"mysql:// / mariadb://"| MySqlEngine["MySqlProvider (通用单表 + 覆盖索引 + 延迟关联)"]
+    end
 ```
 
----
-
-## 3. 使用 SQLx 执行原生数据库查询
-
-Foundry 的 `DbPool` 为标准的 `sqlx::PgPool`。你可以使用类型安全的 SQLx 进行原生查询：
-
-### 步骤 1: 定义数据结构体
-
-```rust
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use chrono::{DateTime, Utc};
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct CustomArticle {
-    pub id: i64,
-    pub system_slug: String,
-    pub title: String,
-    pub content: String,
-    pub views: i32,
-    pub created_at: DateTime<Utc>,
-}
-```
-
-### 步骤 2: 编写数据库 Repository 逻辑
-
-```rust
-use foundry::prelude::*;
-use crate::models::CustomArticle;
-
-pub struct ArticleRepository;
-
-impl ArticleRepository {
-    /// 按当前子系统查询文章列表
-    pub async fn list_by_system(
-        db: &DbPool,
-        system_slug: &str,
-    ) -> AppResult<Vec<CustomArticle>> {
-        let rows = sqlx::query_as::<_, CustomArticle>(
-            "SELECT id, system_slug, title, content, views, created_at 
-             FROM articles 
-             WHERE system_slug = $1 
-             ORDER BY created_at DESC"
-        )
-        .bind(system_slug)
-        .fetch_all(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-        Ok(rows)
-    }
-
-    /// 插入一条新文章
-    pub async fn create(
-        db: &DbPool,
-        system_slug: &str,
-        title: &str,
-        content: &str,
-    ) -> AppResult<i64> {
-        let row: (i64,) = sqlx::query_as(
-            "INSERT INTO articles (system_slug, title, content, views, created_at)
-             VALUES ($1, $2, $3, 0, NOW())
-             RETURNING id"
-        )
-        .bind(system_slug)
-        .bind(title)
-        .bind(content)
-        .fetch_one(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-        Ok(row.0)
-    }
-}
-```
+### 核心特性
+1. **面向方法调用，驱动零泄露**：上层业务代码无需关心底层是 PostgreSQL 还是 MySQL，统一通过 `state.db.records().create(...)`、`state.db.records().list(...)` 等 Trait 方法访问数据。
+2. **智能协议自适应**：系统启动时自动分析 `DATABASE_URL` 的协议头并激活对应驱动：
+   - `postgres://` 或 `postgresql://` $\rightarrow$ 自动激活 PostgreSQL
+   - `mysql://` 或 `mariadb://` $\rightarrow$ 自动激活 MySQL / MariaDB
+   - 亦可通过环境变量 `DATABASE_TYPE=mysql` 或 `DATABASE_TYPE=postgres` 显式强制指定。
+3. **Cargo Feature 按需编译**：底层驱动通过 Feature Flags 控制，避免不必要的依赖编译膨胀。
 
 ---
 
-## 4. 数据库事务操作 (ACID)
+## 2. 环境配置与 Feature Flags
 
-当业务涉及多个数据表的原子变更时，使用数据库事务：
+### Cargo.toml 依赖配置
 
-```rust
-use foundry::prelude::*;
+Foundry 默认开启 `postgres` 特性。若需使用 MySQL，只需在应用的 `Cargo.toml` 中开启 `mysql` 特性：
 
-pub async fn transfer_balance(
-    db: &DbPool,
-    from_user: i64,
-    to_user: i64,
-    amount: i64,
-) -> AppResult<()> {
-    // 1. 开启事务
-    let mut tx = db.begin().await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+```toml
+[dependencies]
+# 仅使用 PostgreSQL (默认)
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
-    // 2. 扣减转出方账户
-    let deduct_res = sqlx::query(
-        "UPDATE accounts SET balance = balance - $1 WHERE id = $2 AND balance >= $1"
-    )
-    .bind(amount)
-    .bind(from_user)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e.to_string()))?;
+# 或者开启 MySQL 支持
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mysql"] }
 
-    if deduct_res.rows_affected() == 0 {
-        return Err(AppError::BadRequest("账户余额不足".to_string()));
-    }
-
-    // 3. 增加收款方账户
-    sqlx::query(
-        "UPDATE accounts SET balance = balance + $1 WHERE id = $2"
-    )
-    .bind(amount)
-    .bind(to_user)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e.to_string()))?;
-
-    // 4. 提交事务 (若中途出错函数返回 Err 则自动 Rollback)
-    tx.commit().await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-    Ok(())
-}
+# 或者同时支持 PostgreSQL 与 MySQL 双驱动
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["postgres", "mysql"] }
 ```
+
+### 环境变量配置 (`.env`)
+
+#### 使用 PostgreSQL：
+```bash
+DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+#### 使用 MySQL / MariaDB：
+```bash
+DATABASE_URL=mysql://root:root@localhost:3306/foundry
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+> **提示**：当 `AUTO_MIGRATE=true` 时，服务启动时会自动检测数据库是否存在；若不存在会自动建库，并执行对应数据库方言的初始化迁移脚本（包括表结构、索引与默认超级管理员账号）。
 
 ---
 
-## 5. 操作 Zero-DDL 动态数据模型
+## 3. 容器化一键启动 (Docker / Nerdctl / Podman)
 
-Foundry 内置了免 DDL 动态模型存储（`RecordStore`），可在不执行 DDL 迁移的情况下安全读写任意动态 JSON Schema：
+项目根目录和 `dev/` 目录下提供了标准的 `compose.yml`，兼容 **Docker Compose**、**Nerdctl (containerd)** 与 **Podman Compose**：
+
+### 启动数据库容器：
+
+```bash
+# 使用 Docker Compose
+docker compose up -d postgres mysql redis
+
+# 或使用 Nerdctl (containerd 环境)
+nerdctl compose up -d postgres mysql redis
+
+# 或使用 Podman Compose
+podman-compose up -d postgres mysql redis
+```
+
+容器就绪后：
+- **MySQL 8.4**：端口 `3306`，账号 `root`，密码 `root`，数据库 `foundry`。
+- **PostgreSQL 18.6**：端口 `5432`，账号 `postgres`，密码 `postgrespassword`，数据库 `foundry`。
+- **Redis 8.0**：端口 `6379`。
+
+---
+
+## 4. 业务代码中操作存储 (`Database` 门面)
+
+在自定义控制器与业务逻辑中，通过 `Extension<AppState>` 获取统一的 `Database` 门面：
 
 ```rust
+use axum::{extract::Extension, Json};
 use foundry::prelude::*;
-use foundry_storage::models::RecordStore;
 use serde_json::json;
 
-pub async fn save_dynamic_post(
-    db: &DbPool,
-    ctx: &SystemContext,
-    title: &str,
-    content: &str,
-) -> AppResult<i64> {
-    let payload = json!({
-        "title": title,
-        "content": content,
-        "status": "published",
-        "tags": ["rust", "foundry"]
-    });
+pub async fn create_article_handler(
+    Extension(state): Extension<AppState>,
+    Extension(ctx): Extension<SystemContext>,
+    Json(payload): Json<serde_json::Value>,
+) -> AppResult<Json<ApiResponse<serde_json::Value>>> {
+    // 1. 使用动态模型引擎写入数据 (Zero-DDL 存储)
+    let record = state
+        .db
+        .records()
+        .create(
+            &ctx.system_slug,
+            "articles",
+            json!({
+                "title": payload.get("title").and_then(|v| v.as_str()).unwrap_or("未命名"),
+                "content": payload.get("content").and_then(|v| v.as_str()).unwrap_or(""),
+                "views": 0,
+                "is_published": true
+            }),
+        )
+        .await?;
 
-    // 自动保存至 model_records 表，按 system_slug 与 model_slug 严格隔离
-    let record = RecordStore::create(
-        db,
-        &ctx.system_slug,
-        "posts",
-        payload,
-    )
+    Ok(Json(ApiResponse::success(json!({
+        "id": record.id,
+        "data": record.data
+    }))))
+}
+```
+
+### Store Engines 常用方法速查：
+
+| 领域模块 | 方法调用入口 | 常用方法 |
+|---|---|---|
+| **动态业务记录** | `db.records()` | `create()`, `get_by_id()`, `update()`, `delete()`, `list()` |
+| **模型与字段元数据** | `db.models()` | `list_models()`, `get_model()`, `create_model()`, `list_fields()`, `add_field()` |
+| **子系统租户** | `db.systems()` | `list()`, `list_paginated()`, `get_by_id()`, `get_by_slug()`, `create()`, `update()` |
+| **动态系统配置** | `db.configs()` | `get()`, `set()`, `get_aggregated()`, `get_schema()` |
+| **管理员与权限** | `db.admins()` | `get_by_id()`, `get_by_username()`, `create()`, `update()` |
+| **审计追踪日志** | `db.audit()` | `insert()`, `list()` |
+
+---
+
+## 5. MySQL 通用单表架构与深度调优
+
+针对 MySQL 无 GIN 倒排索引的特性，Foundry 落地了**单表通用存储 (Universal Single-Table) 架构**：
+
+### 5.1 覆盖复合索引设计
+```sql
+CREATE TABLE IF NOT EXISTS model_records (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    model_id BIGINT NOT NULL,
+    system_id VARCHAR(32) NOT NULL,
+    model_slug VARCHAR(48) NOT NULL,
+    data JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
+    INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
+    INDEX idx_system_query (system_id, deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 5.2 延迟关联分页 (Deferred Join) 优化
+当数据量达到百万级时，传统 `SELECT * LIMIT 100000, 20` 会因扫描大 JSON 列导致严重的内存与 IO 开销。Foundry 的 `MySqlRecordEngine` 自动采用**延迟关联分页**：
+
+```sql
+-- 1. 先仅扫描覆盖索引获取目标主键 ID (极速 Index Scan)
+-- 2. 再通过主键回表拉取对应的完整 data JSON
+SELECT r.id, r.system_id, r.model_slug, r.data, r.created_at, r.updated_at, r.deleted_at
+FROM model_records r
+INNER JOIN (
+    SELECT id
+    FROM model_records
+    WHERE model_id = ? AND deleted_at IS NULL
+    ORDER BY created_at DESC, id DESC
+    LIMIT ? OFFSET ?
+) t ON r.id = t.id
+ORDER BY r.created_at DESC, r.id DESC;
+```
+
+此优化将深度分页的执行时间从秒级降至毫秒级，彻底消除性能瓶颈。
+
+### 5.3 解决 MySQL 无 `RETURNING` 语法的原子重查
+在数据插入时，PostgreSQL 支持 `INSERT ... RETURNING *`，而 MySQL 仅返回受影响行数与自增 ID。Foundry 在事务内部原子组合 `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT`，对外统一呈现原子创建并返回完整实体的强一致体验。
+
+---
+
+## 6. 读取与注入强类型配置
+
+通过 `db.get_typed_config::<T>(&system_slug, key)` 可以直接将动态配置反序列化为类型安全的结构体：
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct PaymentConfig {
+    pub api_key: String,
+    pub merchant_id: String,
+    pub sandbox: bool,
+}
+
+// 在控制器中读取
+let pay_cfg: Option<PaymentConfig> = state
+    .db
+    .get_typed_config(&ctx.system_slug, "payment_settings")
     .await?;
-
-    Ok(record.id)
-}
 ```
 
 ---
 
-## 6. 读取系统动态配置 (`ConfigStore`)
+## 7. 编写业务自定义原生 SQL 迁移
 
-读取管理员在后台动态配置的系统参数：
-
-```rust
-use foundry::prelude::*;
-use foundry_storage::configs::ConfigStore;
-
-pub async fn get_system_settings(
-    db: &DbPool,
-    ctx: &SystemContext,
-) -> AppResult<bool> {
-    let configs = ConfigStore::get_aggregated(db, &ctx.system_slug).await?;
-    
-    // 读取维护模式开关
-    let in_maintenance = configs
-        .get("maintenance_mode")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    Ok(in_maintenance)
-}
-```
-
----
-
-## 7. 租户隔离的 Redis 缓存读写
-
-当启用 Redis 时，提取 `Extension(redis): Extension<RedisPool>`，并使用 `ctx.redis_key(...)` 自动添加子系统隔离前缀：
-
-```rust
-use axum::extract::Extension;
-use foundry::prelude::*;
-
-pub async fn get_cached_item(
-    ctx: &SystemContext,
-    redis: &RedisPool,
-    item_id: &str,
-) -> AppResult<Option<String>> {
-    // 自动生成带命名空间的 Key: "foundry:{system_slug}:items:{item_id}"
-    let cache_key = ctx.redis_key(&format!("items:{}", item_id));
-
-    let mut conn = redis.clone();
-
-    let val: Option<String> = redis::cmd("GET")
-        .arg(&cache_key)
-        .query_async(&mut conn)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    Ok(val)
-}
-```
-
----
-
-## 8. 编写应用专属数据库迁移脚本
-
-将业务专属的 `.sql` 迁移文件放置在工程根目录的 `migrations/` 目录下：
+如果你的业务子系统需要独立的实体物理表，可直接在 `migrations/` 目录下追加 SQL 迁移脚本：
 
 ```text
 my-app/
 └── migrations/
-    ├── 001_create_articles_table.sql
-    └── 002_create_orders_table.sql
+    ├── postgres/
+    │   └── 001_create_orders.sql
+    └── mysql/
+        └── 001_create_orders.sql
 ```
 
-#### 示例: `migrations/001_create_articles_table.sql`
-
-```sql
-CREATE TABLE IF NOT EXISTS articles (
-    id BIGSERIAL PRIMARY KEY,
-    system_slug VARCHAR(64) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    views INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_articles_system_slug ON articles(system_slug);
-```
-
-启动应用时若配置 `AUTO_MIGRATE=true`，或手动执行 `foundry migrate`，框架将自动应用迁移脚本。
+系统会根据当前激活的数据库引擎自动执行对应方言目录下的迁移。

@@ -10,7 +10,11 @@ pub use foundry_core::{
 pub use foundry_engine::{AppState, ExternalSubsystemManifest, ExternalSubsystemModule};
 pub use foundry_extension::{HookPipeline, MutationHook};
 pub use foundry_storage::{
-    AdminStore, AuditLogInsert, AuditLogQuery, AuditStore, ConfigStore, DbPool, ModelStore,
-    RecordQuery, RecordStore, RedisPool, SystemQuery, SystemStore, init_db_pool, init_redis,
-    run_migrations,
+    AdminEntity, AdminStore, AdminStoreEngine, AuditLogEntity, AuditLogInsert, AuditLogQuery,
+    AuditStore, AuditStoreEngine, ConfigStore, ConfigStoreEngine, Database, DbPool, ModelEntity,
+    ModelFieldEntity, ModelRecordEntity, ModelStore, ModelStoreEngine, PlatformSummary,
+    RecordQuery, RecordStore, RecordStoreEngine, RedisPool, StorageDriverProvider,
+    StorageEngineSet, StorageRegistry, SystemConfigEntity, SystemEntity, SystemItem, SystemQuery,
+    SystemStats, SystemStore, SystemStoreEngine, init_db_pool, init_redis, run_migrations,
+    validate_record,
 };

@@ -15,9 +15,17 @@ path = "src/bin/foundry.rs"
 name = "foundry-cli"
 path = "src/bin/foundry_cli.rs"
 
+[lints]
+workspace = true
+
+[features]
+default = ["postgres"]
+postgres = ["foundry_storage/postgres"]
+mysql = ["foundry_storage/mysql"]
+
 [dependencies]
 foundry_core = { workspace = true }
-foundry_storage = { workspace = true }
+foundry_storage = { workspace = true, default-features = false }
 sqlx = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }

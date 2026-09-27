@@ -94,37 +94,41 @@ async-trait = "0.1"
 
 ### 3. 启动并初始化数据库与缓存服务
 
-#### 方式一：Docker Compose 一键启动（推荐开发使用）
-使用工程预置的 `dev/docker-compose.yml` 快速启动本地 PostgreSQL 18 与 Redis 7 实例（该配置会自动将 `migrations/init.sql` 挂载到容器初始化目录，首次启动自动完成建库、建表与超管账号注入）：
+#### 方式一：Compose 一键启动容器（推荐开发使用）
+项目提供了通用的 `compose.yml`（在根目录与 `dev/` 目录均有配置），完全兼容 **Docker Compose**、**Nerdctl (containerd 环境)** 与 **Podman Compose**：
 
 ```bash
-docker compose -f dev/docker-compose.yml up -d
+# 启动 PostgreSQL 18、MySQL 8.4 与 Redis 服务
+# 使用 Docker Compose:
+docker compose up -d postgres mysql redis
+
+# 或使用 Nerdctl (containerd):
+nerdctl compose up -d postgres mysql redis
+
+# 或使用 Podman:
+podman-compose up -d postgres mysql redis
 ```
 
-> **手动初始化 / 重置开发数据库**：
-> 如果需要重新初始化数据或开发库异常，可直接运行：
-> ```bash
-> bash dev/init-db.sh
-> ```
+容器启动时会自动将各数据库方言的 `migrations/` 初始化脚本挂载到容器中，首次启动自动完成建库、建表、覆盖索引创建与初始超级管理员账号注入。
 
-#### 方式二：手动导入数据库（严格管控模式）
-如果使用已有的独立 PostgreSQL 实例，或者在严格的 DBA 管控生产流程下：
-1. 开发者或 DBA 可以直接审计 `migrations/init.sql` 文件；
-2. 通过原生 `psql` 命令手动导入：
-   ```bash
-   psql -h 127.0.0.1 -p 5432 -U postgres -d foundry -f migrations/init.sql
-   ```
-3. 在 `.env` 中可配置 `AUTO_MIGRATE=false`，禁止服务端启动时执行任何自动迁移，确保数据库变更严格受控。
+#### 方式二：连接已有独立数据库
+如果连接已有实例，系统在 `AUTO_MIGRATE=true` 时会自动完成数据库初始化。
 
-检查项目根目录下的 `.env` 配置是否与本地环境匹配：
+检查项目根目录下的 `.env` 配置，根据所选数据库类型配置连接串：
 
 ```bash
 HOST=0.0.0.0
 PORT=8080
+
+# 选项 A: 使用 PostgreSQL (默认)
 DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+
+# 选项 B: 使用 MySQL / MariaDB (需在 Cargo.toml 开启 features = ["mysql"])
+# DATABASE_URL=mysql://root:root@localhost:3306/foundry
+
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
-# 服务启动时是否执行框架表检查（严格 DBA 管控场景可设为 false）
+# 服务启动时是否执行自动迁移与建表检查
 AUTO_MIGRATE=true
 ```
 

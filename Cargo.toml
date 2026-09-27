@@ -21,15 +21,26 @@ repository = "https://github.com/foundkit/foundry"
 homepage = "https://foundkit.org"
 documentation = "https://docs.foundkit.org"
 
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
+
 [workspace.dependencies]
 # Main facade crate
-foundry = { path = "crates/foundry" }
+foundry = { path = "crates/foundry", default-features = false }
 
 # Internal workspace crates
 foundry_core = { path = "crates/foundry_core" }
-foundry_storage = { path = "crates/foundry_storage" }
+foundry_storage = { path = "crates/foundry_storage", default-features = false }
 foundry_auth = { path = "crates/foundry_auth" }
-foundry_engine = { path = "crates/foundry_engine" }
+foundry_engine = { path = "crates/foundry_engine", default-features = false }
 foundry_extension = { path = "crates/foundry_extension" }
 
 # Async & HTTP
@@ -44,7 +55,7 @@ serde_json = "1.0"
 validator = { version = "0.20", features = ["derive"] }
 
 # Database & Caching
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "chrono", "uuid", "json", "macros"] }
 redis = { version = "0.29", features = ["tokio-comp", "aio", "connection-manager"] }
 
 # Primitives & Utilities

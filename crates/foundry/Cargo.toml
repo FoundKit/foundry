@@ -7,12 +7,17 @@ license.workspace = true
 description = "Foundry - A modern, decoupled Rust backend platform and application framework"
 repository.workspace = true
 
+[lints]
+workspace = true
+
 [features]
-default = ["server", "storage", "auth", "extension"]
+default = ["server", "storage", "auth", "extension", "postgres"]
 server = ["dep:foundry_engine", "dep:axum", "dep:tower", "dep:tower-http", "dep:tokio"]
 storage = ["dep:foundry_storage", "dep:sqlx"]
 auth = ["dep:foundry_auth"]
 extension = ["dep:foundry_extension"]
+postgres = ["foundry_storage?/postgres"]
+mysql = ["foundry_storage?/mysql"]
 
 [dependencies]
 foundry_core = { workspace = true }

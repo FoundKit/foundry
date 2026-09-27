@@ -4,7 +4,7 @@ use foundry_core::SubsystemModule;
 use foundry_core::error::{AppError, AppResult};
 use foundry_engine::{AppState, build_router, load_external_subsystems};
 use foundry_extension::{HookPipeline, MutationHook};
-use foundry_storage::{DbPool, RedisPool, init_db_pool, init_redis, run_migrations};
+use foundry_storage::{Database, DbPool, RedisPool, init_redis};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::info;
@@ -172,14 +172,14 @@ impl FoundryBuilder {
 
         info!("Initializing Foundry Platform Application...");
 
-        // 1. Initialize PostgreSQL Connection Pool
-        info!("Connecting to PostgreSQL database...");
-        let db_pool = init_db_pool(&self.config.database_url, self.config.db_pool_size).await?;
-
-        // 2. Run migrations if enabled
-        if self.config.auto_migrate {
-            run_migrations(&db_pool).await?;
-        }
+        // 1. Initialize Database facade (with auto migrations if enabled)
+        info!("Connecting to database...");
+        let db = Database::connect(
+            &self.config.database_url,
+            self.config.db_pool_size,
+            self.config.auto_migrate,
+        )
+        .await?;
 
         // 3. Initialize Redis if configured
         let redis_pool = if let Some(ref rurl) = self.config.redis_url {
@@ -208,7 +208,7 @@ impl FoundryBuilder {
 
         info!("Loaded {} active sub-systems", all_subsystems.len());
 
-        let state = AppState::new(db_pool, redis_pool, jwt_service, self.hooks, all_subsystems);
+        let state = AppState::new(db, redis_pool, jwt_service, self.hooks, all_subsystems);
 
         let router = build_router(state.clone());
 
@@ -238,6 +238,10 @@ impl FoundryApp {
 
     pub fn into_router(self) -> Router {
         self.router
+    }
+
+    pub fn db(&self) -> &Database {
+        &self.state.db
     }
 
     pub fn db_pool(&self) -> &DbPool {

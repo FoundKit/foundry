@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use foundry_core::types::is_valid_slug;
-use foundry_storage::{init_db_pool, run_migrations};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -113,34 +112,11 @@ pub async fn run_cli() -> anyhow::Result<()> {
                     "postgres://postgres:postgrespassword@localhost:5432/foundry".to_string()
                 })
             });
-            println!("Connecting to database at {}...", db_url);
-            let pool = init_db_pool(&db_url, 5).await?;
-
-            let migrations_dir = Path::new("migrations");
-            if migrations_dir.is_dir() {
-                let mut entries: Vec<_> = fs::read_dir(migrations_dir)?
-                    .filter_map(|e| e.ok())
-                    .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("sql"))
-                    .collect();
-                entries.sort_by_key(|e| e.file_name());
-
-                if !entries.is_empty() {
-                    println!(
-                        "Applying {} migration script(s) from migrations/:",
-                        entries.len()
-                    );
-                    for entry in entries {
-                        let path = entry.path();
-                        println!("  • Applying {:?}...", path.file_name().unwrap_or_default());
-                        let sql = fs::read_to_string(&path)?;
-                        sqlx::raw_sql(&sql).execute(&pool).await?;
-                    }
-                    println!("✅ Project migrations applied successfully.");
-                    return Ok(());
-                }
-            }
-
-            run_migrations(&pool).await?;
+            println!(
+                "Connecting to database and running migrations for {}...",
+                db_url
+            );
+            foundry_storage::Database::run_migrations(&db_url, None).await?;
             println!("✅ Database migrations applied successfully.");
         }
         Commands::Validate { path } => {

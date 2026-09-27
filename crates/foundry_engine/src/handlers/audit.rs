@@ -6,7 +6,7 @@ use axum::{
 use foundry_auth::AdminClaims;
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::{ApiResponse, PaginatedData};
-use foundry_storage::{AuditLogEntity, AuditLogQuery, AuditStore};
+use foundry_storage::{AuditLogEntity, AuditLogQuery};
 
 pub async fn list_audit_logs_handler(
     State(state): State<AppState>,
@@ -29,6 +29,6 @@ pub async fn list_audit_logs_handler(
         }
     }
 
-    let logs = AuditStore::list(&state.db, query).await?;
+    let logs = state.db.audit().list(query).await?;
     Ok(Json(ApiResponse::success(logs)))
 }

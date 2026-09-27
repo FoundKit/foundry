@@ -94,37 +94,41 @@ async-trait = "0.1"
 
 ### 3. Start & Initialize Database Services
 
-#### Option 1: Docker Compose (Recommended for Local Dev)
-Start local PostgreSQL 18 and Redis 7 containers using the pre-configured `dev/docker-compose.yml` (automatically mounts `migrations/init.sql` into container initialization scripts on first boot):
+#### Option 1: Universal Compose (Recommended for Dev)
+A standard `compose.yml` is provided at both the project root and in `dev/`, compatible with **Docker Compose**, **Nerdctl (containerd environments)**, and **Podman Compose**:
 
 ```bash
-docker compose -f dev/docker-compose.yml up -d
+# Start PostgreSQL 18, MySQL 8.4, and Redis services
+# Using Docker Compose:
+docker compose up -d postgres mysql redis
+
+# Or using Nerdctl (containerd):
+nerdctl compose up -d postgres mysql redis
+
+# Or using Podman:
+podman-compose up -d postgres mysql redis
 ```
 
-> **Manual Reset / Re-initialization**:
-> To re-apply the initialization script or reset dev data:
-> ```bash
-> bash dev/init-db.sh
-> ```
+The compose file automatically mounts dialect migration scripts from `migrations/` into each container, bootstrapping the schema, covering indexes, and initial superadmin credentials on first startup.
 
-#### Option 2: Manual Database Setup (Strict DBA Control Mode)
-For external PostgreSQL instances or strict DBA workflows:
-1. Review the full schema in `migrations/init.sql`;
-2. Import manually via `psql`:
-   ```bash
-   psql -h 127.0.0.1 -p 5432 -U postgres -d foundry -f migrations/init.sql
-   ```
-3. Set `AUTO_MIGRATE=false` in `.env` to prevent server runtime auto-migration checks.
+#### Option 2: Connect Existing Databases
+If connecting to an external database, Foundry will automatically run schema checks when `AUTO_MIGRATE=true`.
 
-Check your `.env` file matches your local setup:
+Configure your `.env` for your preferred database:
 
 ```bash
 HOST=0.0.0.0
 PORT=8080
+
+# Option A: PostgreSQL (default)
 DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+
+# Option B: MySQL / MariaDB (requires features = ["mysql"] in Cargo.toml)
+# DATABASE_URL=mysql://root:root@localhost:3306/foundry
+
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
-# Auto-check framework tables on startup (set to false for strict manual DBA control)
+# Auto-check and migrate framework tables on startup
 AUTO_MIGRATE=true
 ```
 

@@ -7,9 +7,7 @@ use foundry_auth::AdminClaims;
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::{ApiResponse, PaginatedData};
 use foundry_core::types::is_valid_slug;
-use foundry_storage::{
-    PlatformSummary, SystemEntity, SystemItem, SystemQuery, SystemStats, SystemStore,
-};
+use foundry_storage::{PlatformSummary, SystemEntity, SystemItem, SystemQuery, SystemStats};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -40,7 +38,7 @@ pub async fn list_systems_handler(
         Some(claims.allowed_systems.as_slice())
     };
 
-    let result = SystemStore::list_paginated(&state.db, query, allowed).await?;
+    let result = state.db.systems().list_paginated(query, allowed).await?;
     Ok(Json(ApiResponse::success(result)))
 }
 
@@ -50,7 +48,7 @@ pub async fn get_system_handler(
     Extension(claims): Extension<AdminClaims>,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<ApiResponse<SystemItem>>> {
-    let system = SystemStore::get_by_id(&state.db, id).await?;
+    let system = state.db.systems().get_by_id(id).await?;
 
     let is_platform_wide = claims.has_platform_manage_access();
     if !is_platform_wide && !claims.allowed_systems.contains(&system.slug) {
@@ -67,7 +65,7 @@ pub async fn get_system_by_slug_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
 ) -> AppResult<Json<ApiResponse<SystemItem>>> {
-    let system = SystemStore::get_by_slug(&state.db, &system_slug).await?;
+    let system = state.db.systems().get_by_slug(&system_slug).await?;
     Ok(Json(ApiResponse::success(system)))
 }
 
@@ -76,7 +74,7 @@ pub async fn get_system_stats_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
 ) -> AppResult<Json<ApiResponse<SystemStats>>> {
-    let stats = SystemStore::get_stats(&state.db, &system_slug).await?;
+    let stats = state.db.systems().get_stats(&system_slug).await?;
     Ok(Json(ApiResponse::success(stats)))
 }
 
@@ -92,7 +90,7 @@ pub async fn get_platform_summary_handler(
         ));
     }
 
-    let summary = SystemStore::platform_summary(&state.db).await?;
+    let summary = state.db.systems().platform_summary().await?;
     Ok(Json(ApiResponse::success(summary)))
 }
 
@@ -115,13 +113,11 @@ pub async fn create_system_handler(
         ));
     }
 
-    let system = SystemStore::create(
-        &state.db,
-        &payload.slug,
-        &payload.name,
-        payload.description.as_deref(),
-    )
-    .await?;
+    let system = state
+        .db
+        .systems()
+        .create(&payload.slug, &payload.name, payload.description.as_deref())
+        .await?;
 
     Ok(Json(ApiResponse::success(system)))
 }
@@ -139,14 +135,16 @@ pub async fn update_system_handler(
         ));
     }
 
-    let system = SystemStore::update(
-        &state.db,
-        id,
-        payload.name.as_deref(),
-        payload.description.as_deref(),
-        payload.status,
-    )
-    .await?;
+    let system = state
+        .db
+        .systems()
+        .update(
+            id,
+            payload.name.as_deref(),
+            payload.description.as_deref(),
+            payload.status,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(system)))
 }

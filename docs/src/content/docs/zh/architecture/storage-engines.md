@@ -402,26 +402,26 @@ CREATE TABLE IF NOT EXISTS model_records (
 ```
 
 ### 阶段 0: 核心 SPI 架构解耦与 Trait 契约抽象（地基工程）
-- [ ] **0.1 业务 Store Traits 抽象**：在 `crates/foundry_storage/src/traits/` 中定义标准业务 Trait（`RecordStoreEngine`、`ModelStoreEngine`、`SystemStoreEngine`、`ConfigStoreEngine`、`AdminStoreEngine`、`AuditStoreEngine`）。
-- [ ] **0.2 SPI 与注册中心**：在 `crates/foundry_storage/src/spi/` 中定义 `StorageDriverProvider` 契约与全局驱动注册中心 `StorageRegistry`。
-- [ ] **0.3 统一 Database 门面与协议自动嗅探**：实现 `Database` 门面结构体，支持从 `DATABASE_URL` 协议前缀（`postgres://`, `mysql://`, `mongodb://`, `oracle://`）自动激活 Provider，并保留 `DATABASE_TYPE` 环境变量显式覆盖支持。
-- [ ] **0.4 Cargo Feature Flags 模块化**：改造 `crates/foundry_storage/Cargo.toml`，设立 `postgres`, `mysql`, `mongodb`, `oracle` 等 Feature Flags，默认启用 `postgres`。
-- [ ] **0.5 PostgreSQL 提取与既有系统无缝兼容**：
+- [x] **0.1 业务 Store Traits 抽象**：在 `crates/foundry_storage/src/traits/` 中定义标准业务 Trait（`RecordStoreEngine`、`ModelStoreEngine`、`SystemStoreEngine`、`ConfigStoreEngine`、`AdminStoreEngine`、`AuditStoreEngine`）。
+- [x] **0.2 SPI 与注册中心**：在 `crates/foundry_storage/src/spi/` 中定义 `StorageDriverProvider` 契约与全局驱动注册中心 `StorageRegistry`。
+- [x] **0.3 统一 Database 门面与协议自动嗅探**：实现 `Database` 门面结构体，支持从 `DATABASE_URL` 协议前缀（`postgres://`, `mysql://`, `mongodb://`, `oracle://`）自动激活 Provider，并保留 `DATABASE_TYPE` 环境变量显式覆盖支持。
+- [x] **0.4 Cargo Feature Flags 模块化**：改造 `crates/foundry_storage/Cargo.toml`，设立 `postgres`, `mysql`, `mongodb`, `oracle` 等 Feature Flags，默认启用 `postgres`。
+- [x] **0.5 PostgreSQL 提取与既有系统无缝兼容**：
   - 将现有硬编码 PG 逻辑重构至 `engines/postgres/` 并实现 `PostgresProvider`。
   - 将 `foundry_engine::AppState` 与 `FoundryApp::builder()` 的底层连接切换为 `Database` 门面。
   - 运行自动化测试与冒烟测试，确保现有 PostgreSQL 100% 行为向后兼容。
 
 ### 阶段 1: 优先落地 MySQL & MariaDB 统一策略引擎 (P0 首发支持 - 单表通用 JSON 引擎)
-- [ ] **1.1 单表通用迁移脚本**：编写 `migrations/mysql/init.sql`，落地单表全量存储架构，设计以紧凑整数 `model_id: BIGINT` 为主索引前缀的 `model_records` 表，适配 `AUTO_INCREMENT`、`DATETIME(6)`、原生 `JSON` 与覆盖复合索引。
-- [ ] **1.2 驱动与连接管理**：编写 `engines/mysql/` 策略模块，基于 `sqlx::MySqlPool` 实现连接池初始化与心跳探测。
-- [ ] **1.3 MySQL 方言 RecordStoreEngine 深度性能调优**：
+- [x] **1.1 单表通用迁移脚本**：编写 `migrations/mysql/init.sql`，落地单表全量存储架构，设计以紧凑整数 `model_id: BIGINT` 为主索引前缀的 `model_records` 表，适配 `AUTO_INCREMENT`、`DATETIME(6)`、原生 `JSON` 与覆盖复合索引。
+- [x] **1.2 驱动与连接管理**：编写 `engines/mysql/` 策略模块，基于 `sqlx::MySqlPool` 实现连接池初始化与心跳探测。
+- [x] **1.3 MySQL 方言 RecordStoreEngine 深度性能调优**：
   - 落地**覆盖索引与延迟关联分页 (Deferred Join)**：先查轻量覆盖索引拿主键 ID，再回表提取大 JSON 载荷，彻底攻克深度分页性能痛点。
-  - 解决无 `RETURNING` 语法问题（在事务内安全执行 `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT`）。
+  - 解决无 `RETURNING` 语法问题（在事务内安全执行 `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT` 原子重查）。
   - 实现基于虚拟生成列 (Virtual Generated Columns) 的热点字段二级 B-Tree 索引加速。
-- [ ] **1.4 元数据表适配**：实现 `models`, `systems`, `configs`, `admins`, `audit_logs` 的 MySQL 引擎实现。
-- [ ] **1.5 本地容器与端到端 CI 测试**：
-  - 在 `dev/docker-compose.yml` 中追加 MySQL 8.0 容器。
-  - 编写端到端集成测试，验证 `DATABASE_URL=mysql://...` 下 AutoCRUD、管理后台登录、权限校验与动态字段读写。
+- [x] **1.4 元数据表适配**：实现 `models`, `systems`, `configs`, `admins`, `audit_logs` 的 MySQL 引擎实现。
+- [x] **1.5 本地容器与端到端 CI 测试**：
+  - 提供兼容 Docker Compose 与 Nerdctl 的 `compose.yml`，追加 MySQL 8.4 容器服务。
+  - 编写端到端集成测试（`tests/mysql_integration_tests.rs`），验证 `DATABASE_URL=mysql://...` 下 AutoCRUD、管理后台登录、权限校验与动态字段读写 100% 正常。
 
 ### 阶段 2: 落地 MongoDB 原生文档策略引擎 (P1 次阶段支持)
 - [ ] **2.1 引入官方驱动**：在 `features = ["mongodb"]` 条件下引入官方异步驱动 `mongodb`。

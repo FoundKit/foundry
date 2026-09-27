@@ -1,12 +1,12 @@
 use foundry_auth::JwtService;
 use foundry_core::SubsystemModule;
 use foundry_extension::HookPipeline;
-use foundry_storage::{DbPool, RedisPool};
+use foundry_storage::{Database, RedisPool};
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DbPool,
+    pub db: Database,
     pub redis: Option<RedisPool>,
     pub jwt: Arc<JwtService>,
     pub hooks: Arc<HookPipeline>,
@@ -15,7 +15,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(
-        db: DbPool,
+        db: Database,
         redis: Option<RedisPool>,
         jwt: JwtService,
         hooks: HookPipeline,

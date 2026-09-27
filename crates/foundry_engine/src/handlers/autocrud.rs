@@ -6,7 +6,7 @@ use axum::{
 use foundry_core::context::SystemContext;
 use foundry_core::error::AppResult;
 use foundry_core::response::{ApiResponse, PaginatedData};
-use foundry_storage::{ModelRecordEntity, ModelStore, RecordQuery, RecordStore};
+use foundry_storage::{ModelRecordEntity, RecordQuery, validate_record};
 use serde_json::Value;
 
 /// GET /api/v1/s/:system_slug/:model_slug (List records with pagination and filters)
@@ -16,9 +16,17 @@ pub async fn list_records_handler(
     Query(query): Query<RecordQuery>,
 ) -> AppResult<Json<ApiResponse<PaginatedData<ModelRecordEntity>>>> {
     // Verify model exists
-    let _model = ModelStore::get_model(&state.db, &system_slug, &model_slug).await?;
+    let _model = state
+        .db
+        .models()
+        .get_model(&system_slug, &model_slug)
+        .await?;
 
-    let records = RecordStore::list(&state.db, &system_slug, &model_slug, query).await?;
+    let records = state
+        .db
+        .records()
+        .list(&system_slug, &model_slug, query)
+        .await?;
     Ok(Json(ApiResponse::success(records)))
 }
 
@@ -27,8 +35,16 @@ pub async fn get_record_handler(
     State(state): State<AppState>,
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
 ) -> AppResult<Json<ApiResponse<ModelRecordEntity>>> {
-    let _model = ModelStore::get_model(&state.db, &system_slug, &model_slug).await?;
-    let record = RecordStore::get_by_id(&state.db, &system_slug, &model_slug, id).await?;
+    let _model = state
+        .db
+        .models()
+        .get_model(&system_slug, &model_slug)
+        .await?;
+    let record = state
+        .db
+        .records()
+        .get_by_id(&system_slug, &model_slug, id)
+        .await?;
     Ok(Json(ApiResponse::success(record)))
 }
 
@@ -39,11 +55,15 @@ pub async fn create_record_handler(
     Path((system_slug, model_slug)): Path<(String, String)>,
     Json(mut payload): Json<Value>,
 ) -> AppResult<Json<ApiResponse<ModelRecordEntity>>> {
-    let model = ModelStore::get_model(&state.db, &system_slug, &model_slug).await?;
-    let fields = ModelStore::list_fields(&state.db, model.id).await?;
+    let model = state
+        .db
+        .models()
+        .get_model(&system_slug, &model_slug)
+        .await?;
+    let fields = state.db.models().list_fields(model.id).await?;
 
     // In-memory schema validation
-    RecordStore::validate_record(&fields, &payload)?;
+    validate_record(&fields, &payload)?;
 
     // Execute before_create mutation hooks
     state
@@ -51,7 +71,11 @@ pub async fn create_record_handler(
         .execute_before_create(&ctx, &model_slug, &mut payload)
         .await?;
 
-    let record = RecordStore::create(&state.db, &system_slug, &model_slug, payload.clone()).await?;
+    let record = state
+        .db
+        .records()
+        .create(&system_slug, &model_slug, payload.clone())
+        .await?;
 
     // Execute after_create mutation hooks
     state
@@ -69,11 +93,15 @@ pub async fn update_record_handler(
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
     Json(mut payload): Json<Value>,
 ) -> AppResult<Json<ApiResponse<ModelRecordEntity>>> {
-    let model = ModelStore::get_model(&state.db, &system_slug, &model_slug).await?;
-    let fields = ModelStore::list_fields(&state.db, model.id).await?;
+    let model = state
+        .db
+        .models()
+        .get_model(&system_slug, &model_slug)
+        .await?;
+    let fields = state.db.models().list_fields(model.id).await?;
 
     // In-memory schema validation
-    RecordStore::validate_record(&fields, &payload)?;
+    validate_record(&fields, &payload)?;
 
     // Execute before_update mutation hooks
     state
@@ -81,8 +109,11 @@ pub async fn update_record_handler(
         .execute_before_update(&ctx, &model_slug, id, &mut payload)
         .await?;
 
-    let record =
-        RecordStore::update(&state.db, &system_slug, &model_slug, id, payload.clone()).await?;
+    let record = state
+        .db
+        .records()
+        .update(&system_slug, &model_slug, id, payload.clone())
+        .await?;
 
     // Execute after_update mutation hooks
     state
@@ -99,7 +130,11 @@ pub async fn delete_record_handler(
     Extension(ctx): Extension<SystemContext>,
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
 ) -> AppResult<Json<ApiResponse<()>>> {
-    let _model = ModelStore::get_model(&state.db, &system_slug, &model_slug).await?;
+    let _model = state
+        .db
+        .models()
+        .get_model(&system_slug, &model_slug)
+        .await?;
 
     // Execute before_delete mutation hooks
     state
@@ -107,7 +142,11 @@ pub async fn delete_record_handler(
         .execute_before_delete(&ctx, &model_slug, id)
         .await?;
 
-    RecordStore::delete(&state.db, &system_slug, &model_slug, id).await?;
+    state
+        .db
+        .records()
+        .delete(&system_slug, &model_slug, id)
+        .await?;
 
     // Execute after_delete mutation hooks
     state

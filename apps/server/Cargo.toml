@@ -11,8 +11,16 @@ repository.workspace = true
 name = "foundry-server"
 path = "src/main.rs"
 
+[lints]
+workspace = true
+
+[features]
+default = ["postgres"]
+postgres = ["foundry/postgres"]
+mysql = ["foundry/mysql"]
+
 [dependencies]
-foundry = { workspace = true }
+foundry = { workspace = true, default-features = false }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

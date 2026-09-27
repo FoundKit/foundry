@@ -402,25 +402,25 @@ Adding a new database engine requires **zero modifications to core code**:
 ```
 
 ### Phase 0: Core SPI Architecture & Trait Abstraction (Foundation)
-- [ ] **0.1 Standard Domain Store Traits**: Define standard traits in `crates/foundry_storage/src/traits/` (`RecordStoreEngine`, `ModelStoreEngine`, `SystemStoreEngine`, `ConfigStoreEngine`, `AdminStoreEngine`, `AuditStoreEngine`).
-- [ ] **0.2 SPI Registry**: Define `StorageDriverProvider` and `StorageRegistry` in `crates/foundry_storage/src/spi/`.
-- [ ] **0.3 Unified Database Facade & Protocol Sniffing**: Implement `Database` facade, supporting automatic URL scheme sniffing (`postgres://`, `mysql://`, `mongodb://`, `oracle://`) with `DATABASE_TYPE` override support.
-- [ ] **0.4 Cargo Feature Modularization**: Configure `Cargo.toml` with feature flags (`postgres`, `mysql`, `mongodb`, `oracle`).
-- [ ] **0.5 PostgreSQL Provider Extraction**:
+- [x] **0.1 Standard Domain Store Traits**: Define standard traits in `crates/foundry_storage/src/traits/` (`RecordStoreEngine`, `ModelStoreEngine`, `SystemStoreEngine`, `ConfigStoreEngine`, `AdminStoreEngine`, `AuditStoreEngine`).
+- [x] **0.2 SPI Registry**: Define `StorageDriverProvider` and `StorageRegistry` in `crates/foundry_storage/src/spi/`.
+- [x] **0.3 Unified Database Facade & Protocol Sniffing**: Implement `Database` facade, supporting automatic URL scheme sniffing (`postgres://`, `mysql://`, `mongodb://`, `oracle://`) with `DATABASE_TYPE` override support.
+- [x] **0.4 Cargo Feature Modularization**: Configure `Cargo.toml` with feature flags (`postgres`, `mysql`, `mongodb`, `oracle`).
+- [x] **0.5 PostgreSQL Provider Extraction**:
   - Extract existing hardcoded PG logic into `engines/postgres/` and implement `PostgresProvider`.
   - Refactor `foundry_engine::AppState` and `FoundryApp::builder()` to consume `Database`.
   - Execute automated tests to guarantee 100% backward compatibility for PostgreSQL.
 
 ### Phase 1: MySQL & MariaDB Support (P0 Priority - Universal Single-Table JSON Engine)
-- [ ] **1.1 Universal Single-Table Migrations**: Write `migrations/mysql/init.sql`, implementing single-table storage with compact integer `model_id: BIGINT` as the primary index prefix in `model_records` (`AUTO_INCREMENT`, `DATETIME(6)`, native `JSON`, and composite covering indexes).
-- [ ] **1.2 Connection Management**: Implement `engines/mysql/` module using `sqlx::MySqlPool`.
-- [ ] **1.3 MySQL RecordStoreEngine High-Performance Implementation**:
+- [x] **1.1 Universal Single-Table Migrations**: Write `migrations/mysql/init.sql`, implementing single-table storage with compact integer `model_id: BIGINT` as the primary index prefix in `model_records` (`AUTO_INCREMENT`, `DATETIME(6)`, native `JSON`, and composite covering indexes).
+- [x] **1.2 Connection Management**: Implement `engines/mysql/` module using `sqlx::MySqlPool`.
+- [x] **1.3 MySQL RecordStoreEngine High-Performance Implementation**:
   - Implement **Covering Index & Deferred Join Pagination**: scan lightweight index for IDs first, then join back to fetch full JSON, eliminating deep pagination bottlenecks.
   - Resolve the lack of `RETURNING` (`INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT` in atomic transaction).
   - Implement on-demand Virtual Generated Columns with B-Tree indexes for hot query/filter keys.
-- [ ] **1.4 Metadata Stores**: Implement MySQL stores for `models`, `systems`, `configs`, `admins`, and `audit_logs`.
-- [ ] **1.5 Container & End-to-End Testing**:
-  - Add MySQL 8.0 service to `dev/docker-compose.yml`.
+- [x] **1.4 Metadata Stores**: Implement MySQL stores for `models`, `systems`, `configs`, `admins`, and `audit_logs`.
+- [x] **1.5 Container & End-to-End Testing**:
+  - Add MySQL 8.4 service to universal `compose.yml` (compatible with `nerdctl compose` and `docker compose`).
   - Add CI integration tests verifying AutoCRUD, admin authentication, dynamic records, and configs under MySQL.
 
 ### Phase 2: MongoDB Native Document Engine Support (P1 Priority)

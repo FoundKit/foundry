@@ -6,6 +6,9 @@ authors = ["Blog Platform Team <dev@example.com>"]
 license = "MIT OR Apache-2.0"
 description = "Standalone Example Application built on top of the Foundry Framework"
 
+[lints]
+workspace = true
+
 [dependencies]
 foundry = { path = "../../crates/foundry" }
 tokio = { version = "1.44", features = ["full"] }

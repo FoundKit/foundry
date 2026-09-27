@@ -4,4 +4,4 @@ allowBuilds:
   "@pagefind/linux-x64": true
   "@rolldown/binding-linux-x64-gnu": true
 
-minimumReleaseAge: 0s
+minimumReleaseAge: 0

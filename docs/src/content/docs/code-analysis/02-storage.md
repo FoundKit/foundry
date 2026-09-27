@@ -17,40 +17,42 @@ description: "Stage 2: In-depth analysis of database pool, Redis session caching
 
 ## 概述
 
-`foundry_storage` 是 Foundry 框架的**数据持久化层**，实现了：
-- **PostgreSQL 连接池管理**
-- **Redis 连接管理**
-- **Zero-DDL 动态模型系统**（核心特性）
-- **系统、管理员、配置、审计日志的 CRUD**
-- **租户隔离的数据访问**
+## Overview
 
-**依赖关系：**
+`foundry_storage` is Foundry's **multi-database abstraction and persistence layer**, featuring an SPI pluggable architecture:
+- **Smart Multi-Database Routing**: Automatically adapts between PostgreSQL and MySQL/MariaDB
+- **Unified Database Facade & Store Traits Contracts**: Pure method-driven API with zero driver leaks
+- **Redis Session & Cache Management**
+- **Zero-DDL Dynamic Models**: PostgreSQL JSONB/GIN and MySQL Universal Single-Table with deferred join pagination
+- **Tenant-isolated Storage**: Configurations, subsystems, admins, and audit logs
+
+**Dependencies:**
 ```
-foundry_core (基础类型) → foundry_storage (数据访问)
+foundry_core (Types & Errors) → foundry_storage (Multi-DB SPI Storage)
 ```
 
-**关键依赖：**
-- `sqlx` - 异步 PostgreSQL 客户端（编译时 SQL 验证）
-- `redis` - 异步 Redis 客户端
-- `serde_json` - JSON 序列化/反序列化
-- `chrono` - 日期时间处理
-- `uuid` - UUID 生成
+**Key Dependencies:**
+- `sqlx` - Async database client (PostgreSQL & MySQL feature flags)
+- `redis` - Async Redis client
+- `serde_json` - JSON serialization / deserialization
+- `chrono` - DateTime operations
+- `uuid` - UUID generation
 
 ---
 
-## 架构总览
+## Architecture Overview
 
 ```
 foundry_storage
-├── db.rs              # PostgreSQL 连接池初始化
-├── redis_client.rs    # Redis 连接管理
-├── entities.rs        # 数据库实体定义（FromRow）
-├── systems.rs         # SystemStore：子系统 CRUD
-├── models.rs          # ModelStore + RecordStore：动态模型核心
-├── admins.rs          # AdminStore：管理员 CRUD
-├── configs.rs         # ConfigStore：系统配置 KV 存储
-├── audit.rs           # AuditStore：审计日志
-└── lib.rs             # 统一导出
+├── traits/            # Domain Store Trait contracts (RecordStoreEngine, etc.)
+├── spi/               # SPI driver interface & registry (StorageRegistry)
+├── facade.rs          # Unified Database facade & auto protocol sniffing
+├── engines/           # Database engine implementations (conditional compilation)
+│   ├── postgres/      # PostgreSQL driver (JSONB + GIN index)
+│   └── mysql/         # MySQL driver (Universal Single-Table + Covering Index + Deferred Join)
+├── entities.rs        # Strongly-typed database entities (FromRow)
+├── redis_client.rs    # Redis connection management
+└── lib.rs             # Public exports
 ```
 
 ---

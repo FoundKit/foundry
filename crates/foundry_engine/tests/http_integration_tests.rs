@@ -14,7 +14,6 @@ use foundry_engine::{AppState, build_router};
 use foundry_extension::HookPipeline;
 use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 use validator::Validate;
 
@@ -87,13 +86,11 @@ impl SubsystemModule for TestCarnivalSubsystemModule {
 
 // Create dummy uninitialized pool for offline route testing
 fn dummy_app_state() -> AppState {
-    let pool = PgPoolOptions::new()
-        .connect_lazy("postgres://dummy:dummy@localhost:5432/dummy")
-        .unwrap();
+    let db = foundry_storage::Database::dummy();
     let jwt = JwtService::new("test_secret_key_1234567890", 24);
     let hooks = HookPipeline::new();
     let subsystems: Vec<Box<dyn SubsystemModule>> = vec![Box::new(TestCarnivalSubsystemModule)];
-    AppState::new(pool, None, jwt, hooks, subsystems)
+    AppState::new(db, None, jwt, hooks, subsystems)
 }
 
 #[tokio::test]

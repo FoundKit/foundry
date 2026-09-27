@@ -17,20 +17,20 @@ description: "阶段 2：深度剖析数据库连接池、Redis 会话缓存、�
 
 ## 概述
 
-`foundry_storage` 是 Foundry 框架的**数据持久化层**，实现了：
-- **PostgreSQL 连接池管理**
-- **Redis 连接管理**
-- **Zero-DDL 动态模型系统**（核心特性）
-- **系统、管理员、配置、审计日志的 CRUD**
-- **租户隔离的数据访问**
+`foundry_storage` 是 Foundry 框架的**多数据库抽象与数据持久化层**，基于 SPI 插件化架构实现了：
+- **多数据库智能路由**：自动适配 PostgreSQL 与 MySQL/MariaDB
+- **统一 Database 门面与 Store Traits 契约**：面向方法调用，底层驱动零泄露
+- **Redis 会话与缓存连接管理**
+- **Zero-DDL 动态模型系统**（PostgreSQL JSONB/GIN 与 MySQL 通用单表+延迟关联分页）
+- **租户隔离的配置、系统、管理员、审计日志存储**
 
 **依赖关系：**
 ```
-foundry_core (基础类型) → foundry_storage (数据访问)
+foundry_core (基础类型) → foundry_storage (多数据库 SPI 存储)
 ```
 
 **关键依赖：**
-- `sqlx` - 异步 PostgreSQL 客户端（编译时 SQL 验证）
+- `sqlx` - 异步数据库客户端（支持 PostgreSQL 与 MySQL 特性开关）
 - `redis` - 异步 Redis 客户端
 - `serde_json` - JSON 序列化/反序列化
 - `chrono` - 日期时间处理
@@ -42,14 +42,14 @@ foundry_core (基础类型) → foundry_storage (数据访问)
 
 ```
 foundry_storage
-├── db.rs              # PostgreSQL 连接池初始化
+├── traits/            # 领域 Store Trait 抽象契约 (RecordStoreEngine 等)
+├── spi/               # SPI 插件接口与驱动注册中心 (StorageRegistry)
+├── facade.rs          # 统一 Database 门面与自动协议路由
+├── engines/           # 各数据库引擎具体实现 (按需编译)
+│   ├── postgres/      # PostgreSQL 驱动 (JSONB + GIN 倒排索引)
+│   └── mysql/         # MySQL 驱动 (单表通用存储 + 覆盖索引 + 延迟关联)
+├── entities.rs        # 数据库强类型实体定义（FromRow）
 ├── redis_client.rs    # Redis 连接管理
-├── entities.rs        # 数据库实体定义（FromRow）
-├── systems.rs         # SystemStore：子系统 CRUD
-├── models.rs          # ModelStore + RecordStore：动态模型核心
-├── admins.rs          # AdminStore：管理员 CRUD
-├── configs.rs         # ConfigStore：系统配置 KV 存储
-├── audit.rs           # AuditStore：审计日志
 └── lib.rs             # 统一导出
 ```
 

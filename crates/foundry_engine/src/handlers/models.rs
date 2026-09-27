@@ -6,7 +6,7 @@ use axum::{
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
 use foundry_core::types::is_valid_slug;
-use foundry_storage::{ModelEntity, ModelFieldEntity, ModelStore};
+use foundry_storage::{ModelEntity, ModelFieldEntity};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -33,7 +33,7 @@ pub async fn list_models_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
 ) -> AppResult<Json<ApiResponse<Vec<ModelEntity>>>> {
-    let models = ModelStore::list_models(&state.db, &system_slug).await?;
+    let models = state.db.models().list_models(&system_slug).await?;
     Ok(Json(ApiResponse::success(models)))
 }
 
@@ -49,15 +49,17 @@ pub async fn create_model_handler(
         ));
     }
 
-    let model = ModelStore::create_model(
-        &state.db,
-        &system_slug,
-        &payload.slug,
-        &payload.name,
-        payload.description.as_deref(),
-        payload.permissions,
-    )
-    .await?;
+    let model = state
+        .db
+        .models()
+        .create_model(
+            &system_slug,
+            &payload.slug,
+            &payload.name,
+            payload.description.as_deref(),
+            payload.permissions,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(model)))
 }
@@ -66,7 +68,7 @@ pub async fn list_model_fields_handler(
     State(state): State<AppState>,
     Path((_system_slug, model_id)): Path<(String, i64)>,
 ) -> AppResult<Json<ApiResponse<Vec<ModelFieldEntity>>>> {
-    let fields = ModelStore::list_fields(&state.db, model_id).await?;
+    let fields = state.db.models().list_fields(model_id).await?;
     Ok(Json(ApiResponse::success(fields)))
 }
 
@@ -78,18 +80,20 @@ pub async fn add_model_field_handler(
     let is_required = payload.is_required.unwrap_or(false);
     let sort_order = payload.sort_order.unwrap_or(0);
 
-    let field = ModelStore::add_field(
-        &state.db,
-        model_id,
-        &payload.name,
-        &payload.label,
-        &payload.field_type,
-        is_required,
-        payload.default_value,
-        payload.options,
-        sort_order,
-    )
-    .await?;
+    let field = state
+        .db
+        .models()
+        .add_field(
+            model_id,
+            &payload.name,
+            &payload.label,
+            &payload.field_type,
+            is_required,
+            payload.default_value,
+            payload.options,
+            sort_order,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(field)))
 }

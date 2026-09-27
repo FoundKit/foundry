@@ -5,9 +5,17 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
+[features]
+default = ["postgres"]
+postgres = ["foundry_storage/postgres"]
+mysql = ["foundry_storage/mysql"]
+
 [dependencies]
 foundry_core = { workspace = true }
-foundry_storage = { workspace = true }
+foundry_storage = { workspace = true, default-features = false }
 foundry_auth = { workspace = true }
 foundry_extension = { workspace = true }
 axum = { workspace = true }

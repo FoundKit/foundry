@@ -6,7 +6,7 @@ use axum::{
 use foundry_auth::{AdminClaims, hash_password};
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
-use foundry_storage::{AdminEntity, AdminStore};
+use foundry_storage::AdminEntity;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
@@ -41,7 +41,7 @@ pub async fn list_admins_handler(
         ));
     }
 
-    let admins = AdminStore::list(&state.db).await?;
+    let admins = state.db.admins().list().await?;
     Ok(Json(ApiResponse::success(admins)))
 }
 
@@ -80,15 +80,17 @@ pub async fn create_admin_handler(
     };
     let allowed_json = serde_json::to_value(allowed).unwrap_or_else(|_| serde_json::json!([]));
 
-    let admin = AdminStore::create(
-        &state.db,
-        &payload.username,
-        payload.email.as_deref(),
-        &password_hash,
-        &normalized_role,
-        allowed_json,
-    )
-    .await?;
+    let admin = state
+        .db
+        .admins()
+        .create(
+            &payload.username,
+            payload.email.as_deref(),
+            &password_hash,
+            &normalized_role,
+            allowed_json,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(admin)))
 }
@@ -135,16 +137,18 @@ pub async fn update_admin_handler(
         _ => None,
     };
 
-    let admin = AdminStore::update(
-        &state.db,
-        id,
-        payload.email.as_deref(),
-        password_hash.as_deref(),
-        normalized_role.as_deref(),
-        allowed_json,
-        payload.status,
-    )
-    .await?;
+    let admin = state
+        .db
+        .admins()
+        .update(
+            id,
+            payload.email.as_deref(),
+            password_hash.as_deref(),
+            normalized_role.as_deref(),
+            allowed_json,
+            payload.status,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(admin)))
 }

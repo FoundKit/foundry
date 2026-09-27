@@ -8,20 +8,17 @@ use blog_platform::systems::newsletter::dto::SubscriberResponse;
 use blog_platform::systems::{BlogSubsystem, NewsletterSubsystem};
 use foundry::prelude::*;
 use http_body_util::BodyExt;
-use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
 fn test_app_state() -> AppState {
-    let pool = PgPoolOptions::new()
-        .connect_lazy("postgres://dummy:dummy@localhost:5432/dummy")
-        .unwrap();
+    let db = Database::dummy();
     let jwt = JwtService::new("test_secret_key_1234567890", 24);
     let mut hooks = HookPipeline::new();
     hooks.register(BlogMutationHook);
 
     let subsystems: Vec<Box<dyn SubsystemModule>> =
         vec![Box::new(BlogSubsystem), Box::new(NewsletterSubsystem)];
-    AppState::new(pool, None, jwt, hooks, subsystems)
+    AppState::new(db, None, jwt, hooks, subsystems)
 }
 
 #[tokio::test]

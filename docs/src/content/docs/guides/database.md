@@ -1,290 +1,183 @@
 ---
-title: Database & Custom Storage Guide
-description: Complete guide to database operations in Foundry, including native SQLx queries, transactions, Zero-DDL dynamic records, and migrations.
+title: Database & Storage Engine Guide
+description: Foundry Multi-Database SPI architecture, PostgreSQL and MySQL configurations, Zero-DDL dynamic models, and containerized development.
 ---
 
-# Database & Custom Storage Guide
+# Database & Storage Engine Guide
 
-In Foundry applications, developers have complete freedom to interact with the database using either **Custom SQL Queries (via SQLx)** or **Zero-DDL Dynamic Models (via RecordStore)**.
+Foundry features a modern **Multi-Database SPI (Service Provider Interface) pluggable storage architecture**. Business layers, domain services, the AutoCRUD engine, and Axum state exclusively depend on the `Database` facade and standard store traits, **achieving absolute zero driver leakage**.
 
----
-
-## 1. Overview: Two Storage Paradigms
-
-| Storage Paradigm | Best For | Implementation |
-|---|---|---|
-| **Native SQL Tables (Custom Domain)** | Complex business relationships, high-performance structured joins, heavy analytical queries | Custom SQL tables created in `migrations/` + `sqlx` queries |
-| **Zero-DDL Dynamic Models** | Visual entity management in Admin UI, rapid iteration without DDL locks, auto-generated REST CRUD | Built-in `model_records` table + `RecordStore` API |
+The platform provides first-class support for **PostgreSQL (14+)** and **MySQL (8.0+) / MariaDB (10.5+)**, with automatic protocol sniffing based on `DATABASE_URL`.
 
 ---
 
-## 2. Accessing the Database Pool (`DbPool`)
+## 1. Core Architecture & Design Principles
 
-In your subsystem controllers, you can inject the database connection pool directly via Axum's `Extension(db)` extractor:
+```mermaid
+flowchart TD
+    subgraph AppLayer ["Application Layer / AutoCRUD Engine / Controllers"]
+        Handler["Axum Handler (Extension<AppState>)"]
+        Call["Method Calls: db.records() / db.models() / db.configs() / db.systems()"]
+        Handler --> Call
+    end
 
-```rust
-use axum::{extract::Extension, routing::get, Json, Router};
-use foundry::prelude::*;
+    subgraph FacadeLayer ["Unified Facade & SPI (foundry_storage)"]
+        Call --> Facade["Database Facade"]
+        Facade --> Registry["StorageRegistry (Driver Routing)"]
+    end
 
-pub fn build_routes() -> Router {
-    Router::new().route("/stats", get(handle_get_stats))
-}
-
-pub async fn handle_get_stats(
-    Extension(ctx): Extension<SystemContext>,
-    Extension(db): Extension<DbPool>,
-) -> AppResult<Json<ApiResponse<StatsResponse>>> {
-    let stats = StatsService::calculate(&ctx, &db).await?;
-    Ok(Json(ApiResponse::success(stats)))
-}
+    subgraph Engines ["Driver Implementations (Compiled on Demand)"]
+        Registry -->|"postgres:// / postgresql://"| PgEngine["PostgresProvider (JSONB + GIN Inverted Index)"]
+        Registry -->|"mysql:// / mariadb://"| MySqlEngine["MySqlProvider (Universal Single-Table + Covering Index + Deferred Join)"]
+    end
 ```
 
----
-
-## 3. Executing Native SQL Queries with SQLx
-
-Foundry's `DbPool` is a standard `sqlx::PgPool`. You can write type-safe queries using `sqlx`:
-
-### Step 1: Define Your Data Struct
-
-```rust
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use chrono::{DateTime, Utc};
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct CustomArticle {
-    pub id: i64,
-    pub system_slug: String,
-    pub title: String,
-    pub content: String,
-    pub views: i32,
-    pub created_at: DateTime<Utc>,
-}
-```
-
-### Step 2: Querying Records
-
-```rust
-use foundry::prelude::*;
-use crate::models::CustomArticle;
-
-pub struct ArticleRepository;
-
-impl ArticleRepository {
-    /// Fetch all articles for the current subsystem
-    pub async fn list_by_system(
-        db: &DbPool,
-        system_slug: &str,
-    ) -> AppResult<Vec<CustomArticle>> {
-        let rows = sqlx::query_as::<_, CustomArticle>(
-            "SELECT id, system_slug, title, content, views, created_at 
-             FROM articles 
-             WHERE system_slug = $1 
-             ORDER BY created_at DESC"
-        )
-        .bind(system_slug)
-        .fetch_all(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-        Ok(rows)
-    }
-
-    /// Insert a new article
-    pub async fn create(
-        db: &DbPool,
-        system_slug: &str,
-        title: &str,
-        content: &str,
-    ) -> AppResult<i64> {
-        let row: (i64,) = sqlx::query_as(
-            "INSERT INTO articles (system_slug, title, content, views, created_at)
-             VALUES ($1, $2, $3, 0, NOW())
-             RETURNING id"
-        )
-        .bind(system_slug)
-        .bind(title)
-        .bind(content)
-        .fetch_one(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-        Ok(row.0)
-    }
-}
-```
+### Key Highlights
+1. **Method-Driven & Zero Driver Leakage**: Business code accesses storage exclusively via trait methods such as `state.db.records().create(...)` or `state.db.records().list(...)`. No `PgPool` or `MySqlPool` types are exposed.
+2. **Smart Protocol Sniffing**: At startup, Foundry parses the `DATABASE_URL` protocol scheme:
+   - `postgres://` or `postgresql://` $\rightarrow$ activates PostgreSQL engine
+   - `mysql://` or `mariadb://` $\rightarrow$ activates MySQL / MariaDB engine
+   - Can also be explicitly overridden using `DATABASE_TYPE=mysql` or `DATABASE_TYPE=postgres`.
+3. **Conditional Compilation**: Database drivers are gated by Cargo feature flags to keep binary sizes lean.
 
 ---
 
-## 4. Handling Database Transactions (ACID)
+## 2. Environment Setup & Feature Flags
 
-For operations modifying multiple records atomically, use database transactions:
+### Cargo.toml Dependencies
 
-```rust
-use foundry::prelude::*;
+Foundry defaults to `postgres`. To use MySQL, enable the `mysql` feature in your `Cargo.toml`:
 
-pub async fn transfer_balance(
-    db: &DbPool,
-    from_user: i64,
-    to_user: i64,
-    amount: i64,
-) -> AppResult<()> {
-    // 1. Begin transaction
-    let mut tx = db.begin().await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+```toml
+[dependencies]
+# PostgreSQL only (default)
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
-    // 2. Deduct from sender
-    let deduct_res = sqlx::query(
-        "UPDATE accounts SET balance = balance - $1 WHERE id = $2 AND balance >= $1"
-    )
-    .bind(amount)
-    .bind(from_user)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e.to_string()))?;
+# Enable MySQL / MariaDB support
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mysql"] }
 
-    if deduct_res.rows_affected() == 0 {
-        return Err(AppError::BadRequest("Insufficient balance".to_string()));
-    }
-
-    // 3. Credit receiver
-    sqlx::query(
-        "UPDATE accounts SET balance = balance + $1 WHERE id = $2"
-    )
-    .bind(amount)
-    .bind(to_user)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError::Database(e.to_string()))?;
-
-    // 4. Commit transaction
-    tx.commit().await
-        .map_err(|e| AppError::Database(e.to_string()))?;
-
-    Ok(())
-}
+# Support both PostgreSQL and MySQL concurrently
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["postgres", "mysql"] }
 ```
+
+### Environment Configuration (`.env`)
+
+#### For PostgreSQL:
+```bash
+DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+#### For MySQL / MariaDB:
+```bash
+DATABASE_URL=mysql://root:root@localhost:3306/foundry
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+> **Note**: When `AUTO_MIGRATE=true`, Foundry will automatically verify that the database exists (creating it if absent) and execute dialect-specific migrations (schema, covering indexes, and seed superadmin account).
 
 ---
 
-## 5. Working with Zero-DDL Dynamic Models
+## 3. Containerized Setup (Docker / Nerdctl / Podman)
 
-Foundry provides a built-in JSONB storage engine (`RecordStore`) that allows saving and querying dynamic schemas without running SQL migrations:
+The project includes a standard `compose.yml` compatible with **Docker Compose**, **Nerdctl (containerd)**, and **Podman Compose**:
+
+```bash
+# Docker Compose
+docker compose up -d postgres mysql redis
+
+# Nerdctl (containerd)
+nerdctl compose up -d postgres mysql redis
+
+# Podman Compose
+podman-compose up -d postgres mysql redis
+```
+
+Ports:
+- **MySQL 8.4**: Port `3306`, user `root`, password `root`, database `foundry`.
+- **PostgreSQL 18.6**: Port `5432`, user `postgres`, password `postgrespassword`, database `foundry`.
+- **Redis 8.0**: Port `6379`.
+
+---
+
+## 4. Using the `Database` Facade in Application Code
+
+Inject the `AppState` into your Axum handlers to interact with storage engines:
 
 ```rust
+use axum::{extract::Extension, Json};
 use foundry::prelude::*;
-use foundry_storage::models::RecordStore;
 use serde_json::json;
 
-pub async fn save_dynamic_post(
-    db: &DbPool,
-    ctx: &SystemContext,
-    title: &str,
-    content: &str,
-) -> AppResult<i64> {
-    let payload = json!({
-        "title": title,
-        "content": content,
-        "status": "published",
-        "tags": ["rust", "foundry"]
-    });
+pub async fn create_article_handler(
+    Extension(state): Extension<AppState>,
+    Extension(ctx): Extension<SystemContext>,
+    Json(payload): Json<serde_json::Value>,
+) -> AppResult<Json<ApiResponse<serde_json::Value>>> {
+    // 1. Create a dynamic record via Zero-DDL model engine
+    let record = state
+        .db
+        .records()
+        .create(
+            &ctx.system_slug,
+            "articles",
+            json!({
+                "title": payload.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled"),
+                "content": payload.get("content").and_then(|v| v.as_str()).unwrap_or(""),
+                "views": 0,
+                "is_published": true
+            }),
+        )
+        .await?;
 
-    // Automatically stored in `model_records` table partitioned by system_slug & model_slug
-    let record = RecordStore::create(
-        db,
-        &ctx.system_slug,
-        "posts",
-        payload,
-    )
-    .await?;
-
-    Ok(record.id)
+    Ok(Json(ApiResponse::success(json!({
+        "id": record.id,
+        "data": record.data
+    }))))
 }
 ```
 
----
+### Store Engines Overview:
 
-## 6. Accessing System Configurations (`ConfigStore`)
-
-Read dynamic system configurations defined in the Admin UI:
-
-```rust
-use foundry::prelude::*;
-use foundry_storage::configs::ConfigStore;
-
-pub async fn get_system_settings(
-    db: &DbPool,
-    ctx: &SystemContext,
-) -> AppResult<bool> {
-    let configs = ConfigStore::get_aggregated(db, &ctx.system_slug).await?;
-    
-    // Check if maintenance mode is enabled
-    let in_maintenance = configs
-        .get("maintenance_mode")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    Ok(in_maintenance)
-}
-```
+| Domain Store | Accessor | Key Methods |
+|---|---|---|
+| **Dynamic Records** | `db.records()` | `create()`, `get_by_id()`, `update()`, `delete()`, `list()` |
+| **Model Schemas** | `db.models()` | `list_models()`, `get_model()`, `create_model()`, `list_fields()`, `add_field()` |
+| **Subsystems / Tenants** | `db.systems()` | `list()`, `list_paginated()`, `get_by_id()`, `get_by_slug()`, `create()`, `update()` |
+| **System Configurations** | `db.configs()` | `get()`, `set()`, `get_aggregated()`, `get_schema()` |
+| **Admins & RBAC** | `db.admins()` | `get_by_id()`, `get_by_username()`, `create()`, `update()` |
+| **Audit Logs** | `db.audit()` | `insert()`, `list()` |
 
 ---
 
-## 7. Tenant-Isolated Redis Caching
+## 5. MySQL Universal Single-Table Engine & Performance Tuning
 
-When Redis is enabled, inject `Extension(redis): Extension<RedisPool>` and use `ctx.redis_key(...)` to isolate keys per subsystem:
+For MySQL/MariaDB environments, Foundry implements a **Universal Single-Table Engine**:
 
-```rust
-use axum::extract::Extension;
-use foundry::prelude::*;
-
-pub async fn get_cached_item(
-    ctx: &SystemContext,
-    redis: &RedisPool,
-    item_id: &str,
-) -> AppResult<Option<String>> {
-    // Generates key: "foundry:{system_slug}:items:{item_id}"
-    let cache_key = ctx.redis_key(&format!("items:{}", item_id));
-
-    let mut conn = redis.clone();
-
-    let val: Option<String> = redis::cmd("GET")
-        .arg(&cache_key)
-        .query_async(&mut conn)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    Ok(val)
-}
-```
-
----
-
-## 8. Writing Custom Database Migrations
-
-Place your custom domain `.sql` migration files in the `migrations/` directory of your project:
-
-```text
-my-app/
-└── migrations/
-    ├── 001_create_articles_table.sql
-    └── 002_create_orders_table.sql
-```
-
-#### Example: `migrations/001_create_articles_table.sql`
-
+### 5.1 Composite Covering Index
 ```sql
-CREATE TABLE IF NOT EXISTS articles (
-    id BIGSERIAL PRIMARY KEY,
-    system_slug VARCHAR(64) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    views INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_articles_system_slug ON articles(system_slug);
+CREATE TABLE IF NOT EXISTS model_records (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    model_id BIGINT NOT NULL,
+    system_id VARCHAR(32) NOT NULL,
+    model_slug VARCHAR(48) NOT NULL,
+    data JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
+    INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
+    INDEX idx_system_query (system_id, deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-When you start your application with `AUTO_MIGRATE=true` or run `foundry migrate`, baseline schema tables and your custom migrations will be safely applied.
+### 5.2 Deferred Join Pagination
+Deep pagination (e.g. `OFFSET 100000 LIMIT 20`) on large JSON tables typically causes severe disk IO. `MySqlRecordEngine` uses **Deferred Join**:
+1. Scan the index alone to obtain matching primary keys.
+2. Join back on the primary key to retrieve the full `data` payload.
+
+### 5.3 Atomic Re-Fetch on Insert
+MySQL lacks the `RETURNING` clause. Foundry atomically orchestrates `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT` in a single transaction, delivering strict consistency across all database engines.

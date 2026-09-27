@@ -9,7 +9,7 @@ use axum::{
 use bytes::Bytes;
 use foundry_auth::AdminClaims;
 use foundry_core::context::SystemContext;
-use foundry_storage::{AuditLogInsert, AuditStore};
+use foundry_storage::AuditLogInsert;
 use http_body_util::BodyExt;
 use std::time::Instant;
 use tracing::error;
@@ -101,7 +101,7 @@ pub async fn audit_interceptor(
     let admin_id = admin_claims.as_ref().map(|c| c.sub);
     let admin_username = admin_claims.as_ref().map(|c| c.username.clone());
 
-    let pool = state.db.clone();
+    let db = state.db.clone();
     let log_insert = AuditLogInsert {
         admin_id,
         admin_username,
@@ -120,7 +120,7 @@ pub async fn audit_interceptor(
 
     // Asynchronous non-blocking background write
     tokio::spawn(async move {
-        if let Err(e) = AuditStore::insert(&pool, log_insert).await {
+        if let Err(e) = db.audit().insert(log_insert).await {
             error!("Failed to persist audit log: {}", e);
         }
     });

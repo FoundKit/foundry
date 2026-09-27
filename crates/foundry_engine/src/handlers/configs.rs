@@ -5,7 +5,7 @@ use axum::{
 };
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
-use foundry_storage::{ConfigStore, SystemConfigEntity};
+use foundry_storage::SystemConfigEntity;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -24,7 +24,7 @@ pub async fn get_aggregated_configs_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
 ) -> AppResult<Json<ApiResponse<Value>>> {
-    let configs = ConfigStore::get_aggregated(&state.db, &system_slug).await?;
+    let configs = state.db.configs().get_aggregated(&system_slug).await?;
     Ok(Json(ApiResponse::success(configs)))
 }
 
@@ -40,7 +40,7 @@ pub async fn update_aggregated_configs_handler(
         )
     })?;
 
-    ConfigStore::update_values(&state.db, &system_slug, map).await?;
+    state.db.configs().update_values(&system_slug, map).await?;
     Ok(Json(ApiResponse::success(())))
 }
 
@@ -49,7 +49,7 @@ pub async fn list_config_schema_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
 ) -> AppResult<Json<ApiResponse<Vec<SystemConfigEntity>>>> {
-    let list = ConfigStore::list(&state.db, &system_slug).await?;
+    let list = state.db.configs().list(&system_slug).await?;
     Ok(Json(ApiResponse::success(list)))
 }
 
@@ -62,17 +62,19 @@ pub async fn upsert_config_schema_handler(
     let options = payload.options.unwrap_or_else(|| serde_json::json!({}));
     let sort_order = payload.sort_order.unwrap_or(0);
 
-    let config = ConfigStore::upsert(
-        &state.db,
-        &system_slug,
-        &payload.key,
-        &payload.label,
-        &payload.value_type,
-        payload.default_value,
-        options,
-        sort_order,
-    )
-    .await?;
+    let config = state
+        .db
+        .configs()
+        .upsert(
+            &system_slug,
+            &payload.key,
+            &payload.label,
+            &payload.value_type,
+            payload.default_value,
+            options,
+            sort_order,
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(config)))
 }

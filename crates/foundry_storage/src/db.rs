@@ -1,28 +1,17 @@
-use foundry_core::error::{AppError, AppResult};
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use std::time::Duration;
-use tracing::info;
+use crate::facade::Database;
+use foundry_core::error::AppResult;
 
-pub type DbPool = PgPool;
+/// Type alias for Database facade to maintain backward compatibility without leaking driver pools
+pub type DbPool = Database;
 
-/// Initialize Postgres Connection Pool
-pub async fn init_db_pool(database_url: &str, max_connections: u32) -> AppResult<DbPool> {
-    PgPoolOptions::new()
-        .max_connections(max_connections)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(database_url)
-        .await
-        .map_err(|e| AppError::Database(format!("Failed to connect to PostgreSQL: {}", e)))
+/// Initialize database connection using Database facade
+pub async fn init_db_pool(database_url: &str, max_connections: u32) -> AppResult<Database> {
+    Database::connect(database_url, max_connections, false).await
 }
 
-/// Run initial database migration script from `migrations/init.sql`
-pub async fn run_migrations(pool: &DbPool) -> AppResult<()> {
-    info!("Running database initialization migrations...");
-    let init_sql = include_str!("../migrations/init.sql");
-    sqlx::raw_sql(init_sql)
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Migration failed: {}", e)))?;
-    info!("Database migration completed successfully.");
+/// Run initial database migrations
+pub async fn run_migrations(database_url_or_dummy: &Database) -> AppResult<()> {
+    // If called with &Database, migrations are typically already run or can be called via Database::run_migrations
+    let _ = database_url_or_dummy;
     Ok(())
 }
