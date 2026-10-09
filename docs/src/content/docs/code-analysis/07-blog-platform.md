@@ -526,7 +526,7 @@ Content-Type: application/json
    ```rust
    BlogService::create_post(&ctx, payload).await?
    ```
-   - 实际应用中调用 `RecordStore` 存储到 PostgreSQL
+   - 实际应用中调用 `RecordStore` / `Database` 存储到底层数据库（PostgreSQL / MySQL 等）
    - 触发 `BlogMutationHook::before_create`（注入 `hook_processed` 字段）
 
 5. **Hook 拦截**
@@ -668,7 +668,7 @@ Ok(Json(ApiResponse::success(post)))     // 成功时包装
 | 阶段 | Blog Platform 如何使用 |
 |------|------------------------|
 | **Stage 1 (Core)** | `SystemContext` 在 Controller 中注入，`AppError`/`ApiResponse` 统一处理响应 |
-| **Stage 2 (Storage)** | 实际应用中 `BlogService` 会调用 `RecordStore` 存储到 PostgreSQL |
+| **Stage 2 (Storage)** | 实际应用中 `BlogService` 会调用 `RecordStore` / `Database` 存储到底层数据库（PostgreSQL / MySQL 等） |
 | **Stage 3 (Auth)** | 所有路由经过 `auth_middleware`，验证 JWT 和 RBAC 角色 |
 | **Stage 4 (Extension)** | `BlogMutationHook` 拦截 Auto-CRUD 操作，注入业务逻辑 |
 | **Stage 5 (Engine)** | 继承所有中间件（audit/auth/context）、Auto-CRUD 路由 |

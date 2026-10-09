@@ -23,7 +23,7 @@ flowchart TD
         direction TB
         F_Facade["crates/foundry (高层门面门面 crate: FoundryApp, Builder, prelude)"]
         F_Core["crates/foundry_core (Context, SubsystemModule, Error, Response)"]
-        F_Storage["crates/foundry_storage (Zero-DDL 动态存储, PostgreSQL, Redis)"]
+        F_Storage["crates/foundry_storage (多数据库 SPI, Zero-DDL 动态存储, Redis)"]
         F_Auth["crates/foundry_auth (管理员 IAM, Argon2id, JWT, 专题 RBAC)"]
         F_Engine["crates/foundry_engine (Axum 统一路由, Auto-CRUD, 审计拦截)"]
         F_Ext["crates/foundry_extension (生命周期变更高阶钩子)"]
@@ -53,7 +53,7 @@ flowchart TD
 |---|---|---|
 | **运行时与网络** | Axum 服务引擎、TCP Listener、优雅停机、CORS、跟踪 | 端口/主机配置、实际业务流量接入 |
 | **路由体系** | `/api/v1` 统一路由树、Admin API、Auto-CRUD、子系统 `/ext/*` 挂载 | 自定义业务路由处理函数、业务专属中间件 |
-| **存储基础设施** | PostgreSQL 连接池管理、Redis 租户隔离缓存、Zero-DDL 动态模型引擎 | 业务数据模型定义、业务复杂事务与查询 |
+| **存储基础设施** | 多数据库 SPI 驱动管理、Redis 租户隔离缓存、Zero-DDL 动态模型引擎 | 业务数据模型定义、业务复杂事务与查询 |
 | **身份与权限** | Argon2id 哈希、JWT 签发校验、三级 RBAC（超管/普通/专题管理员） | 业务域账号体系、专题管理员分配 |
 | **Admin 控制台** | React Admin SPA 仪表盘、动态模型配置器、iframe 安全沙箱 Bridge | 自定义子系统运营大屏（HTML/React/Vue） |
 | **扩展机制** | `SubsystemModule` 特征、`MutationHook` 变更拦截管道 | 业务子系统实现、领域事件监听 |
@@ -114,7 +114,7 @@ Foundry 提供了直观流畅的 `FoundryApp::builder()` 启动器 API：
 sequenceDiagram
     participant Main as 用户应用 main()
     participant Builder as FoundryBuilder 构造器
-    participant DB as PostgreSQL & Redis
+    participant DB as 数据库 (PostgreSQL/MySQL等) & Redis
     participant Engine as Axum 路由引擎
     participant Listener as Tokio TCP 监听器
 

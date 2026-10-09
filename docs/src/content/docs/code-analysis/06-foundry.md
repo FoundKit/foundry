@@ -66,18 +66,24 @@ foundry_core, foundry_storage, foundry_auth, foundry_extension, foundry_engine
 
 ```toml
 [features]
-default = ["server", "storage", "auth", "extension"]
-server = ["foundry_engine", "axum", "tower", "tokio"]
-storage = ["foundry_storage", "sqlx"]
-auth = ["foundry_auth"]
-extension = ["foundry_extension"]
+default = ["server", "storage", "auth", "extension", "postgres"]
+server = ["dep:foundry_engine", "dep:axum", "dep:tower", "dep:tower-http", "dep:tokio"]
+storage = ["dep:foundry_storage", "dep:sqlx"]
+auth = ["dep:foundry_auth"]
+extension = ["dep:foundry_extension"]
+postgres = ["foundry_storage?/postgres", "foundry_engine?/postgres"]
+mysql = ["foundry_storage?/mysql", "foundry_engine?/mysql"]
 ```
 
 **灵活性：**
 ```toml
-# 完整功能（默认）
+# 完整功能（默认 PostgreSQL）
 [dependencies]
 foundry = "0.1"
+
+# 启用 MySQL 支持
+[dependencies]
+foundry = { version = "0.1", features = ["mysql"] }
 
 # 仅核心类型（不启动服务器）
 [dependencies]
@@ -95,7 +101,7 @@ foundry = { version = "0.1", default-features = false }
 pub struct FoundryConfig {
     pub host: String,                          // 监听地址（默认 0.0.0.0）
     pub port: u16,                             // 端口（默认 8080）
-    pub database_url: String,                  // PostgreSQL 连接字符串
+    pub database_url: String,                  // 数据库连接字符串（支持 postgres://, mysql:// 等）
     pub redis_url: Option<String>,             // Redis 连接字符串（可选）
     pub jwt_secret: String,                    // JWT 签名密钥
     pub jwt_expiry_hours: i64,                 // Token 有效期（默认 7 天）
@@ -292,17 +298,13 @@ impl FoundryBuilder {
 
         info!("Initializing Foundry Platform Application...");
 
-        // 2. 初始化 PostgreSQL 连接池
-        info!("Connecting to PostgreSQL database...");
-        let db_pool = init_db_pool(
+        // 2. 初始化数据库门面与连接池 (通过 SPI 自动路由方言驱动，包含 auto_migrate 自动迁移)
+        info!("Connecting to database...");
+        let db = Database::connect(
             &self.config.database_url,
-            self.config.db_pool_size
+            self.config.db_pool_size,
+            self.config.auto_migrate,
         ).await?;
-
-        // 3. 运行数据库迁移
-        if self.config.auto_migrate {
-            run_migrations(&db_pool).await?;
-        }
 
         // 4. 初始化 Redis（可选）
         let redis_pool = if let Some(ref rurl) = self.config.redis_url {
@@ -369,7 +371,7 @@ build()
 ┌──────────────────────────────────┐
 │ 1. 初始化日志（tracing）         │
 ├──────────────────────────────────┤
-│ 2. 连接 PostgreSQL               │
+│ 2. 连接数据库 (SPI 驱动探测)     │
 ├──────────────────────────────────┤
 │ 3. 执行数据库迁移                │
 ├──────────────────────────────────┤

@@ -53,10 +53,12 @@ Foundry 模式：框架 = 独立 Crate 依赖（用户项目完全独立）
 | **语言** | Rust 2024 Edition (1.85+) | 高性能、类型安全 |
 | **异步运行时** | Tokio 1.44 | 异步 I/O |
 | **Web 框架** | Axum 0.8 | HTTP 路由与处理 |
-| **数据库** | PostgreSQL 16-18 | 主数据存储 |
+| **数据库** | 多数据库 SPI 架构（PostgreSQL 14-18、MySQL 8.0+/8.4+ 已稳定支持；MariaDB、MongoDB、Oracle DB 规划中） | 主数据存储（纯方法调用，底层驱动零泄露） |
 | **缓存** | Redis 7-8 | 会话与缓存 |
 | **前端** | React 18 + TailwindCSS | 管理后台 |
 | **身份认证** | Argon2id + JWT | 安全认证 |
+
+> 💡 **多数据库架构说明**：Foundry 采用 SPI (Service Provider Interface) 插件化存储机制，业务代码与 Auto-CRUD 引擎仅面向统一方法调用。运行时可根据 `DATABASE_URL` 协议前缀（如 `postgres://`、`mysql://`）或环境变量 `DATABASE_TYPE` 自动探测并路由对应驱动引擎。
 
 ### 1.3 项目结构总览
 
@@ -117,8 +119,8 @@ foundry/
 ┌─────────────────────────────────────────────────────────────┐
 │              基础设施层 (Infrastructure)                      │
 │  ┌──────────────────────┬──────────────────────────────────┐│
-│  │  PostgreSQL 18       │  Redis 7                         ││
-│  │  (主数据库 + 元数据)  │  (会话 + 缓存)                    ││
+│  │  多数据库 SPI 驱动     │  Redis 7-8                       ││
+│  │  (PostgreSQL/MySQL等) │  (会话 + 缓存)                    ││
 │  └──────────────────────┴──────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -265,24 +267,27 @@ pub struct SystemContext {
 
 ### 3.3 `foundry_storage` - 存储层
 
-**职责：** 数据库连接、Redis 缓存、动态模型 CRUD
+**职责：** 多数据库 SPI 抽象、连接池管理、Redis 缓存、动态模型 CRUD
 
-**核心文件：**
+**核心文件与模块：**
 
-| 文件 | 职责 |
+| 文件 / 模块 | 职责 |
 |------|------|
-| `db.rs` | SQLx PostgreSQL 连接池管理 |
-| `redis_client.rs` | Redis 客户端封装 |
-| `models.rs` | `RecordStore` - Zero-DDL 动态模型 |
+| `facade.rs` | `Database` - 统一门面与协议智能探测路由 |
+| `spi/` | `StorageRegistry` 与 `StorageDriverProvider` SPI 插件扩展架构 |
+| `engines/` | 特化数据库驱动实现（PostgreSQL JSONB/GIN、MySQL 覆盖索引/延迟关联等） |
+| `db.rs` | `DbPool`（`Database` 别名）向后兼容层与连接池入口 |
+| `redis_client.rs` | Redis 客户端封装（ConnectionManager） |
+| `models.rs` | `RecordStore` 与 `ModelStore` - Zero-DDL 动态模型统一操作入口 |
 | `systems.rs` | `SystemStore` - 子系统元数据管理 |
 | `admins.rs` | `AdminStore` - 管理员账户 CRUD |
 | `configs.rs` | `ConfigStore` - 系统配置 KV 存储 |
 | `audit.rs` | `AuditStore` - 审计日志 |
-| `entities.rs` | 数据库实体定义（Models） |
+| `entities.rs` | 数据库实体定义（FromRow 派生） |
 
 **学习路径：**
-1. **先读** `db.rs` - 理解连接池初始化
-2. **重点读** `models.rs` - 理解动态模型实现（核心特性）
+1. **先读** `facade.rs` 与 `spi/` - 理解统一门面与多数据库插件 SPI 注册机制
+2. **重点读** `models.rs` 与 `engines/` - 理解动态模型与数据库特化实现（核心特性）
 3. **后读** `systems.rs` - 理解子系统如何持久化
 4. **选读** `admins.rs`、`configs.rs` - 理解其他存储抽象
 
@@ -469,7 +474,7 @@ app.run().await?;  // 绑定端口，开始监听
 ```
 
 **内部步骤：**
-1. 连接 PostgreSQL（`foundry_storage::db::init_pool`）
+1. 连接数据库（通过 `Database::connect` / `init_db_pool`，根据连接串协议如 `postgres://` 或 `mysql://` 智能路由激活对应驱动引擎）
 2. 连接 Redis（`foundry_storage::redis_client::init`）
 3. 加载已注册子系统元数据
 4. 构建 Axum 路由树（`foundry_engine::router::build_router`）
@@ -858,9 +863,11 @@ redis.set(&cache_key, &config, 3600).await?;
 - [Tower Middleware](https://docs.rs/tower/)
 - [SQLx Guide](https://github.com/launchbadge/sqlx)
 
-### 8.3 数据库
+### 8.3 数据库与存储架构
 
+- [Foundry 存储引擎架构与多数据库规划](/zh/architecture/storage-engines/)
 - [PostgreSQL JSON 功能](https://www.postgresql.org/docs/current/datatype-json.html)
+- [MySQL 8.4 JSON 参考手册](https://dev.mysql.com/doc/refman/8.4/en/json.html)
 - [Redis 命令参考](https://redis.io/commands/)
 
 ### 8.4 前端
@@ -937,7 +944,10 @@ npm run build                                        # 构建生产版本
 
 ```bash
 # .env 示例
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/foundry_dev
+# 选项 A: PostgreSQL (默认)
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/foundry_dev
+# 选项 B: MySQL / MariaDB (需在 Cargo.toml 开启 features = ["mysql"])
+# DATABASE_URL=mysql://root:root@localhost:3306/foundry_dev
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-super-secret-key-at-least-32-characters-long
 SERVER_HOST=0.0.0.0

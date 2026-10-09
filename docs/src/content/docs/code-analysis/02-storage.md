@@ -150,9 +150,10 @@ pub struct ModelRecordEntity {
 }
 ```
 
-**核心设计：** `data` 字段使用 PostgreSQL 的 `JSONB` 类型，存储任意结构的 JSON 数据。
+**核心设计：** `data` 字段根据数据库方言适配：PostgreSQL 使用 `JSONB` 类型搭配 GIN 倒排索引；MySQL 使用标准 `JSON` 列搭配虚拟生成列 (Virtual Columns) 与二级 B-Tree 索引。
 
 **数据库表结构：**
+*PostgreSQL 方言：*
 ```sql
 CREATE TABLE model_records (
     id BIGSERIAL PRIMARY KEY,
@@ -165,6 +166,21 @@ CREATE TABLE model_records (
     INDEX idx_system_model (system_id, model_slug),
     INDEX idx_data_gin (data)  -- GIN 索引支持 JSON 查询
 );
+```
+
+*MySQL 方言：*
+```sql
+CREATE TABLE model_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    model_id BIGINT NOT NULL,
+    system_id VARCHAR(64) NOT NULL,
+    model_slug VARCHAR(48) NOT NULL,
+    data JSON NOT NULL,
+    created_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
+    KEY idx_records_model_deleted (model_id, deleted_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 #### D. AdminEntity - 管理员实体
@@ -238,77 +254,86 @@ pub struct PlatformSummary {
 
 ---
 
-## 2. db.rs - PostgreSQL 连接池
+## 2. db.rs 与 facade.rs - 多数据库门面与连接池管理
 
-### 2.1 连接池初始化
+### 2.1 Database 统一门面与 SPI 架构
+
+Foundry 摒弃了在应用层直接绑定 `sqlx::PgPool` 或 `sqlx::MySqlPool` 的传统设计，改为由 `Database` 门面统一持有各 Store Engine Trait 对象：
 
 ```rust
-use sqlx::postgres::{PgPool, PgPoolOptions};
-
-pub type DbPool = PgPool;  // 类型别名
-
-pub async fn init_db_pool(
-    database_url: &str,
-    max_connections: u32
-) -> AppResult<DbPool> {
-    PgPoolOptions::new()
-        .max_connections(max_connections)
-        .acquire_timeout(Duration::from_secs(5))  // 获取连接超时
-        .connect(database_url)
-        .await
-        .map_err(|e| AppError::Database(format!("Failed to connect: {}", e)))
+// crates/foundry_storage/src/facade.rs
+pub struct Database {
+    records: Arc<dyn RecordStoreEngine>,
+    models: Arc<dyn ModelStoreEngine>,
+    systems: Arc<dyn SystemStoreEngine>,
+    configs: Arc<dyn ConfigStoreEngine>,
+    admins: Arc<dyn AdminStoreEngine>,
+    audit: Arc<dyn AuditStoreEngine>,
 }
 ```
 
-**关键参数：**
-- `max_connections`：连接池大小（默认推荐：CPU 核心数 * 2）
-- `acquire_timeout`：从池中获取连接的超时时间
-
-**连接池工作原理：**
-```
-请求 1 → 从池中获取连接 → 执行查询 → 归还连接
-请求 2 → 从池中获取连接 → 执行查询 → 归还连接
-...
-如果池满 → 等待 5 秒 → 超时返回错误
-```
-
-### 2.2 数据库迁移
+在 `db.rs` 中，保留了向后兼容的类型别名与初始化函数：
 
 ```rust
-pub async fn run_migrations(pool: &DbPool) -> AppResult<()> {
-    info!("Running database initialization migrations...");
-    let init_sql = include_str!("../migrations/init.sql");
-    sqlx::raw_sql(init_sql)
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Migration failed: {}", e)))?;
-    info!("Database migration completed successfully.");
-    Ok(())
+// crates/foundry_storage/src/db.rs
+use crate::facade::Database;
+use foundry_core::error::AppResult;
+
+/// 类型别名：保持向后兼容，同时对业务代码彻底隐藏底层驱动 Pool
+pub type DbPool = Database;
+
+/// 通过 Database 门面初始化连接
+pub async fn init_db_pool(database_url: &str, max_connections: u32) -> AppResult<Database> {
+    Database::connect(database_url, max_connections, false).await
 }
 ```
 
-**`include_str!` 宏：** 在编译时将 SQL 文件内容嵌入二进制文件。
+### 2.2 智能协议探测与连接流程
 
-**迁移脚本示例（migrations/init.sql）：**
-```sql
--- 创建表（如果不存在）
-CREATE TABLE IF NOT EXISTS systems (...);
-CREATE TABLE IF NOT EXISTS models (...);
-CREATE TABLE IF NOT EXISTS model_records (...);
+`Database::connect` 接收连接字符串，通过 SPI 注册中心自动识别并激活对应数据库引擎：
 
--- 创建索引
-CREATE INDEX IF NOT EXISTS idx_records_system_model 
-ON model_records(system_id, model_slug);
+```rust
+// crates/foundry_storage/src/facade.rs
+impl Database {
+    pub async fn connect(url: &str, max_connections: u32, auto_migrate: bool) -> AppResult<Self> {
+        let explicit_type = std::env::var("DATABASE_TYPE").ok();
+        Self::connect_with_type(url, explicit_type.as_deref(), max_connections, auto_migrate).await
+    }
 
--- 创建 GIN 索引用于 JSON 查询
-CREATE INDEX IF NOT EXISTS idx_records_data_gin 
-ON model_records USING GIN(data);
+    pub async fn connect_with_type(
+        url: &str,
+        explicit_type: Option<&str>,
+        max_connections: u32,
+        auto_migrate: bool,
+    ) -> AppResult<Self> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider(url, explicit_type)?;
 
--- 插入初始超级管理员
-INSERT INTO admins (username, password_hash, role)
-VALUES ('admin', '$argon2id$...', 'super_admin')
-ON CONFLICT (username) DO NOTHING;
+        // 1. 若开启 auto_migrate，执行该数据库特化的迁移脚本
+        if auto_migrate {
+            provider.run_migrations(url).await?;
+        }
+
+        // 2. 构造底层连接池并组装门面 EngineSet
+        let engines = provider.create_engines(url, max_connections).await?;
+        Ok(Self::from_engines(engines))
+    }
+}
 ```
+
+**连接与协议路由规则：**
+```
+DATABASE_URL:
+postgres://... 或 postgresql://... ──► 自动激活 PostgresProvider (sqlx::PgPool)
+mysql://... 或 mariadb://...       ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
+环境变量 DATABASE_TYPE=mysql / postgres ──► 显式强制指定驱动类型
+```
+
+### 2.3 多数据库方言迁移机制
+
+每个数据库提供者实现 `StorageDriverProvider` 的 `run_migrations` 契约，自动按需执行特化的初始化脚本与防重锁：
+- **PostgreSQL**：执行 `migrations/postgres/init.sql`（创建 `BIGSERIAL`、`JSONB`、`GIN(data)` 倒排索引与超管账号 Seed）。
+- **MySQL / MariaDB**：执行 `migrations/mysql/init.sql`（先探测/自动建库，创建 `BIGINT AUTO_INCREMENT`、`JSON` 字段、覆盖索引与超管账号 Seed）。
 
 ---
 
@@ -1351,7 +1376,7 @@ let config: BlogConfig = ConfigStore::get_typed(&pool, "blog").await?;
 ---
 
 **✅ 第二阶段完成！** 你现在应该理解了：
-- PostgreSQL 和 Redis 的连接管理
+- 多数据库（PostgreSQL / MySQL 等）和 Redis 的连接与生命周期管理
 - 所有数据库实体的结构和用途
 - Zero-DDL 动态模型的完整实现
 - 租户隔离的实现机制

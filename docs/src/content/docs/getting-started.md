@@ -136,7 +136,7 @@ cargo run
 ```
 
 When the server starts, Foundry will automatically:
-1. Connect to PostgreSQL and Redis.
+1. Connect to the configured database (PostgreSQL / MySQL, etc.) and Redis.
 2. Verify metadata schema (when `AUTO_MIGRATE=true`).
 3. Serve the embedded React Admin SPA and mount all registered subsystems.
 4. Start listening on `http://0.0.0.0:8080`.

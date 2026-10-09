@@ -136,7 +136,7 @@ cargo run
 ```
 
 服务启动时，Foundry 将自动完成以下初始化：
-1. 连接 PostgreSQL 数据库与 Redis 缓存。
+1. 智能连接所配置的数据库（PostgreSQL / MySQL 等）与 Redis 缓存。
 2. 自动检查基础元数据表（`AUTO_MIGRATE=true` 时）。
 3. 挂载内置的嵌入式 React 管理后台与所有业务子系统路由。
 4. 监听并在 `http://0.0.0.0:8080` 提供服务。

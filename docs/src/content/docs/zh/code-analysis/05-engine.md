@@ -74,7 +74,7 @@ foundry_engine
 ```rust
 #[derive(Clone)]
 pub struct AppState {
-    pub db: DbPool,                                  // PostgreSQL 连接池
+    pub db: DbPool,                                  // 统一数据库门面 (Database，支持 PostgreSQL/MySQL 等多数据库 SPI)
     pub redis: Option<RedisPool>,                    // Redis 连接池（可选）
     pub jwt: Arc<JwtService>,                        // JWT 服务
     pub hooks: Arc<HookPipeline>,                    // 钩子管道

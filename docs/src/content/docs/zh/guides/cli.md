@@ -88,10 +88,14 @@ foundry system list
 
 ## 3. 数据库迁移: `foundry migrate`
 
-手动对 PostgreSQL 数据库执行基准迁移与项目级 `migrations/` 脚本：
+手动对数据库（PostgreSQL / MySQL 等）执行基准迁移与项目级 `migrations/` 脚本：
 
 ```bash
+# PostgreSQL 迁移
 foundry migrate --database-url postgres://postgres:postgrespassword@localhost:5432/foundry
+
+# 或 MySQL 迁移
+# foundry migrate --database-url mysql://root:root@localhost:3306/foundry
 ```
 
 ---

@@ -1018,7 +1018,7 @@ Content-Type: application/json
 extract_context → audit_middleware → auth_middleware 
 → handlers::autocrud::create
 → validate_record → execute_before_create (Hook)
-→ RecordStore::create (插入 PostgreSQL)
+→ RecordStore::create (插入底层数据库，如 PostgreSQL / MySQL)
 → execute_after_create (Hook)
 → 返回 ApiResponse
 ```
@@ -1288,7 +1288,7 @@ server {
 
 ### 后端（Rust）
 - **Core**: SystemContext、AppError、ApiResponse、SubsystemModule trait
-- **Storage**: PostgreSQL + SQLx、Redis、RecordStore（Zero-DDL）
+- **Storage**: 多数据库 SPI (PostgreSQL / MySQL) + SQLx、Redis、RecordStore（Zero-DDL）
 - **Auth**: Argon2id、JWT、RBAC
 - **Extension**: MutationHook、HookPipeline
 - **Engine**: Axum、Auto-CRUD、中间件

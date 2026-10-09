@@ -88,10 +88,14 @@ foundry system list
 
 ## 3. Database Migrations: `foundry migrate`
 
-Applies SQL migrations against PostgreSQL:
+Applies SQL migrations against the target database (PostgreSQL / MySQL, etc.):
 
 ```bash
+# PostgreSQL migration
 foundry migrate --database-url postgres://postgres:postgrespassword@localhost:5432/foundry
+
+# Or MySQL migration
+# foundry migrate --database-url mysql://root:root@localhost:3306/foundry
 ```
 
 ---

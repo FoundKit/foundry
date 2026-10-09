@@ -23,7 +23,7 @@ flowchart TD
         direction TB
         F_Facade["crates/foundry (High-level facade crate: FoundryApp, Builder, prelude)"]
         F_Core["crates/foundry_core (Context, SubsystemModule, Error, Response)"]
-        F_Storage["crates/foundry_storage (Zero-DDL dynamic storage, PostgreSQL, Redis)"]
+        F_Storage["crates/foundry_storage (Multi-DB SPI, Zero-DDL dynamic storage, Redis)"]
         F_Auth["crates/foundry_auth (Admin IAM, Argon2id, JWT, Topic-scoped RBAC)"]
         F_Engine["crates/foundry_engine (Axum router, Auto-CRUD, Audit logging)"]
         F_Ext["crates/foundry_extension (Mutation hook pipelines)"]
@@ -53,7 +53,7 @@ flowchart TD
 |---|---|---|
 | **Runtime & HTTP** | Axum server engine, TCP listener, graceful shutdown, CORS | Port/host binding configuration, endpoint consumption |
 | **Routing** | Unified `/api/v1` tree, Admin APIs, Auto-CRUD, `/ext/*` subsystem mounting | Custom route handlers, middleware integration |
-| **Storage Engine** | PostgreSQL connection pool, Redis cache namespace isolation, Zero-DDL dynamic model schema | Business entity definitions, custom domain queries |
+| **Storage Engine** | Multi-DB SPI driver management, Redis cache namespace isolation, Zero-DDL dynamic model schema | Business entity definitions, custom domain queries |
 | **Authentication & RBAC** | Argon2id hashing, JWT validation, Super/Platform/Topic Admin role verification | User domain auth logic, topic assignment |
 | **Admin Control Plane** | React Admin Shell SPA, model explorer, config forms, iframe sandbox bridge | Custom subsystem operational views (HTML, React, Vue) |
 | **Extensibility** | `SubsystemModule` trait, `MutationHook` lifecycle pipeline | Custom business subsystems, domain event listeners |
@@ -114,7 +114,7 @@ Foundry provides a fluent `FoundryApp::builder()` API:
 sequenceDiagram
     participant Main as Application main()
     participant Builder as FoundryBuilder
-    participant DB as PostgreSQL & Redis
+    participant DB as Database (PostgreSQL/MySQL, etc.) & Redis
     participant Engine as Axum Router Engine
     participant Listener as Tokio TCP Listener
 
