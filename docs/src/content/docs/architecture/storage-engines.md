@@ -7,12 +7,13 @@ description: Foundry pluggable multi-database architecture, SPI design, dialect-
 # (Architecture Design & Implementation Roadmap)
 
 > **Target Versions**: `v0.2.0` ~ `v0.3.0`  
-> **Core Objective**: Decouple the current hardcoded PostgreSQL binding by introducing an **SPI (Service Provider Interface) pluggable mechanism** and **Strategy Pattern**. Encapsulate raw drivers completely, expose clean method-based domain interfaces, support automatic database selection via a single environment variable or connection URL, and progressively support **MySQL/MariaDB**, **MongoDB**, and **Oracle**.  
-> **Support Matrix**:
-> - **Currently Supported**: PostgreSQL (14+)
-> - **Priority 0 (P0 - Immediate)**: MySQL (8.0+) / MariaDB (10.5+) — The most widely used open-source relational databases
-> - **Priority 1 (P1 - Secondary)**: MongoDB (6.0+) — Native document database, zero-schema dynamic records natural fit
-> - **Priority 2 (P2 - Enterprise)**: Oracle (19c/21c/23ai) — Large commercial enterprise & financial systems
+> **Core Objective**: Decouple the hardcoded PostgreSQL binding by introducing an **SPI (Service Provider Interface) pluggable mechanism** and **Strategy Pattern**. Encapsulate raw drivers completely, expose clean method-based domain interfaces, support automatic database selection via a single environment variable or connection URL, and progressively implement database support strictly in sequence: **PostgreSQL (1st, Completed)**, **MySQL (2nd, Completed)**, **MariaDB (3rd, Pending)**, **MongoDB (4th, Pending)**, and **Oracle DB (5th, Pending)**.  
+> **Support Matrix & Sequence**:
+> - **1. PostgreSQL (14+)**: Initial Integration [x] Completed
+> - **2. MySQL (8.0+ / 8.4+)**: Second Integration [x] Completed
+> - **3. MariaDB (10.5+)**: Third Integration [ ] Pending
+> - **4. MongoDB (6.0+)**: Fourth Integration [ ] Pending
+> - **5. Oracle DB (19c/21c/23ai)**: Fifth Integration [ ] Pending
 > - **Future Extensible Slots**: SQLite (embedded / single-file / unit tests), SQL Server (MSSQL), TiDB, etc.
 
 ---
@@ -81,11 +82,12 @@ flowchart TD
         Registry --> ProviderTrait["trait StorageDriverProvider"]
     end
 
-    subgraph BuiltinEngines ["4. Built-in Database Strategy Engines (Current Targets)"]
-        ProviderTrait --> PgEng["PostgresProvider (JSONB + GIN Inverted Index)"]
-        ProviderTrait --> MySqlEng["MySqlProvider (MySQL 8.0 / MariaDB Unified)"]
-        ProviderTrait --> MongoEng["MongoProvider (Native BSON Documents + Wildcard Index)"]
-        ProviderTrait --> OracleEng["OracleProvider (Identity + Blocking Thread Pool Isolation)"]
+    subgraph BuiltinEngines ["4. Database Strategy Engines (Planned Sequence)"]
+        ProviderTrait --> PgEng["1. PostgresProvider (PostgreSQL 14+, Completed)"]
+        ProviderTrait --> MySqlEng["2. MySqlProvider (MySQL 8.0+, Completed)"]
+        ProviderTrait --> MariaEng["3. MariaDbProvider (MariaDB 10.5+, Pending)"]
+        ProviderTrait --> MongoEng["4. MongoProvider (MongoDB 6.0+, Pending)"]
+        ProviderTrait --> OracleEng["5. OracleProvider (Oracle DB, Pending)"]
     end
 
     subgraph FutureEngines ["5. Future Extensibility Slots (Zero Core Modification)"]
@@ -251,14 +253,14 @@ impl Database {
 
 ## 🎯 5. Database-Native Strategy Details
 
-### 1. PostgreSQL Strategy
+### 1. PostgreSQL Strategy (1st Integration - [x] Completed)
 - **Schema**: `model_records` table, with `data JSONB NOT NULL DEFAULT '{}'::jsonb`.
 - **Indexes**:
   - `CREATE INDEX idx_lookup ON model_records(system_id, model_slug, created_at DESC) WHERE deleted_at IS NULL;` (Partial index for quick lookup)
   - `CREATE INDEX idx_data_gin ON model_records USING GIN(data);` (Full inverted index for arbitrary JSON fields)
 - **SQL Dialect**: `$1, $2` parameters; writes use `INSERT ... RETURNING *` in a single round-trip.
 
-### 2. MySQL & MariaDB Unified Strategy (Priority 0 - Universal Single-Table JSON Engine)
+### 2. MySQL 8.0+ Strategy (2nd Integration - [x] Completed)
 
 #### A. Architectural Decision: Universal Single-Table vs Dynamic Physical Tables
 For MySQL, we adopt a **Universal Single-Table JSON Engine (`model_records`)** and firmly **reject** the pattern of creating dynamic physical tables per model:
@@ -333,7 +335,12 @@ To address MySQL 8.0's lack of GIN inverted indexes, the driver implements a fou
      ```
    - Partitions data evenly across 16 sub-tables while maintaining automatic **Partition Pruning**, ensuring individual partition indexes fit comfortably in RAM.
 
-### 3. MongoDB Native Document Strategy (Priority 1)
+3. **MariaDB 10.5+ Strategy (3rd Integration - [ ] Pending)**:
+   - MariaDB handles `JSON` as an alias for `LONGTEXT` with `JSON_VALID()` constraints.
+   - Distinct virtual column syntax (`PERSISTENT` vs `VIRTUAL`) and secondary indexing will be isolated under a dedicated `MariaDbProvider` during the third integration phase.
+   - Dedicated connection settings and health checks tailored to MariaDB server variables.
+
+### 4. MongoDB Native Document Strategy (4th Integration - [ ] Pending)
 - **Document Mapping**:
   - `model_records` maps directly to native MongoDB collections:
     ```json
@@ -352,7 +359,7 @@ To address MySQL 8.0's lack of GIN inverted indexes, the driver implements a fou
 - **Native Dynamic Indexing**: MongoDB Wildcard Index (`data.$**`) natively indexes arbitrary nested JSON properties without any DDL migrations.
 - **Full Async Runtime**: Official `mongodb` crate with full Tokio async compatibility.
 
-### 4. Oracle Enterprise Strategy (Priority 2)
+### 5. Oracle Enterprise Strategy (5th Integration - [ ] Pending)
 - **Dialect Adaptations**:
   - Primary Key: `id NUMBER(19) GENERATED ALWAYS AS IDENTITY PRIMARY KEY`.
   - Timestamps: `TIMESTAMP WITH TIME ZONE`.
@@ -396,12 +403,12 @@ Adding a new database engine requires **zero modifications to core code**:
 ## 📅 7. Phased Implementation Roadmap
 
 ```
-[Phase 0: Core SPI & Trait Contracts] ➔ [Phase 1: MySQL & MariaDB Support (P0)]
+[Phase 0: Core SPI & PostgreSQL (Completed)] ➔ [Phase 1: MySQL 8.0+ Engine (Completed)]
                                                          │
-[Phase 4: Production-Readiness & Release] ⬅ [Phase 3: Oracle Engine (P2)] ⬅ [Phase 2: MongoDB Engine (P1)]
+[Phase 5: Production-Readiness & Release] ⬅ [Phase 4: Oracle DB] ⬅ [Phase 3: MongoDB] ⬅ [Phase 2: MariaDB Adaptation]
 ```
 
-### Phase 0: Core SPI Architecture & Trait Abstraction (Foundation)
+### Phase 0: Core SPI Architecture & PostgreSQL Extraction (1st Integration - [x] Completed)
 - [x] **0.1 Standard Domain Store Traits**: Define standard traits in `crates/foundry_storage/src/traits/` (`RecordStoreEngine`, `ModelStoreEngine`, `SystemStoreEngine`, `ConfigStoreEngine`, `AdminStoreEngine`, `AuditStoreEngine`).
 - [x] **0.2 SPI Registry**: Define `StorageDriverProvider` and `StorageRegistry` in `crates/foundry_storage/src/spi/`.
 - [x] **0.3 Unified Database Facade & Protocol Sniffing**: Implement `Database` facade, supporting automatic URL scheme sniffing (`postgres://`, `mysql://`, `mongodb://`, `oracle://`) with `DATABASE_TYPE` override support.
@@ -411,7 +418,7 @@ Adding a new database engine requires **zero modifications to core code**:
   - Refactor `foundry_engine::AppState` and `FoundryApp::builder()` to consume `Database`.
   - Execute automated tests to guarantee 100% backward compatibility for PostgreSQL.
 
-### Phase 1: MySQL & MariaDB Support (P0 Priority - Universal Single-Table JSON Engine)
+### Phase 1: MySQL 8.0+ Strategy Engine (2nd Integration - [x] Completed)
 - [x] **1.1 Universal Single-Table Migrations**: Write `migrations/mysql/init.sql`, implementing single-table storage with compact integer `model_id: BIGINT` as the primary index prefix in `model_records` (`AUTO_INCREMENT`, `DATETIME(6)`, native `JSON`, and composite covering indexes).
 - [x] **1.2 Connection Management**: Implement `engines/mysql/` module using `sqlx::MySqlPool`.
 - [x] **1.3 MySQL RecordStoreEngine High-Performance Implementation**:
@@ -423,24 +430,29 @@ Adding a new database engine requires **zero modifications to core code**:
   - Add MySQL 8.4 service to universal `compose.yml` (compatible with `nerdctl compose` and `docker compose`).
   - Add CI integration tests verifying AutoCRUD, admin authentication, dynamic records, and configs under MySQL.
 
-### Phase 2: MongoDB Native Document Engine Support (P1 Priority)
-- [ ] **2.1 Driver Integration**: Introduce official `mongodb` async driver under `features = ["mongodb"]`.
-- [ ] **2.2 BSON Document Mapping & ID Strategy**:
+### Phase 2: MariaDB 10.5+ Dialect & Engine Adaptation (3rd Integration - [ ] Pending)
+- [ ] **2.1 Dialect Isolation & Connection Management**: Create distinct `MariaDbProvider` to isolate connection configuration and MariaDB-specific server variables.
+- [ ] **2.2 JSON Alias & Virtual Column Compatibility**: Validate MariaDB `JSON` (`LONGTEXT` alias with `JSON_VALID()`) and `PERSISTENT` virtual generated column behavior.
+- [ ] **2.3 Container & Regression Testing**: Add MariaDB 10.11/11.x to integration suites and verify full parity with AutoCRUD and auth behaviors.
+
+### Phase 3: MongoDB Native Document Engine Support (4th Integration - [ ] Pending)
+- [ ] **3.1 Driver Integration**: Introduce official `mongodb` async driver under `features = ["mongodb"]`.
+- [ ] **3.2 BSON Document Mapping & ID Strategy**:
   - Implement two-way serialization between BSON Documents and `ModelRecordEntity`.
   - Introduce `_counters` collection or Snowflake algorithm to maintain public `id: i64` contract.
-- [ ] **2.3 Dynamic Indexing**: Utilize MongoDB Wildcard Indexes (`$**`) for zero-maintenance JSON query indexing.
-- [ ] **2.4 Platform Collections**: Implement MongoDB document stores for `systems`, `models`, `configs`, `admins`, and `audit_logs`.
-- [ ] **2.5 Container & Integration Testing**: Configure MongoDB 7.0 in Docker Compose and verify zero-schema storage and pagination.
+- [ ] **3.3 Dynamic Indexing**: Utilize MongoDB Wildcard Indexes (`$**`) for zero-maintenance JSON query indexing.
+- [ ] **3.4 Platform Collections**: Implement MongoDB document stores for `systems`, `models`, `configs`, `admins`, and `audit_logs`.
+- [ ] **3.5 Container & Integration Testing**: Configure MongoDB 7.0/8.0 in Docker Compose and verify zero-schema storage and pagination.
 
-### Phase 3: Oracle Enterprise Engine & Blocking Isolation (P2 Priority)
-- [ ] **3.1 Dependency Configuration**: Introduce `oracle` crate and connection pooling under `features = ["oracle"]`.
-- [ ] **3.2 Dialect Migrations**: Write `migrations/oracle/init.sql` (`NUMBER(19) GENERATED ALWAYS AS IDENTITY`, `TIMESTAMP WITH TIME ZONE`, Oracle JSON search indexes).
-- [ ] **3.3 Async Isolation Worker Pool**: Implement `engines/oracle/worker.rs` with `tokio::task::spawn_blocking` to isolate ODPI-C blocking operations from the Axum async runtime.
-- [ ] **3.4 Dockerfile with Oracle Instant Client**: Provide Docker build definitions including required Oracle C runtime libraries.
-- [ ] **3.5 Oracle Integration Testing**: Verify model creation, CRUD, and transaction operations on Oracle.
+### Phase 4: Oracle DB Enterprise Engine & Blocking Isolation (5th Integration - [ ] Pending)
+- [ ] **4.1 Dependency Configuration**: Introduce `oracle` crate and connection pooling under `features = ["oracle"]`.
+- [ ] **4.2 Dialect Migrations**: Write `migrations/oracle/init.sql` (`NUMBER(19) GENERATED ALWAYS AS IDENTITY`, `TIMESTAMP WITH TIME ZONE`, Oracle JSON search indexes).
+- [ ] **4.3 Async Isolation Worker Pool**: Implement `engines/oracle/worker.rs` with `tokio::task::spawn_blocking` to isolate ODPI-C blocking operations from the Axum async runtime.
+- [ ] **4.4 Dockerfile with Oracle Instant Client**: Provide Docker build definitions including required Oracle C runtime libraries.
+- [ ] **4.5 Oracle Integration Testing**: Verify model creation, CRUD, and transaction operations on Oracle.
 
-### Phase 4: Production-Readiness, CLI Tooling & Release
-- [ ] **4.1 Smart CLI Migration Tooling**: Upgrade `foundry migrate` command to auto-detect target database and invoke the respective dialect migration runner.
-- [ ] **4.2 Open-Closed Principle Verification**: Implement a unit test with a `MockDriverProvider` to demonstrate that external storage providers can be registered without modifying core code.
-- [ ] **4.3 Multi-Database Deployment Guide**: Publish production configuration, connection pool tuning, and failover guides in docs.
-- [ ] **4.4 Version Release**: Align milestone progress and tag the official Foundry multi-database release.
+### Phase 5: Production-Readiness, CLI Tooling & Release
+- [ ] **5.1 Smart CLI Migration Tooling**: Upgrade `foundry migrate` command to auto-detect target database and invoke the respective dialect migration runner.
+- [ ] **5.2 Open-Closed Principle Verification**: Implement a unit test with a `MockDriverProvider` to demonstrate that external storage providers can be registered without modifying core code.
+- [ ] **5.3 Multi-Database Deployment Guide**: Publish production configuration, connection pool tuning, and failover guides in docs.
+- [ ] **5.4 Version Release**: Align milestone progress and tag the official Foundry multi-database release.

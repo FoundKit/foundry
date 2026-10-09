@@ -15,6 +15,7 @@
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/react-18%2B%20%2F%2019-61dafb.svg)](https://react.dev)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-16%2B%20%2F%2018%2B-336791.svg)](https://www.postgresql.org)
+[![MySQL](https://img.shields.io/badge/mysql-8.0%2B%20%2F%208.4%2B-4479A1.svg)](https://www.mysql.com)
 [![Redis](https://img.shields.io/badge/redis-7%2B%20%2F%208-dc382d.svg)](https://redis.io)
 
 </div>
@@ -32,7 +33,7 @@ Foundry 框架仓库 (Framework)
     │
     ├── crates/foundry             # 顶层门面 Crate (FoundryApp, Builder, prelude)
     ├── crates/foundry_core        # 上下文、错误处理、响应模型、Subsystem trait
-    ├── crates/foundry_storage     # Zero-DDL 动态数据模型、系统配置、PostgreSQL、Redis
+    ├── crates/foundry_storage     # Zero-DDL 动态数据模型、系统配置、多数据库 SPI (PostgreSQL, MySQL)、Redis
     ├── crates/foundry_auth        # 管理员身份与认证、Argon2id、JWT、专题级 RBAC
     ├── crates/foundry_engine      # 多系统路由、Auto-CRUD 引擎、审计日志中间件
     ├── crates/foundry_extension   # 生命周期变更钩子 (Mutation Hook) 与扩展流水线
@@ -48,7 +49,7 @@ Foundry 框架仓库 (Framework)
 用户业务应用 (独立 Git 仓库)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
     ├── dev/                       # 本地开发专用资源 (.gitignore 忽略)
-    │   ├── docker-compose.yml     # PostgreSQL 18 + Redis 7 本地容器编排 (挂载 init.sql)
+    │   ├── compose.yml            # PostgreSQL 18.6 + MySQL 8.4 + Redis 8 本地容器编排
     │   ├── init-db.sh             # 本地开发数据库初始化/重置脚本
     │   └── init-dev-db.sql        # 独立开发数据库创建引导脚本
     ├── src/
@@ -58,7 +59,10 @@ Foundry 框架仓库 (Framework)
     │       └── newsletter/
     ├── config/                    # 应用配置
     └── migrations/                # 业务专属数据库迁移脚本
-        └── init.sql               # 平台初始化全量表结构与初始超管账号 Seed
+        ├── postgres/              # PostgreSQL 平台初始化全量表结构与初始超管账号 Seed
+        │   └── init.sql
+        └── mysql/                 # MySQL 平台初始化全量表结构与初始超管账号 Seed
+            └── init.sql
 ```
 
 ---
@@ -75,8 +79,10 @@ cargo install --git https://github.com/foundkit/foundry foundry_cli
 foundry new my-app
 cd my-app
 
-# 3. 启动本地开发数据库 (PostgreSQL 18 + Redis 7)
-docker compose -f dev/docker-compose.yml up -d
+# 3. 启动本地开发数据库 (PostgreSQL 18.6 或 MySQL 8.4 + Redis 8)
+docker compose up -d postgres redis
+# 或者使用 MySQL / MariaDB：
+# docker compose up -d mysql redis
 
 # 4. 启动后端服务
 cargo run
@@ -128,8 +134,8 @@ async fn main() -> anyhow::Result<()> {
 1. **框架与业务完全解耦（Framework & Application Decoupling）**：应用开发者在独立的 Git 仓库中构建业务。升级 Foundry 仅需执行 `cargo update`，彻底告别上游 Git 合并冲突。
 2. **顶层门面（`foundry`）与公共 API**：直观优雅的 `FoundryApp::builder()` API、类型安全的错误信封（`AppError`、`AppResult`）、统一规范的响应结构体（`ApiResponse`）以及 `foundry::prelude::*` 丰富重导出。
 3. **子系统架构（Subsystem Architecture）**：通过实现 `SubsystemModule` 将业务领域组织为高内聚、自包含的子系统（包含控制器、业务领域服务、数据校验 DTO 与自定义 Admin 管理页面）。
-4. **Zero-DDL 动态存储引擎**：在可视化 Admin 控制台中直接配置系统参数与动态数据模型，无需编写原生 SQL DDL 迁移脚本，无锁表停机烦恼。
-5. **即刻生成的 RESTful Auto-CRUD**：所有动态数据模型自动获得高性能 REST API 接口（`/api/v1/s/{system_slug}/{model_slug}`），原生支持分页与 GIN JSON 检索。
+4. **Zero-DDL 动态存储与多数据库 SPI**：在可视化 Admin 控制台中直接配置系统参数与动态数据模型，无需编写原生 SQL DDL 迁移脚本。内置开箱即用的多数据库插件架构，已稳定支持 PostgreSQL 与 MySQL 8.0+，后续将依序接入 MariaDB（第三）、MongoDB（第四）与 Oracle DB（第五）。
+5. **即刻生成的 RESTful Auto-CRUD**：所有动态数据模型自动获得高性能 REST API 接口（`/api/v1/s/{system_slug}/{model_slug}`），在所有适配的数据库上均原生支持分页与检索。
 6. **解耦的 Admin 控制台外壳与 SDK 桥接**：独立 Admin SPA 前端（`apps/admin`）通过沙箱视图内嵌各子系统的自定义页面（HTML、React、Vue 等），并通过 `postMessage` 协议自动注入 JWT 认证凭据与主题配置。
 7. **分级权限体系（Hierarchical RBAC）**：支持超级管理员（`super_admin`）、平台管理员（`admin`）和专题专属管理员（`topic_admin`）的细粒度角色权限控制。
 8. **生命周期变更钩子（Mutation Hooks）**：通过实现 `MutationHook` 拦截实体数据的完整生命周期事件（`before_create`、`after_create`、`before_update`、`after_update`、`before_delete`、`after_delete`）。
@@ -142,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
 |---|---|
 | [`foundry`](crates/foundry) | 顶层门面 Crate，提供 `FoundryApp`、`FoundryBuilder` 与核心 `prelude`。 |
 | [`foundry_core`](crates/foundry_core) | 核心原语、`SystemContext`、`SubsystemModule`、`AppError` 与统一响应模型。 |
-| [`foundry_storage`](crates/foundry_storage) | PostgreSQL 连接池、Redis 缓存、Zero-DDL 动态数据模型与数据库迁移支持。 |
+| [`foundry_storage`](crates/foundry_storage) | 多数据库 SPI (PostgreSQL, MySQL；后续规划 MariaDB/MongoDB/Oracle DB)、Redis 缓存、Zero-DDL 动态数据模型与数据库迁移支持。 |
 | [`foundry_auth`](crates/foundry_auth) | 管理员身份认证、Argon2id 密码哈希、JWT Token 服务与专题级 RBAC 守卫。 |
 | [`foundry_engine`](crates/foundry_engine) | 统一 Axum 路由分发、Auto-CRUD 处理引擎与操作审计日志中间件。 |
 | [`foundry_extension`](crates/foundry_extension) | 实体生命周期变更钩子（Mutation Hook）流水线与扩展机制。 |
@@ -156,23 +162,22 @@ Foundry 提供了精简高效的开发者命令行工具（`foundry` / `foundry-
 
 ### 1. 本地开发数据库
 
-生成的工程包含专门的 `dev/docker-compose.yml`（已被 `.gitignore` 忽略以保持仓库整洁），默认配置挂载 `migrations/init.sql`，首次启动时自动完成数据库初始化：
+项目提供了标准容器编排配置（`compose.yml`），针对不同数据库方言挂载对应初始化配置：
 
 ```bash
-# 启动本地 PostgreSQL 18 与 Redis 7（首次启动会自动执行 migrations/init.sql）
-docker compose -f dev/docker-compose.yml up -d
+# 启动本地基础依赖（PostgreSQL 18.6 或 MySQL 8.4 + Redis 8）
+docker compose up -d postgres redis   # PostgreSQL 组合
+# 或者选择 MySQL：
+docker compose up -d mysql redis      # MySQL 组合
 
 # 查看服务运行状态
-docker compose -f dev/docker-compose.yml ps
-
-# 手动重新应用或重置本地开发数据库
-bash dev/init-db.sh
+docker compose ps
 
 # 停止本地数据库
-docker compose -f dev/docker-compose.yml down
+docker compose down
 
 # 重置本地数据库及其数据卷（全新重新初始化）
-docker compose -f dev/docker-compose.yml down -v
+docker compose down -v
 ```
 
 ### 2. 子系统（子项目）操作

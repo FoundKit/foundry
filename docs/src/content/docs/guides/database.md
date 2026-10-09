@@ -7,7 +7,7 @@ description: Foundry Multi-Database SPI architecture, PostgreSQL and MySQL confi
 
 Foundry features a modern **Multi-Database SPI (Service Provider Interface) pluggable storage architecture**. Business layers, domain services, the AutoCRUD engine, and Axum state exclusively depend on the `Database` facade and standard store traits, **achieving absolute zero driver leakage**.
 
-The platform provides first-class support for **PostgreSQL (14+)** and **MySQL (8.0+) / MariaDB (10.5+)**, with automatic protocol sniffing based on `DATABASE_URL`.
+In accordance with the integration roadmap, database support proceeds strictly in sequence: **PostgreSQL (1st, Completed)** $\rightarrow$ **MySQL (2nd, Completed)** $\rightarrow$ **MariaDB (3rd, Pending)** $\rightarrow$ **MongoDB (4th, Pending)** $\rightarrow$ **Oracle DB (5th, Pending)**. Currently, **PostgreSQL (14+)** and **MySQL (8.0+)** are fully supported.
 
 ---
 

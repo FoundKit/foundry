@@ -15,6 +15,7 @@
 [![Rust](https://img.shields.io/badge/rust-2024%20%2F%201.85%2B-orange.svg)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/react-18%2B%20%2F%2019-61dafb.svg)](https://react.dev)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-16%2B%20%2F%2018%2B-336791.svg)](https://www.postgresql.org)
+[![MySQL](https://img.shields.io/badge/mysql-8.0%2B%20%2F%208.4%2B-4479A1.svg)](https://www.mysql.com)
 [![Redis](https://img.shields.io/badge/redis-7%2B%20%2F%208-dc382d.svg)](https://redis.io)
 
 </div>
@@ -32,7 +33,7 @@ Foundry Repository (Framework)
     │
     ├── crates/foundry             # Main facade crate (FoundryApp, Builder, prelude)
     ├── crates/foundry_core        # Context, errors, responses, Subsystem trait
-    ├── crates/foundry_storage     # Zero-DDL dynamic models, configs, PostgreSQL, Redis
+    ├── crates/foundry_storage     # Zero-DDL dynamic models, configs, Multi-DB SPI (PostgreSQL, MySQL), Redis
     ├── crates/foundry_auth        # Admin IAM, Argon2id, JWT, Topic-scoped RBAC
     ├── crates/foundry_engine      # Multi-system router, Auto-CRUD, Audit middleware
     ├── crates/foundry_extension   # Mutation hooks & extension pipeline
@@ -48,7 +49,7 @@ Foundry Repository (Framework)
 User Application (Independent Git Repo)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
     ├── dev/                       # Local development resources (.gitignore'd)
-    │   ├── docker-compose.yml     # PostgreSQL 18 + Redis 7 local stack (with init.sql mount)
+    │   ├── compose.yml            # PostgreSQL 18.6 + MySQL 8.4 + Redis 8 local stack
     │   ├── init-db.sh             # Local dev database initialization/reset script
     │   └── init-dev-db.sql        # Standalone dev database bootstrap script
     ├── src/
@@ -58,7 +59,10 @@ User Application (Independent Git Repo)
     │       └── newsletter/
     ├── config/                    # Application configuration
     └── migrations/                # Application database migrations
-        └── init.sql               # Platform schema & initial superadmin seed
+        ├── postgres/              # PostgreSQL platform schema & initial superadmin seed
+        │   └── init.sql
+        └── mysql/                 # MySQL platform schema & initial superadmin seed
+            └── init.sql
 ```
 
 ---
@@ -75,8 +79,10 @@ cargo install --git https://github.com/foundkit/foundry foundry_cli
 foundry new my-app
 cd my-app
 
-# 3. Start local development database (PostgreSQL 18 + Redis 7)
-docker compose -f dev/docker-compose.yml up -d
+# 3. Start local development database (PostgreSQL 18.6 or MySQL 8.4 + Redis 8)
+docker compose up -d postgres redis
+# Or for MySQL / MariaDB:
+# docker compose up -d mysql redis
 
 # 4. Start the server
 cargo run
@@ -128,8 +134,8 @@ async fn main() -> anyhow::Result<()> {
 1. **Framework & Application Total Decoupling**: Application developers build inside their own Git repository. Upgrading Foundry requires only `cargo update` with zero upstream git merge conflicts.
 2. **High-Level Facade (`foundry`) & Public APIs**: Intuitive `FoundryApp::builder()` API, type-safe error envelopes (`AppError`, `AppResult`), standardized response wrappers (`ApiResponse`), and rich re-exports in `foundry::prelude::*`.
 3. **Subsystem Architecture**: Organize business domains into self-contained subsystems implementing `SubsystemModule` (controllers, logic services, validation DTOs, and custom admin views).
-4. **Zero-DDL Dynamic Storage**: Define system configs and dynamic data models visually in the admin UI without raw database DDL migrations or schema locks.
-5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/v1/s/{system_slug}/{model_slug}`) with pagination and GIN JSON search.
+4. **Zero-DDL Dynamic Storage & Multi-Database SPI**: Define system configs and dynamic data models visually without DDL migrations. Built-in pluggable support for PostgreSQL and MySQL 8.0+, with MariaDB (3rd), MongoDB (4th), and Oracle DB (5th) planned in sequence.
+5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/v1/s/{system_slug}/{model_slug}`) with pagination and search across all supported databases.
 6. **Decoupled Admin Shell & SDK Bridge**: The Admin SPA (`apps/admin`) embeds subsystem custom pages (HTML, React, Vue) inside sandboxed views, injecting JWT authentication and theme settings automatically via `postMessage` protocol.
 7. **Hierarchical RBAC**: Fine-grained role-based access control with Super Admins (`super_admin`), Platform Admins (`admin`), and Topic-Scoped Admins (`topic_admin`).
 8. **Lifecycle Mutation Hooks**: Intercept entity lifecycle events (`before_create`, `after_create`, `before_update`, `after_update`, `before_delete`, `after_delete`) using `MutationHook`.
@@ -142,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
 |---|---|
 | [`foundry`](crates/foundry) | Top-level facade crate providing `FoundryApp`, `FoundryBuilder`, and `prelude`. |
 | [`foundry_core`](crates/foundry_core) | Core primitives, `SystemContext`, `SubsystemModule`, `AppError`, and response models. |
-| [`foundry_storage`](crates/foundry_storage) | PostgreSQL connection pool, Redis cache, Zero-DDL dynamic models, and migrations. |
+| [`foundry_storage`](crates/foundry_storage) | Multi-Database SPI (PostgreSQL, MySQL; MariaDB, MongoDB, Oracle DB planned), Redis cache, Zero-DDL dynamic models, and migrations. |
 | [`foundry_auth`](crates/foundry_auth) | Admin identities, Argon2id hashing, JWT token service, and Topic RBAC guards. |
 | [`foundry_engine`](crates/foundry_engine) | Unified Axum routing, Auto-CRUD handler engine, and audit logging middleware. |
 | [`foundry_extension`](crates/foundry_extension) | Lifecycle mutation hook pipelines and extension mechanisms. |
@@ -156,23 +162,22 @@ Foundry provides a streamlined developer CLI (`foundry` / `foundry-cli`) to mana
 
 ### 1. Local Development Database
 
-Scaffolded projects include a dedicated `dev/docker-compose.yml` (ignored by `.gitignore` to keep repositories clean), pre-configured to mount `migrations/init.sql` for automated first-boot initialization:
+Scaffolded projects include local container compose specifications (or universal `compose.yml`), pre-configured to mount dialect-specific initializations:
 
 ```bash
-# Start local PostgreSQL 18 and Redis 7 (auto-applies migrations/init.sql on first startup)
-docker compose -f dev/docker-compose.yml up -d
+# Start local database stack (PostgreSQL 18.6 or MySQL 8.4 + Redis 8)
+docker compose up -d postgres redis   # PostgreSQL stack
+# Or for MySQL:
+docker compose up -d mysql redis      # MySQL stack
 
 # Check service status
-docker compose -f dev/docker-compose.yml ps
-
-# Manually re-apply or reset dev database
-bash dev/init-db.sh
+docker compose ps
 
 # Stop local database
-docker compose -f dev/docker-compose.yml down
+docker compose down
 
 # Reset local database and volumes (clean re-initialization)
-docker compose -f dev/docker-compose.yml down -v
+docker compose down -v
 ```
 
 ### 2. Subsystem (Subproject) Operations

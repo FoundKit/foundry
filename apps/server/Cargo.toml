@@ -20,7 +20,7 @@ postgres = ["foundry/postgres"]
 mysql = ["foundry/mysql"]
 
 [dependencies]
-foundry = { workspace = true, default-features = false }
+foundry = { workspace = true, default-features = false, features = ["server", "storage", "auth", "extension"] }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

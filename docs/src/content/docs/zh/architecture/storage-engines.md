@@ -7,13 +7,14 @@ description: Foundry 多数据库引擎 SPI 插件化架构设计、方言特化
 # (Multi-Database & Pluggable Storage Architecture)
 
 > **版本定位**：`v0.2.0` ~ `v0.3.0`  
-> **核心目标**：解耦当前单一 PostgreSQL 绑定，引入 **SPI (Service Provider Interface) 插件化机制** 与 **策略模式 (Strategy Pattern)**，实现底层驱动全面封装、上层纯方法调用，支持通过单一环境变量或连接串自动切换数据库，并分批次落地支持 **MySQL/MariaDB**、**MongoDB** 与 **Oracle**。  
-> **支持矩阵**：
-> - **当前已支持**：PostgreSQL (14+)
-> - **首发重点支持 (P0)**：MySQL (8.0+) / MariaDB (10.5+) —— 最广泛使用的开源关系型数据库
-> - **次阶段支持 (P1)**：MongoDB (6.0+) —— 原生文档型数据库，零 Schema 海量动态记录天然契合
-> - **企业级特化 (P2)**：Oracle (19c/21c/23ai) —— 大型商业企业与金融政企级数据库
-> - **未来预留扩展**：SQLite (嵌入式/单机/单元测试), SQL Server (MSSQL), TiDB 等
+> **核心目标**：解耦当前单一 PostgreSQL 绑定，引入 **SPI (Service Provider Interface) 插件化机制** 与 **策略模式 (Strategy Pattern)**，实现底层驱动全面封装、上层纯方法调用，支持通过单一环境变量或连接串自动切换数据库，并按照清晰规划分批次落地支持 **PostgreSQL（第一，已完成）**、**MySQL（第二，已完成）**、**MariaDB（第三，待接入）**、**MongoDB（第四，待接入）** 与 **Oracle DB（第五，待接入）**。  
+> **支持矩阵与接入序列**：
+> - **1. PostgreSQL (14+)**：最开始接入 [x] 已完成
+> - **2. MySQL (8.0+ / 8.4+)**：第二接入 [x] 已完成
+> - **3. MariaDB (10.5+)**：第三接入 [ ] 待对接
+> - **4. MongoDB (6.0+)**：第四接入 [ ] 待对接
+> - **5. Oracle DB (19c/21c/23ai)**：第五接入 [ ] 待对接
+> - **未来预留扩展插槽**：SQLite (嵌入式/单机/单元测试), SQL Server (MSSQL), TiDB 等
 
 ---
 
@@ -81,11 +82,12 @@ flowchart TD
         Registry --> ProviderTrait["trait StorageDriverProvider"]
     end
 
-    subgraph BuiltinEngines ["4. 内置数据库策略引擎 (Current Targets)"]
-        ProviderTrait --> PgEng["PostgresProvider (JSONB + GIN 倒排索引)"]
-        ProviderTrait --> MySqlEng["MySqlProvider (MySQL 8.0 / MariaDB 统一策略)"]
-        ProviderTrait --> MongoEng["MongoProvider (原生 BSON 文档集合 + Wildcard 索引)"]
-        ProviderTrait --> OracleEng["OracleProvider (Identity + 线程池阻塞隔离)"]
+    subgraph BuiltinEngines ["4. 规划数据库策略引擎序列 (按计划顺序接入)"]
+        ProviderTrait --> PgEng["1. PostgresProvider (PostgreSQL 14+, 已完成)"]
+        ProviderTrait --> MySqlEng["2. MySqlProvider (MySQL 8.0+, 已完成)"]
+        ProviderTrait --> MariaEng["3. MariaDbProvider (MariaDB 10.5+, 待对接)"]
+        ProviderTrait --> MongoEng["4. MongoProvider (MongoDB 6.0+, 待对接)"]
+        ProviderTrait --> OracleEng["5. OracleProvider (Oracle DB, 待对接)"]
     end
 
     subgraph FutureEngines ["5. 未来预留扩展插槽 (Future Targets)"]
@@ -251,14 +253,14 @@ impl Database {
 
 ## 🎯 五、 各数据库策略特化实现细节
 
-### 1. PostgreSQL 策略
+### 1. PostgreSQL 策略（第一接入 - [x] 已完成）
 - **表结构**：保持当前 `model_records`，字段 `data JSONB NOT NULL DEFAULT '{}'::jsonb`。
 - **索引**：
   - `CREATE INDEX idx_lookup ON model_records(system_id, model_slug, created_at DESC) WHERE deleted_at IS NULL;`（部分索引加速主干检索）
   - `CREATE INDEX idx_data_gin ON model_records USING GIN(data);`（对任意 JSON 内部键值的倒排索引）
 - **SQL 方言**：占位符 `$1, $2`；写入利用 `INSERT ... RETURNING *` 一次网络 IO 获取自增与生成数据。
 
-### 2. MySQL & MariaDB 统一策略 (首发支持 P0 - 单表通用 JSON 引擎)
+### 2. MySQL 8.0+ 策略（第二接入 - [x] 已完成）
 
 #### A. 核心架构选型：单表通用存储 vs 动态物理分表
 在 MySQL 下，我们明确采用**单表全量通用存储 (Universal Single-Table JSON Engine)**，坚决**否定**为每个模型创建物理独立表的方案：
@@ -333,7 +335,13 @@ CREATE TABLE IF NOT EXISTS model_records (
      ```
    - 依靠 `model_id` 自动将海量数据分散在 16 个独立的物理子表中，查询时 MySQL 自动进行**分区裁剪 (Partition Pruning)**，单分区索引完全适配内存。
 
-### 3. MongoDB 原生文档策略 (次阶段支持 P1)
+3. **MariaDB 10.5+ 特化策略（第三接入 - [ ] 待对接）**
+- **方言与行为适配**：
+  - MariaDB 将 `JSON` 作为 `LONGTEXT` 的别名，并内置 `JSON_VALID()` 约束检查。
+  - 虚拟列定义为 `PERSISTENT` 或 `VIRTUAL`，在二级索引与复合键定义上与 MySQL 8.0 存在细微语法差异，将在第三阶段设立专门的 `MariaDbProvider` 独立兼容。
+  - 连接池管理与自动迁移支持隔离，确保对 MariaDB 特有系统变量和连接特征的最佳适配。
+
+### 4. MongoDB 原生文档策略（第四接入 - [ ] 待对接）
 - **文档映射**：
   - `model_records` 映射为 MongoDB 集合中的原生 Document，例如：
     ```json
@@ -352,7 +360,7 @@ CREATE TABLE IF NOT EXISTS model_records (
 - **原生动态索引**：利用 MongoDB 的 `Wildcard Index` (`data.$**`)，天然支持对任意 JSON 路径进行索引加速，完全免去 DDL 烦恼。
 - **全异步驱动**：官方 `mongodb` crate 纯异步 Tokio 支持。
 
-### 4. Oracle 企业级策略 (企业特化 P2)
+### 5. Oracle DB 企业级策略（第五接入 - [ ] 待对接）
 - **表结构差异适配**：
   - 主键：`id NUMBER(19) GENERATED ALWAYS AS IDENTITY PRIMARY KEY`。
   - 时间类型：`TIMESTAMP WITH TIME ZONE`。
@@ -396,12 +404,12 @@ CREATE TABLE IF NOT EXISTS model_records (
 ## 📅 七、 重新制定的分阶段实施落地路线图
 
 ```
-[阶段 0: 核心 SPI 与 Trait 契约确立] ➔ [阶段 1: 优先落地 MySQL / MariaDB]
-                                                      │
-[阶段 4: 生产就绪与生态发布] ⬅ [阶段 3: Oracle 企业引擎] ⬅ [阶段 2: MongoDB 原生文档引擎]
+[阶段 0: 核心 SPI 与 PostgreSQL (已完成)] ➔ [阶段 1: MySQL 8.0+ 引擎 (已完成)]
+                                                 │
+[阶段 5: 生产就绪与生态发布] ⬅ [阶段 4: Oracle DB] ⬅ [阶段 3: MongoDB] ⬅ [阶段 2: MariaDB 专项适配]
 ```
 
-### 阶段 0: 核心 SPI 架构解耦与 Trait 契约抽象（地基工程）
+### 阶段 0: 核心 SPI 架构解耦与 PostgreSQL 提取（第一接入 - [x] 已完成）
 - [x] **0.1 业务 Store Traits 抽象**：在 `crates/foundry_storage/src/traits/` 中定义标准业务 Trait（`RecordStoreEngine`、`ModelStoreEngine`、`SystemStoreEngine`、`ConfigStoreEngine`、`AdminStoreEngine`、`AuditStoreEngine`）。
 - [x] **0.2 SPI 与注册中心**：在 `crates/foundry_storage/src/spi/` 中定义 `StorageDriverProvider` 契约与全局驱动注册中心 `StorageRegistry`。
 - [x] **0.3 统一 Database 门面与协议自动嗅探**：实现 `Database` 门面结构体，支持从 `DATABASE_URL` 协议前缀（`postgres://`, `mysql://`, `mongodb://`, `oracle://`）自动激活 Provider，并保留 `DATABASE_TYPE` 环境变量显式覆盖支持。
@@ -411,7 +419,7 @@ CREATE TABLE IF NOT EXISTS model_records (
   - 将 `foundry_engine::AppState` 与 `FoundryApp::builder()` 的底层连接切换为 `Database` 门面。
   - 运行自动化测试与冒烟测试，确保现有 PostgreSQL 100% 行为向后兼容。
 
-### 阶段 1: 优先落地 MySQL & MariaDB 统一策略引擎 (P0 首发支持 - 单表通用 JSON 引擎)
+### 阶段 1: 落地 MySQL 8.0+ 策略引擎 (第二接入 - [x] 已完成)
 - [x] **1.1 单表通用迁移脚本**：编写 `migrations/mysql/init.sql`，落地单表全量存储架构，设计以紧凑整数 `model_id: BIGINT` 为主索引前缀的 `model_records` 表，适配 `AUTO_INCREMENT`、`DATETIME(6)`、原生 `JSON` 与覆盖复合索引。
 - [x] **1.2 驱动与连接管理**：编写 `engines/mysql/` 策略模块，基于 `sqlx::MySqlPool` 实现连接池初始化与心跳探测。
 - [x] **1.3 MySQL 方言 RecordStoreEngine 深度性能调优**：
@@ -423,24 +431,29 @@ CREATE TABLE IF NOT EXISTS model_records (
   - 提供兼容 Docker Compose 与 Nerdctl 的 `compose.yml`，追加 MySQL 8.4 容器服务。
   - 编写端到端集成测试（`tests/mysql_integration_tests.rs`），验证 `DATABASE_URL=mysql://...` 下 AutoCRUD、管理后台登录、权限校验与动态字段读写 100% 正常。
 
-### 阶段 2: 落地 MongoDB 原生文档策略引擎 (P1 次阶段支持)
-- [ ] **2.1 引入官方驱动**：在 `features = ["mongodb"]` 条件下引入官方异步驱动 `mongodb`。
-- [ ] **2.2 BSON 文档映射与主键兼容**：
+### 阶段 2: 独立适配 MariaDB 10.5+ 方言与特化引擎 (第三接入 - [ ] 待对接)
+- [ ] **2.1 方言特化与连接层隔离**：调研 MariaDB 10.5+ 与 MySQL 8.0 差异，独立提供 `MariaDbProvider`，独立处理连接参数与系统变量兼容。
+- [ ] **2.2 JSON 别名与虚拟列索引验证**：针对 MariaDB `JSON`（`LONGTEXT` 别名）及 `PERSISTENT` 虚拟列语法进行特化脚本验证。
+- [ ] **2.3 容器与回归集成测试**：在测试套件中引入 MariaDB 10.11/11.x 容器环境，验证 AutoCRUD 与权限行为一致性。
+
+### 阶段 3: 落地 MongoDB 原生文档策略引擎 (第四接入 - [ ] 待对接)
+- [ ] **3.1 引入官方驱动**：在 `features = ["mongodb"]` 条件下引入官方异步驱动 `mongodb`。
+- [ ] **3.2 BSON 文档映射与主键兼容**：
   - 实现原生 BSON Document 与 `ModelRecordEntity` 的双向无损序列化。
   - 引入轻量级自增计数器集合（`_counters`）或 Snowflake 策略，保证对外统一 `id: i64` 接口契约不变。
-- [ ] **2.3 动态索引与集合自动初始化**：利用 MongoDB 的 `Wildcard Index` (`$**`)，对动态 JSON 内容进行自动索引加速。
-- [ ] **2.4 全套业务集合落地**：在 MongoDB 中实现 `systems`, `models`, `configs`, `admins`, `audit_logs` 的文档存储实现。
-- [ ] **2.5 本地容器与集成测试**：在 Docker Compose 中配置 MongoDB 7.0 实例，完成全量功能测试与极限并发读写验证。
+- [ ] **3.3 动态索引与集合自动初始化**：利用 MongoDB 的 `Wildcard Index` (`$**`)，对动态 JSON 内容进行自动索引加速。
+- [ ] **3.4 全套业务集合落地**：在 MongoDB 中实现 `systems`, `models`, `configs`, `admins`, `audit_logs` 的文档存储实现。
+- [ ] **3.5 本地容器与集成测试**：在 Docker Compose 中配置 MongoDB 7.0/8.0 实例，完成全量功能测试与极限并发读写验证。
 
-### 阶段 3: 落地 Oracle 企业级引擎与阻塞隔离 (P2 企业特化)
-- [ ] **3.1 引入驱动与依赖控制**：在 `features = ["oracle"]` 条件下引入 `rust-oracle` 与连接池依赖。
-- [ ] **3.2 方言迁移脚本**：编写 `migrations/oracle/init.sql`，处理 `NUMBER(19) GENERATED ALWAYS AS IDENTITY`、`TIMESTAMP WITH TIME ZONE` 以及 Oracle JSON 检索索引。
-- [ ] **3.3 异步隔离工作池**：编写 `engines/oracle/worker.rs`，利用 `tokio::task::spawn_blocking` 实现专用阻塞连接池包裹，确保高并发 Axum 运行时不受 ODPI-C 同步调用阻塞。
-- [ ] **3.4 Docker 运行环境支持**：编写包含 Oracle Instant Client 动态链接库的运行镜像与构建指引。
-- [ ] **3.5 Oracle 集成测试**：验证 Oracle 环境下的模型创建、数据增删改查与事务行为。
+### 阶段 4: 落地 Oracle DB 企业级引擎与阻塞隔离 (第五接入 - [ ] 待对接)
+- [ ] **4.1 引入驱动与依赖控制**：在 `features = ["oracle"]` 条件下引入 `rust-oracle` 与连接池依赖。
+- [ ] **4.2 方言迁移脚本**：编写 `migrations/oracle/init.sql`，处理 `NUMBER(19) GENERATED ALWAYS AS IDENTITY`、`TIMESTAMP WITH TIME ZONE` 以及 Oracle JSON 检索索引。
+- [ ] **4.3 异步隔离工作池**：编写 `engines/oracle/worker.rs`，利用 `tokio::task::spawn_blocking` 实现专用阻塞连接池包裹，确保高并发 Axum 运行时不受 ODPI-C 同步调用阻塞。
+- [ ] **4.4 Docker 运行环境支持**：编写包含 Oracle Instant Client 动态链接库的运行镜像与构建指引。
+- [ ] **4.5 Oracle 集成测试**：验证 Oracle 环境下的模型创建、数据增删改查与事务行为。
 
-### 阶段 4: 生产就绪、CLI 工具链升级与生态发布
-- [ ] **4.1 CLI 迁移命令智能适配**：升级 `foundry migrate` 命令，自动根据当前环境连接串识别数据库类型，并自动执行对应引擎的方言迁移。
-- [ ] **4.2 扩展性开闭原则验证**：编写轻量级 Mock Provider 单元测试，证明无需改动核心框架代码即可即插即用挂载第三方驱动。
-- [ ] **4.3 完善中英文多数据库运维与配置指南**：在 `docs` 网站发布多数据库选型、生产部署连接池调优以及主从读写建议。
-- [ ] **4.4 路线图同步与正式版本发布**：同步里程碑状态，正式发布支持多数据库存储引擎的 Foundry 版本。
+### 阶段 5: 生产就绪、CLI 工具链升级与生态发布
+- [ ] **5.1 CLI 迁移命令智能适配**：升级 `foundry migrate` 命令，自动根据当前环境连接串识别数据库类型，并自动执行对应引擎的方言迁移。
+- [ ] **5.2 扩展性开闭原则验证**：编写轻量级 Mock Provider 单元测试，证明无需改动核心框架代码即可即插即用挂载第三方驱动。
+- [ ] **5.3 完善中英文多数据库运维与配置指南**：在 `docs` 网站发布多数据库选型、生产部署连接池调优以及主从读写建议。
+- [ ] **5.4 路线图同步与正式版本发布**：同步里程碑状态，正式发布支持多数据库存储引擎的 Foundry 版本。

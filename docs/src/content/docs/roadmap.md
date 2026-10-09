@@ -56,16 +56,17 @@ description: Foundry development milestones, completed features, versioning stra
   - [ ] Auto-generate OpenAPI schemas for dynamically created data models and subsystem routes.
   - [ ] Embedded Swagger UI explorer in Admin Shell.
 
-- [ ] **2.3 Multi-Database Support & Pluggable Storage SPI (MySQL first, then MongoDB, then Oracle)**
-  - [ ] Complete architecture design & implementation roadmap: [Storage Engines & Multi-Database Architecture](/architecture/storage-engines/).
-  - [ ] **Storage Engine SPI & Smart Detection**: Abstract `StorageDriverProvider` and `StorageRegistry`, supporting protocol sniffing from `DATABASE_URL` and explicit selection via `DATABASE_TYPE`.
-  - [ ] **Method-Based Decoupling**: Encapsulate raw pools completely within the `Database` facade (`db.records()`, etc.).
-  - [ ] **Phased Implementation Matrix**:
-    - **Phase 0 (Foundation)**: Core SPI & Trait abstraction; refactor PostgreSQL into `PostgresProvider` with 100% backward compatibility.
-    - **Phase 1 (Priority 0 - Immediate)**: MySQL 8.0+ / MariaDB unified strategy with auto-increment, `DATETIME(6)`, and transaction re-query without `RETURNING`.
-    - **Phase 2 (Priority 1 - Secondary)**: MongoDB 6.0+ native document strategy with BSON mapping, `i64` sequence compatibility, and Wildcard indexing.
-    - **Phase 3 (Priority 2 - Enterprise)**: Oracle 19c/21c/23ai engine with `IDENTITY` dialect and dedicated `spawn_blocking` thread pool for C ODPI-C isolation.
-    - **Phase 4 (Production-Readiness & Release)**: Upgrade `foundry migrate` for dialect-aware migrations and release multi-database guides.
+- [/] **2.3 Multi-Database Support & Pluggable Storage SPI (PostgreSQL 1st, MySQL 2nd, MariaDB 3rd, MongoDB 4th, Oracle DB 5th)**
+  - [x] Complete architecture design & implementation roadmap: [Storage Engines & Multi-Database Architecture](/architecture/storage-engines/).
+  - [x] **Storage Engine SPI & Smart Detection**: Abstract `StorageDriverProvider` and `StorageRegistry`, supporting protocol sniffing from `DATABASE_URL` and explicit selection via `DATABASE_TYPE`.
+  - [x] **Method-Based Decoupling**: Encapsulate raw pools completely within the `Database` facade (`db.records()`, etc.).
+  - [ ] **Phased Implementation Matrix & Progress**:
+    - **Phase 0 (1st Integration - [x] Completed)**: Core SPI & Trait abstraction; refactor PostgreSQL into `PostgresProvider` with 100% backward compatibility.
+    - **Phase 1 (2nd Integration - [x] Completed)**: MySQL 8.0+ / 8.4+ strategy with auto-increment, `DATETIME(6)`, deferred join pagination, and transaction atomic re-query.
+    - **Phase 2 (3rd Integration - [ ] Pending)**: MariaDB 10.5+ dialect and driver adaptation, handling JSON alias and virtual column differences.
+    - **Phase 3 (4th Integration - [ ] Pending)**: MongoDB 6.0+ native document strategy with BSON mapping, `i64` sequence compatibility, and Wildcard indexing.
+    - **Phase 4 (5th Integration - [ ] Pending)**: Oracle DB 19c/21c/23ai engine with `IDENTITY` dialect and dedicated `spawn_blocking` thread pool for C ODPI-C isolation.
+    - **Phase 5 (Production-Readiness & Release)**: Upgrade `foundry migrate` for dialect-aware migrations and release multi-database guides.
 
 ---
 

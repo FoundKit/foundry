@@ -7,7 +7,7 @@ description: Foundry 多数据库 SPI 架构、PostgreSQL 与 MySQL 配置、Zer
 
 Foundry 采用全新的 **多数据库 SPI (Service Provider Interface) 插件化存储架构**。业务层、领域逻辑服务、AutoCRUD 引擎与 Axum 状态统一依赖 `Database` 门面与标准 Store Traits，**彻底实现底层网络驱动零泄露**。
 
-系统原生支持 **PostgreSQL (14+)** 与 **MySQL (8.0+) / MariaDB (10.5+)**，并能根据连接串协议自动自适应路由驱动。
+根据平台接入规划，支持矩阵按序推进：**PostgreSQL (第一，已完成)** $\rightarrow$ **MySQL (第二，已完成)** $\rightarrow$ **MariaDB (第三，待对接)** $\rightarrow$ **MongoDB (第四，待对接)** $\rightarrow$ **Oracle DB (第五，待对接)**。当前已稳定接入并支持 **PostgreSQL (14+)** 与 **MySQL (8.0+)**。
 
 ---
 

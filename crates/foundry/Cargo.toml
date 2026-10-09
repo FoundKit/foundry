@@ -16,8 +16,8 @@ server = ["dep:foundry_engine", "dep:axum", "dep:tower", "dep:tower-http", "dep:
 storage = ["dep:foundry_storage", "dep:sqlx"]
 auth = ["dep:foundry_auth"]
 extension = ["dep:foundry_extension"]
-postgres = ["foundry_storage?/postgres"]
-mysql = ["foundry_storage?/mysql"]
+postgres = ["foundry_storage?/postgres", "foundry_engine?/postgres"]
+mysql = ["foundry_storage?/mysql", "foundry_engine?/mysql"]
 
 [dependencies]
 foundry_core = { workspace = true }
@@ -43,3 +43,4 @@ tinyvec = { workspace = true }
 
 [dev-dependencies]
 http-body-util = "0.1"
+tower = { workspace = true }

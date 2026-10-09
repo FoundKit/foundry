@@ -9,8 +9,13 @@ description = "Standalone Example Application built on top of the Foundry Framew
 [lints]
 workspace = true
 
+[features]
+default = ["postgres"]
+postgres = ["foundry/postgres"]
+mysql = ["foundry/mysql"]
+
 [dependencies]
-foundry = { path = "../../crates/foundry" }
+foundry = { path = "../../crates/foundry", default-features = false, features = ["server", "storage", "auth", "extension"] }
 tokio = { version = "1.44", features = ["full"] }
 axum = { version = "0.8", features = ["macros"] }
 tower = { version = "0.5", features = ["util"] }
@@ -27,4 +32,4 @@ async-trait = "0.1"
 
 [dev-dependencies]
 http-body-util = "0.1"
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"] }
+sqlx = { workspace = true }

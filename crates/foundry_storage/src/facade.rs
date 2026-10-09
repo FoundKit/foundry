@@ -59,6 +59,22 @@ impl Database {
         }
     }
 
+    /// Creates an offline dummy Database instance for route and controller tests when running with MySQL only
+    #[cfg(all(feature = "mysql", not(feature = "postgres")))]
+    pub fn dummy() -> Self {
+        let pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://dummy:dummy@localhost:3306/dummy")
+            .expect("Failed to create dummy pool");
+        Self {
+            records: Arc::new(crate::engines::mysql::records::MySqlRecordEngine::new(pool.clone())),
+            models: Arc::new(crate::engines::mysql::stores::MySqlModelEngine::new(pool.clone())),
+            systems: Arc::new(crate::engines::mysql::stores::MySqlSystemEngine::new(pool.clone())),
+            configs: Arc::new(crate::engines::mysql::stores::MySqlConfigEngine::new(pool.clone())),
+            admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(pool.clone())),
+            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(pool)),
+        }
+    }
+
     /// Automatically routes by protocol or explicit DATABASE_TYPE env var
     pub async fn connect(url: &str, max_connections: u32, auto_migrate: bool) -> AppResult<Self> {
         let explicit_type = std::env::var("DATABASE_TYPE").ok();
