@@ -66,11 +66,21 @@ impl Database {
             .connect_lazy("mysql://dummy:dummy@localhost:3306/dummy")
             .expect("Failed to create dummy pool");
         Self {
-            records: Arc::new(crate::engines::mysql::records::MySqlRecordEngine::new(pool.clone())),
-            models: Arc::new(crate::engines::mysql::stores::MySqlModelEngine::new(pool.clone())),
-            systems: Arc::new(crate::engines::mysql::stores::MySqlSystemEngine::new(pool.clone())),
-            configs: Arc::new(crate::engines::mysql::stores::MySqlConfigEngine::new(pool.clone())),
-            admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(pool.clone())),
+            records: Arc::new(crate::engines::mysql::records::MySqlRecordEngine::new(
+                pool.clone(),
+            )),
+            models: Arc::new(crate::engines::mysql::stores::MySqlModelEngine::new(
+                pool.clone(),
+            )),
+            systems: Arc::new(crate::engines::mysql::stores::MySqlSystemEngine::new(
+                pool.clone(),
+            )),
+            configs: Arc::new(crate::engines::mysql::stores::MySqlConfigEngine::new(
+                pool.clone(),
+            )),
+            admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(
+                pool.clone(),
+            )),
             audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(pool)),
         }
     }

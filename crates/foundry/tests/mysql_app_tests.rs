@@ -1,10 +1,10 @@
 #[cfg(feature = "mysql")]
 mod tests {
     use axum::{
+        Router,
         body::Body,
         http::{Request, StatusCode},
         routing::get,
-        Router,
     };
     use foundry::prelude::*;
     use http_body_util::BodyExt;
