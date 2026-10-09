@@ -26,6 +26,7 @@ pnpm-debug.log*
 *.swo
 .DS_Store
 Thumbs.db
+.agents
 
 # Database / Local volumes
 postgres_data/
