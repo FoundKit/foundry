@@ -84,20 +84,14 @@ AUTO_MIGRATE=true
 
 ## 3. Containerized Setup (Docker / Nerdctl / Podman)
 
-The project includes a standard `compose.yml` compatible with **Docker Compose**, **Nerdctl (containerd)**, and **Podman Compose**:
+Applications scaffolded via `foundry new` include a pre-configured `dev/docker-compose.yml` stack, or you can run PostgreSQL, MySQL, and Redis using standard container commands:
 
 ```bash
-# Docker Compose
-docker compose up -d postgres mysql redis
-
-# Nerdctl (containerd)
-nerdctl compose up -d postgres mysql redis
-
-# Podman Compose
-podman-compose up -d postgres mysql redis
+# In a scaffolded application project:
+docker compose -f dev/docker-compose.yml up -d
 ```
 
-Ports:
+Default credentials:
 - **MySQL 8.4**: Port `3306`, user `root`, password `root`, database `foundry`.
 - **PostgreSQL 18.6**: Port `5432`, user `postgres`, password `postgrespassword`, database `foundry`.
 - **Redis 8.0**: Port `6379`.

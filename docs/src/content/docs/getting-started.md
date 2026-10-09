@@ -94,22 +94,15 @@ async-trait = "0.1"
 
 ### 3. Start & Initialize Database Services
 
-#### Option 1: Universal Compose (Recommended for Dev)
-A standard `compose.yml` is provided at both the project root and in `dev/`, compatible with **Docker Compose**, **Nerdctl (containerd environments)**, and **Podman Compose**:
+#### Option 1: Scaffolded Dev Stack (Recommended for Local Dev)
+Projects generated via `foundry new` include a ready-to-use local development container stack in `dev/docker-compose.yml`:
 
 ```bash
-# Start PostgreSQL 18, MySQL 8.4, and Redis services
-# Using Docker Compose:
-docker compose up -d postgres mysql redis
-
-# Or using Nerdctl (containerd):
-nerdctl compose up -d postgres mysql redis
-
-# Or using Podman:
-podman-compose up -d postgres mysql redis
+# Start local development database and Redis in your application
+docker compose -f dev/docker-compose.yml up -d
 ```
 
-The compose file automatically mounts dialect migration scripts from `migrations/` into each container, bootstrapping the schema, covering indexes, and initial superadmin credentials on first startup.
+The compose file automatically mounts dialect migration scripts from `migrations/` into the container, bootstrapping the schema, covering indexes, and initial superadmin credentials on first startup.
 
 #### Option 2: Connect Existing Databases
 If connecting to an external database, Foundry will automatically run schema checks when `AUTO_MIGRATE=true`.

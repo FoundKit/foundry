@@ -49,7 +49,7 @@ Foundry Repository (Framework)
 User Application (Independent Git Repo)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
     ├── dev/                       # Local development resources (.gitignore'd)
-    │   ├── compose.yml            # PostgreSQL 18.6 + MySQL 8.4 + Redis 8 local stack
+    │   ├── docker-compose.yml     # PostgreSQL 18.6 + Redis local development stack
     │   ├── init-db.sh             # Local dev database initialization/reset script
     │   └── init-dev-db.sql        # Standalone dev database bootstrap script
     ├── src/
@@ -162,7 +162,7 @@ Foundry provides a streamlined developer CLI (`foundry` / `foundry-cli`) to mana
 
 ### 1. Local Development Database
 
-Scaffolded projects include local container compose specifications (or universal `compose.yml`), pre-configured to mount dialect-specific initializations:
+Scaffolded projects include local container compose specifications (in `dev/docker-compose.yml`), pre-configured to mount dialect-specific initializations:
 
 ```bash
 # Start local database stack (PostgreSQL 18.6 or MySQL 8.4 + Redis 8)

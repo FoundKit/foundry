@@ -49,7 +49,7 @@ Foundry 框架仓库 (Framework)
 用户业务应用 (独立 Git 仓库)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1"
     ├── dev/                       # 本地开发专用资源 (.gitignore 忽略)
-    │   ├── compose.yml            # PostgreSQL 18.6 + MySQL 8.4 + Redis 8 本地容器编排
+    │   ├── docker-compose.yml     # PostgreSQL 18.6 + Redis 本地容器编排
     │   ├── init-db.sh             # 本地开发数据库初始化/重置脚本
     │   └── init-dev-db.sql        # 独立开发数据库创建引导脚本
     ├── src/
@@ -162,7 +162,7 @@ Foundry 提供了精简高效的开发者命令行工具（`foundry` / `foundry-
 
 ### 1. 本地开发数据库
 
-项目提供了标准容器编排配置（`compose.yml`），针对不同数据库方言挂载对应初始化配置：
+由脚手架创建的新工程在 `dev/` 目录中预置了本地开发所需的容器编排配置（`dev/docker-compose.yml`），针对不同数据库方言挂载对应初始化配置：
 
 ```bash
 # 启动本地基础依赖（PostgreSQL 18.6 或 MySQL 8.4 + Redis 8）

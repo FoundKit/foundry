@@ -94,22 +94,15 @@ async-trait = "0.1"
 
 ### 3. 启动并初始化数据库与缓存服务
 
-#### 方式一：Compose 一键启动容器（推荐开发使用）
-项目提供了通用的 `compose.yml`（在根目录与 `dev/` 目录均有配置），完全兼容 **Docker Compose**、**Nerdctl (containerd 环境)** 与 **Podman Compose**：
+#### 方式一：脚手架本地开发容器（推荐开发使用）
+通过 `foundry new` 脚手架生成的应用在 `dev/` 目录中预置了容器编排配置（`dev/docker-compose.yml`）：
 
 ```bash
-# 启动 PostgreSQL 18、MySQL 8.4 与 Redis 服务
-# 使用 Docker Compose:
-docker compose up -d postgres mysql redis
-
-# 或使用 Nerdctl (containerd):
-nerdctl compose up -d postgres mysql redis
-
-# 或使用 Podman:
-podman-compose up -d postgres mysql redis
+# 在生成的应用目录中启动本地数据库与 Redis
+docker compose -f dev/docker-compose.yml up -d
 ```
 
-容器启动时会自动将各数据库方言的 `migrations/` 初始化脚本挂载到容器中，首次启动自动完成建库、建表、覆盖索引创建与初始超级管理员账号注入。
+容器启动时会自动将 `migrations/` 初始化脚本挂载到容器中，首次启动自动完成建库、建表、覆盖索引创建与初始超级管理员账号注入。
 
 #### 方式二：连接已有独立数据库
 如果连接已有实例，系统在 `AUTO_MIGRATE=true` 时会自动完成数据库初始化。

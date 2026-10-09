@@ -82,24 +82,18 @@ AUTO_MIGRATE=true
 
 ---
 
-## 3. 容器化一键启动 (Docker / Nerdctl / Podman)
+## 3. 容器化本地开发环境 (Docker / Nerdctl / Podman)
 
-项目根目录和 `dev/` 目录下提供了标准的 `compose.yml`，兼容 **Docker Compose**、**Nerdctl (containerd)** 与 **Podman Compose**：
+通过 `foundry new` 脚手架创建的项目在 `dev/` 目录中预置了 `dev/docker-compose.yml`，也可直接通过容器运行 PostgreSQL、MySQL 与 Redis 服务：
 
-### 启动数据库容器：
+### 启动本地数据库容器：
 
 ```bash
-# 使用 Docker Compose
-docker compose up -d postgres mysql redis
-
-# 或使用 Nerdctl (containerd 环境)
-nerdctl compose up -d postgres mysql redis
-
-# 或使用 Podman Compose
-podman-compose up -d postgres mysql redis
+# 在生成的工程目录中启动：
+docker compose -f dev/docker-compose.yml up -d
 ```
 
-容器就绪后：
+默认端口与凭证：
 - **MySQL 8.4**：端口 `3306`，账号 `root`，密码 `root`，数据库 `foundry`。
 - **PostgreSQL 18.6**：端口 `5432`，账号 `postgres`，密码 `postgrespassword`，数据库 `foundry`。
 - **Redis 8.0**：端口 `6379`。

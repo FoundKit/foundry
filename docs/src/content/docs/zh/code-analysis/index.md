@@ -575,11 +575,11 @@ impl SubsystemModule for BlogSubsystem {
    git clone https://github.com/foundkit/foundry.git
    cd foundry
    
-   # 启动数据库
+   # 配置并运行示例
    cd examples/blog_platform
-   docker compose -f dev/docker-compose.yml up -d
-   
-   # 运行示例
+   cp .env.example .env
+
+   # 运行示例（配置好 DATABASE_URL 与 REDIS_URL 数据库服务后运行）
    cargo run
    ```
 
