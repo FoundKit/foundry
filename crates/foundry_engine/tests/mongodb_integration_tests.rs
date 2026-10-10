@@ -24,7 +24,9 @@ mod mongodb_tests {
         println!("Connecting to MongoDB for E2E testing: {}", mongodb_url);
 
         // Reset test database if possible for clean test state
-        if let Ok(client) = foundry_storage::mongodb::Client::with_uri_str("mongodb://127.0.0.1:27017").await {
+        if let Ok(client) =
+            foundry_storage::mongodb::Client::with_uri_str("mongodb://127.0.0.1:27017").await
+        {
             let _ = client.database("foundry_mongodb_e2e_test").drop().await;
         }
 
@@ -32,7 +34,10 @@ mod mongodb_tests {
         let db = match Database::connect(&mongodb_url, 5, true).await {
             Ok(db) => db,
             Err(e) => {
-                eprintln!("Skipping MongoDB E2E test - cannot connect to MongoDB: {}", e);
+                eprintln!(
+                    "Skipping MongoDB E2E test - cannot connect to MongoDB: {}",
+                    e
+                );
                 return;
             }
         };
@@ -65,7 +70,11 @@ mod mongodb_tests {
         let sys_slug = format!("shop_{}", &uuid::Uuid::new_v4().simple().to_string()[..10]);
         let system = db
             .systems()
-            .create(&sys_slug, "MongoDB E2E Test Shop", Some("Document store integration system"))
+            .create(
+                &sys_slug,
+                "MongoDB E2E Test Shop",
+                Some("Document store integration system"),
+            )
             .await
             .expect("Failed to create system in MongoDB");
         assert_eq!(system.slug, sys_slug);
@@ -256,7 +265,12 @@ mod mongodb_tests {
         println!("Testing full Axum HTTP router with MongoDB storage engine...");
         let jwt = JwtService::new("mongodb_super_secret_jwt_for_e2e_testing", 24);
         let token = jwt
-            .generate_token(admin.id, &admin.username, "super_admin", vec!["*".to_string()])
+            .generate_token(
+                admin.id,
+                &admin.username,
+                "super_admin",
+                vec!["*".to_string()],
+            )
             .unwrap();
 
         let app_state = AppState::new(db.clone(), None, jwt, HookPipeline::new(), vec![]);

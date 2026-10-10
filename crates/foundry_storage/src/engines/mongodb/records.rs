@@ -1,12 +1,12 @@
-use crate::entities::ModelRecordEntity;
 use crate::engines::mongodb::counters::next_id;
+use crate::entities::ModelRecordEntity;
 use crate::traits::{RecordQuery, RecordStoreEngine};
 use async_trait::async_trait;
 use chrono::Utc;
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::PaginatedData;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use serde_json::Value;
 
 pub struct MongoRecordEngine {
@@ -50,7 +50,9 @@ impl RecordStoreEngine for MongoRecordEngine {
         query: RecordQuery,
     ) -> AppResult<PaginatedData<ModelRecordEntity>> {
         let model_id = self.resolve_model_id(system_slug, model_slug).await?;
-        let coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
 
         let filter = doc! {
             "model_id": model_id,
@@ -101,7 +103,9 @@ impl RecordStoreEngine for MongoRecordEngine {
         model_slug: &str,
         id: i64,
     ) -> AppResult<ModelRecordEntity> {
-        let coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
         let filter = doc! {
             "id": id,
             "system_id": system_slug,
@@ -143,7 +147,9 @@ impl RecordStoreEngine for MongoRecordEngine {
             .map_err(|e| AppError::Database(format!("Failed to serialize record: {}", e)))?;
         doc.insert("model_id", model_id);
 
-        let coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
         coll.insert_one(doc)
             .await
             .map_err(|e| AppError::Database(format!("Failed to insert record: {}", e)))?;
@@ -165,7 +171,9 @@ impl RecordStoreEngine for MongoRecordEngine {
         let bson_data = mongodb::bson::to_bson(&record.data)
             .map_err(|e| AppError::Database(format!("Failed to serialize data payload: {}", e)))?;
 
-        let coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
         let filter = doc! {
             "id": id,
             "system_id": system_slug,
@@ -187,7 +195,9 @@ impl RecordStoreEngine for MongoRecordEngine {
     }
 
     async fn delete(&self, system_slug: &str, model_slug: &str, id: i64) -> AppResult<()> {
-        let coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
         let filter = doc! {
             "id": id,
             "system_id": system_slug,

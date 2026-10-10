@@ -14,8 +14,9 @@ mod mariadb_tests {
     use tower::ServiceExt;
 
     fn get_mariadb_url() -> String {
-        std::env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "mariadb://root:root@127.0.0.1:3307/foundry_mariadb_e2e_test".to_string())
+        std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "mariadb://root:root@127.0.0.1:3307/foundry_mariadb_e2e_test".to_string()
+        })
     }
 
     #[tokio::test]
@@ -35,7 +36,10 @@ mod mariadb_tests {
         let db = match Database::connect(&mariadb_url, 5, true).await {
             Ok(db) => db,
             Err(e) => {
-                eprintln!("Skipping MariaDB E2E test - cannot connect to MariaDB: {}", e);
+                eprintln!(
+                    "Skipping MariaDB E2E test - cannot connect to MariaDB: {}",
+                    e
+                );
                 return;
             }
         };
@@ -259,7 +263,12 @@ mod mariadb_tests {
         println!("Testing full Axum HTTP router with MariaDB storage engine...");
         let jwt = JwtService::new("mariadb_super_secret_jwt_for_e2e_testing", 24);
         let token = jwt
-            .generate_token(admin.id, &admin.username, "super_admin", vec!["*".to_string()])
+            .generate_token(
+                admin.id,
+                &admin.username,
+                "super_admin",
+                vec!["*".to_string()],
+            )
             .unwrap();
 
         let app_state = AppState::new(db.clone(), None, jwt, HookPipeline::new(), vec![]);

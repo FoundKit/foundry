@@ -55,9 +55,9 @@ impl StorageDriverProvider for MongoProvider {
     async fn run_migrations(&self, connection_url: &str) -> AppResult<()> {
         info!("Running MongoDB collection and index initialization...");
 
-        let client_options = ClientOptions::parse(connection_url)
-            .await
-            .map_err(|e| AppError::Database(format!("Failed to parse MongoDB URL for migrations: {}", e)))?;
+        let client_options = ClientOptions::parse(connection_url).await.map_err(|e| {
+            AppError::Database(format!("Failed to parse MongoDB URL for migrations: {}", e))
+        })?;
 
         let db_name = client_options
             .default_database
@@ -96,10 +96,9 @@ impl StorageDriverProvider for MongoProvider {
                 "updated_at": mongodb::bson::to_bson(&now).unwrap_or(mongodb::bson::Bson::Null),
             };
 
-            admin_coll
-                .insert_one(admin_doc)
-                .await
-                .map_err(|e| AppError::Database(format!("Failed to insert default super admin: {}", e)))?;
+            admin_coll.insert_one(admin_doc).await.map_err(|e| {
+                AppError::Database(format!("Failed to insert default super admin: {}", e))
+            })?;
         }
 
         info!("MongoDB initialization completed successfully.");
@@ -147,9 +146,7 @@ async fn init_mongodb_indexes(db: &Database) -> AppResult<()> {
         .build();
     let _ = records.create_index(rec_query).await;
 
-    let wildcard_idx = IndexModel::builder()
-        .keys(doc! { "data.$**": 1 })
-        .build();
+    let wildcard_idx = IndexModel::builder().keys(doc! { "data.$**": 1 }).build();
     let _ = records.create_index(wildcard_idx).await;
 
     // admins: username unique

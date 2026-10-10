@@ -1,7 +1,7 @@
 use foundry_core::error::{AppError, AppResult};
+use mongodb::Database;
 use mongodb::bson::doc;
 use mongodb::options::ReturnDocument;
-use mongodb::Database;
 
 pub async fn next_id(db: &Database, counter_name: &str) -> AppResult<i64> {
     let coll = db.collection::<mongodb::bson::Document>("_counters");

@@ -1,8 +1,8 @@
+use crate::engines::mongodb::counters::next_id;
 use crate::entities::{
     AdminEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
     SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
 };
-use crate::engines::mongodb::counters::next_id;
 use crate::traits::{
     AdminStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine, ConfigStoreEngine,
     ModelStoreEngine, SystemQuery, SystemStoreEngine,
@@ -11,8 +11,8 @@ use async_trait::async_trait;
 use chrono::Utc;
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::PaginatedData;
-use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::bson::doc;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -130,7 +130,9 @@ impl ModelStoreEngine for MongoModelEngine {
     }
 
     async fn list_fields(&self, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
-        let coll = self.db.collection::<mongodb::bson::Document>("model_fields");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
         let filter = doc! { "model_id": model_id };
         let find_opts = mongodb::options::FindOptions::builder()
             .sort(doc! { "sort_order": 1, "id": 1 })
@@ -190,7 +192,9 @@ impl ModelStoreEngine for MongoModelEngine {
         let doc = mongodb::bson::to_document(&entity)
             .map_err(|e| AppError::Database(format!("Failed to serialize field: {}", e)))?;
 
-        let coll = self.db.collection::<mongodb::bson::Document>("model_fields");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
         coll.insert_one(doc)
             .await
             .map_err(|e| AppError::Database(format!("Failed to insert field: {}", e)))?;
@@ -305,8 +309,12 @@ impl SystemStoreEngine for MongoSystemEngine {
             .map_err(|e| AppError::Database(format!("Fetch systems failed: {}", e)))?;
 
         let models_coll = self.db.collection::<mongodb::bson::Document>("models");
-        let configs_coll = self.db.collection::<mongodb::bson::Document>("system_configs");
-        let records_coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let configs_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
+        let records_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
 
         let mut items = Vec::new();
         while cursor
@@ -370,8 +378,12 @@ impl SystemStoreEngine for MongoSystemEngine {
             .map_err(|e| AppError::Database(format!("System mapping error: {}", e)))?;
 
         let models_coll = self.db.collection::<mongodb::bson::Document>("models");
-        let configs_coll = self.db.collection::<mongodb::bson::Document>("system_configs");
-        let records_coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let configs_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
+        let records_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
 
         let models_count = models_coll
             .count_documents(doc! { "system_id": &sys.slug, "deleted_at": null })
@@ -420,8 +432,12 @@ impl SystemStoreEngine for MongoSystemEngine {
             .map_err(|e| AppError::Database(format!("System mapping error: {}", e)))?;
 
         let models_coll = self.db.collection::<mongodb::bson::Document>("models");
-        let configs_coll = self.db.collection::<mongodb::bson::Document>("system_configs");
-        let records_coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let configs_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
+        let records_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
 
         let models_count = models_coll
             .count_documents(doc! { "system_id": &sys.slug, "deleted_at": null })
@@ -453,7 +469,12 @@ impl SystemStoreEngine for MongoSystemEngine {
         })
     }
 
-    async fn create(&self, slug: &str, name: &str, description: Option<&str>) -> AppResult<SystemEntity> {
+    async fn create(
+        &self,
+        slug: &str,
+        name: &str,
+        description: Option<&str>,
+    ) -> AppResult<SystemEntity> {
         let coll = self.db.collection::<mongodb::bson::Document>("systems");
         let now = Utc::now();
         let entity = SystemEntity {
@@ -543,7 +564,9 @@ impl SystemStoreEngine for MongoSystemEngine {
     async fn platform_summary(&self) -> AppResult<PlatformSummary> {
         let systems_coll = self.db.collection::<mongodb::bson::Document>("systems");
         let models_coll = self.db.collection::<mongodb::bson::Document>("models");
-        let records_coll = self.db.collection::<mongodb::bson::Document>("model_records");
+        let records_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_records");
         let admins_coll = self.db.collection::<mongodb::bson::Document>("admins");
         let audit_coll = self.db.collection::<mongodb::bson::Document>("audit_logs");
 
@@ -572,10 +595,7 @@ impl SystemStoreEngine for MongoSystemEngine {
             .await
             .unwrap_or(0);
 
-        let total_audit_logs = audit_coll
-            .count_documents(doc! {})
-            .await
-            .unwrap_or(0);
+        let total_audit_logs = audit_coll.count_documents(doc! {}).await.unwrap_or(0);
 
         Ok(PlatformSummary {
             total_systems,
@@ -605,7 +625,9 @@ impl MongoConfigEngine {
 #[async_trait]
 impl ConfigStoreEngine for MongoConfigEngine {
     async fn list(&self, system_slug: &str) -> AppResult<Vec<SystemConfigEntity>> {
-        let coll = self.db.collection::<mongodb::bson::Document>("system_configs");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
         let filter = doc! { "system_id": system_slug };
         let find_opts = mongodb::options::FindOptions::builder()
             .sort(doc! { "sort_order": 1, "id": 1 })
@@ -655,7 +677,9 @@ impl ConfigStoreEngine for MongoConfigEngine {
         options: Value,
         sort_order: i32,
     ) -> AppResult<SystemConfigEntity> {
-        let coll = self.db.collection::<mongodb::bson::Document>("system_configs");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
         let filter = doc! { "system_id": system_slug, "key": key };
 
         let existing = coll
@@ -713,7 +737,9 @@ impl ConfigStoreEngine for MongoConfigEngine {
         system_slug: &str,
         values: &serde_json::Map<String, Value>,
     ) -> AppResult<()> {
-        let coll = self.db.collection::<mongodb::bson::Document>("system_configs");
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("system_configs");
         let now = Utc::now();
 
         for (k, v) in values {
