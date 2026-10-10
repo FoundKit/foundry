@@ -76,6 +76,16 @@ impl StorageRegistry {
             registry.register(Box::new(crate::engines::mysql::MySqlProvider));
         }
 
+        #[cfg(feature = "mariadb")]
+        {
+            registry.register(Box::new(crate::engines::mariadb::MariaDbProvider));
+        }
+
+        #[cfg(feature = "mongodb")]
+        {
+            registry.register(Box::new(crate::engines::mongodb::MongoProvider));
+        }
+
         registry
     }
 }

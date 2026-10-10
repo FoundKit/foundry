@@ -18,6 +18,8 @@ auth = ["dep:foundry_auth"]
 extension = ["dep:foundry_extension"]
 postgres = ["foundry_storage?/postgres", "foundry_engine?/postgres"]
 mysql = ["foundry_storage?/mysql", "foundry_engine?/mysql"]
+mariadb = ["foundry_storage?/mariadb", "foundry_engine?/mariadb"]
+mongodb = ["foundry_storage?/mongodb", "foundry_engine?/mongodb"]
 
 [dependencies]
 foundry_core = { workspace = true }

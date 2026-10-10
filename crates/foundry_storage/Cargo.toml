@@ -12,11 +12,14 @@ workspace = true
 default = ["postgres"]
 postgres = ["sqlx/postgres"]
 mysql = ["sqlx/mysql"]
+mariadb = ["sqlx/mysql"]
+mongodb = ["dep:mongodb"]
 
 [dependencies]
 foundry_core = { workspace = true }
 sqlx = { workspace = true }
 redis = { workspace = true }
+mongodb = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }

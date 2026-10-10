@@ -56,17 +56,16 @@ description: Foundry 平台与框架的开发里程碑、已实现特性、版�
   - [ ] 自动聚合动态数据模型与子系统接口的 OpenAPI Schema。
   - [ ] Admin 外壳内嵌实时交互式 API 文档。
 
-- [/] **2.3 多数据库驱动扩展与插件化存储架构 (PostgreSQL 第一，MySQL 第二，MariaDB 第三，MongoDB 第四，Oracle DB 第五)**
+- [x] **2.3 多数据库驱动扩展与插件化存储架构 (PostgreSQL、MySQL、MariaDB、MongoDB)**
   - [x] 详细设计与实施路线图参见：[存储引擎架构与多数据库规划](/zh/architecture/storage-engines/)。
   - [x] **存储引擎 SPI 机制与智能探测**：抽象 `StorageDriverProvider` 与 `StorageRegistry` 注册中心，支持通过 `DATABASE_URL` 协议前缀自动路由或单一环境变量 `DATABASE_TYPE` 灵活切换。
   - [x] **方法调用解耦与驱动零泄露**：开发者与业务层只调用 `db.records()` 等统一方法，底层驱动全面内聚。
-  - [ ] **分阶段落地优先级与进度**：
+  - [x] **分阶段落地优先级与进度**：
     - **阶段 0 (第一接入 - [x] 已完成)**：核心 SPI 架构解耦，抽离现有 PostgreSQL 为 `PostgresProvider`，确保既有系统 100% 行为兼容。
     - **阶段 1 (第二接入 - [x] 已完成)**：MySQL 8.0+ / 8.4+ 单表通用策略，适配自增主键、DATETIME(6)、延迟关联深度分页优化与事务原子重查。
-    - **阶段 2 (第三接入 - [ ] 待对接)**：MariaDB 10.5+ 独立方言与特化驱动适配，处理 JSON 别名与虚拟列索引差异。
-    - **阶段 3 (第四接入 - [ ] 待对接)**：MongoDB 6.0+ 原生文档策略，BSON 文档与 `i64` 主键映射，Wildcard 全量动态索引加速。
-    - **阶段 4 (第五接入 - [ ] 待对接)**：Oracle DB 19c/21c/23ai 企业级引擎，Identity 自增方言，专用 `spawn_blocking` 工作线程池彻底隔离 C 驱动阻塞调用。
-    - **阶段 5 (生产就绪与生态发布)**：升级 `foundry migrate` 自动化感知多数据库方言迁移，发布多数据库部署指南。
+    - **阶段 2 (第三接入 - [x] 已完成)**：MariaDB 10.5+ 独立方言与特化驱动适配，专用迁移脚本与高性能覆盖复合索引方案。
+    - **阶段 3 (第四接入 - [x] 已完成)**：MongoDB 6.0+ 原生文档策略，BSON 文档与 `_counters` 原子序列 `i64` 主键映射，Wildcard (`data.$**`) 全量动态索引加速。
+    - **阶段 4 (生产就绪与生态发布 - [x] 已完成)**：升级 `foundry migrate` 自动化感知多数据库方言迁移，多数据库端到端集成测试套件验证，发布多数据库使用指南。*(注：Oracle DB 因生态与依赖过重已移除)*
 
 ---
 

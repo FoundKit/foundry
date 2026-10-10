@@ -1,13 +1,19 @@
 ---
 title: Database & Storage Engine Guide
-description: Foundry Multi-Database SPI architecture, PostgreSQL and MySQL configurations, Zero-DDL dynamic models, and containerized development.
+description: Foundry Multi-Database SPI architecture, PostgreSQL, MySQL, MariaDB, and MongoDB configurations, Zero-DDL dynamic models, and local development.
 ---
 
 # Database & Storage Engine Guide
 
-Foundry features a modern **Multi-Database SPI (Service Provider Interface) pluggable storage architecture**. Business layers, domain services, the AutoCRUD engine, and Axum state exclusively depend on the `Database` facade and standard store traits, **achieving absolute zero driver leakage**.
+Foundry features a modern **Multi-Database SPI (Service Provider Interface) pluggable storage architecture**. Business layers, domain services, the AutoCRUD engine, and Axum handlers exclusively depend on the `Database` facade and standard store traits, **achieving absolute zero driver leakage**.
 
-In accordance with the integration roadmap, database support proceeds strictly in sequence: **PostgreSQL (1st, Completed)** $\rightarrow$ **MySQL (2nd, Completed)** $\rightarrow$ **MariaDB (3rd, Pending)** $\rightarrow$ **MongoDB (4th, Pending)** $\rightarrow$ **Oracle DB (5th, Pending)**. Currently, **PostgreSQL (14+)** and **MySQL (8.0+)** are fully supported.
+Foundry officially supports four enterprise-grade databases:
+1. **PostgreSQL (14+)** - Relational engine with JSONB and GIN inverted indexing.
+2. **MySQL (8.0+)** - Universal single-table engine with covering indexes and deferred join pagination.
+3. **MariaDB (10.5+)** - Dedicated MariaDB dialect engine with fine-tuned InnoDB indexes.
+4. **MongoDB (6.0+)** - Native BSON document engine with atomic `i64` sequence counters and dynamic Wildcard indexing.
+
+*(Note: Oracle DB has been removed from the roadmap due to excessive runtime weight, heavy C client dependencies, and insufficient open-source Rust community maintenance.)*
 
 ---
 
@@ -28,17 +34,21 @@ flowchart TD
 
     subgraph Engines ["Driver Implementations (Compiled on Demand)"]
         Registry -->|"postgres:// / postgresql://"| PgEngine["PostgresProvider (JSONB + GIN Inverted Index)"]
-        Registry -->|"mysql:// / mariadb://"| MySqlEngine["MySqlProvider (Universal Single-Table + Covering Index + Deferred Join)"]
+        Registry -->|"mysql://"| MySqlEngine["MySqlProvider (Universal Single-Table + Covering Index + Deferred Join)"]
+        Registry -->|"mariadb://"| MariaEngine["MariaDbProvider (Dedicated Dialect + Covering Index)"]
+        Registry -->|"mongodb:// / mongodb+srv://"| MongoEngine["MongoProvider (Native BSON + Atomic Counter + Wildcard Index)"]
     end
 ```
 
 ### Key Highlights
-1. **Method-Driven & Zero Driver Leakage**: Business code accesses storage exclusively via trait methods such as `state.db.records().create(...)` or `state.db.records().list(...)`. No `PgPool` or `MySqlPool` types are exposed.
+1. **Method-Driven & Zero Driver Leakage**: Business code accesses storage exclusively via trait methods such as `state.db.records().create(...)` or `state.db.records().list(...)`. No driver-specific types (`PgPool`, `MySqlPool`, `mongodb::Database`) are exposed to user applications.
 2. **Smart Protocol Sniffing**: At startup, Foundry parses the `DATABASE_URL` protocol scheme:
-   - `postgres://` or `postgresql://` $\rightarrow$ activates PostgreSQL engine
-   - `mysql://` or `mariadb://` $\rightarrow$ activates MySQL / MariaDB engine
-   - Can also be explicitly overridden using `DATABASE_TYPE=mysql` or `DATABASE_TYPE=postgres`.
-3. **Conditional Compilation**: Database drivers are gated by Cargo feature flags to keep binary sizes lean.
+   - `postgres://` or `postgresql://` $\rightarrow$ activates PostgreSQL engine.
+   - `mysql://` $\rightarrow$ activates MySQL engine.
+   - `mariadb://` $\rightarrow$ activates MariaDB engine.
+   - `mongodb://` or `mongodb+srv://` $\rightarrow$ activates MongoDB engine.
+   - Can also be explicitly overridden using `DATABASE_TYPE=postgres|mysql|mariadb|mongodb`.
+3. **Conditional Compilation**: Database drivers are gated by Cargo feature flags to keep binary sizes lean and compile times fast.
 
 ---
 
@@ -46,61 +56,98 @@ flowchart TD
 
 ### Cargo.toml Dependencies
 
-Foundry defaults to `postgres`. To use MySQL, enable the `mysql` feature in your `Cargo.toml`:
+Foundry defaults to `postgres`. Enable the corresponding feature flags in your `Cargo.toml` depending on your target database:
 
 ```toml
 [dependencies]
-# PostgreSQL only (default)
+# 1. PostgreSQL only (default)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
-# Enable MySQL / MariaDB support
+# 2. Enable MySQL support
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mysql"] }
 
-# Support both PostgreSQL and MySQL concurrently
-foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["postgres", "mysql"] }
+# 3. Enable MariaDB support
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mariadb"] }
+
+# 4. Enable MongoDB support
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mongodb"] }
+
+# 5. Enable all database engines simultaneously
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
 ```
 
 ### Environment Configuration (`.env`)
 
 #### For PostgreSQL:
 ```bash
-DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry_dev
+DATABASE_TYPE=postgres
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-#### For MySQL / MariaDB:
+#### For MySQL:
 ```bash
-DATABASE_URL=mysql://root:root@localhost:3306/foundry
+DATABASE_URL=mysql://root:root@localhost:3306/foundry_dev
+DATABASE_TYPE=mysql
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-> **Note**: When `AUTO_MIGRATE=true`, Foundry will automatically verify that the database exists (creating it if absent) and execute dialect-specific migrations (schema, covering indexes, and seed superadmin account).
+#### For MariaDB:
+```bash
+DATABASE_URL=mariadb://root:root@127.0.0.1:3307/foundry_dev
+DATABASE_TYPE=mariadb
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+#### For MongoDB:
+```bash
+DATABASE_URL=mongodb://127.0.0.1:27017/foundry_dev
+DATABASE_TYPE=mongodb
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+> **Note**: When `AUTO_MIGRATE=true`, Foundry will automatically verify that the database exists (creating it if absent for SQL engines or creating default collections and indexes for MongoDB) and execute migrations (schema, covering indexes, and seed superadmin account).
 
 ---
 
-## 3. Containerized Setup (Docker / Nerdctl / Podman)
+## 3. Containerized Setup (Docker / Podman)
 
-Applications scaffolded via `foundry new` include a pre-configured `dev/docker-compose.yml` stack, or you can run PostgreSQL, MySQL, and Redis using standard container commands:
+Applications scaffolded via `foundry new` include container configurations. You can run any database using standard Docker containers:
 
 ```bash
-# In a scaffolded application project:
-docker compose -f dev/docker-compose.yml up -d
-```
+# PostgreSQL
+docker run -d --name foundry-postgres -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry_dev postgres:16-alpine
 
-Default credentials:
-- **MySQL 8.4**: Port `3306`, user `root`, password `root`, database `foundry`.
-- **PostgreSQL 18.6**: Port `5432`, user `postgres`, password `postgrespassword`, database `foundry`.
-- **Redis 8.0**: Port `6379`.
+# MySQL
+docker run -d --name foundry-mysql -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry_dev mysql:8.4
+
+# MariaDB
+docker run -d --name foundry-mariadb -p 3307:3306 \
+  -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=foundry_dev mariadb:11.4
+
+# MongoDB
+docker run -d --name foundry-mongodb -p 27017:27017 \
+  mongo:7.0
+
+# Redis
+docker run -d --name foundry-redis -p 6379:6379 redis:alpine
+```
 
 ---
 
 ## 4. Using the `Database` Facade in Application Code
 
-Inject the `AppState` into your Axum handlers to interact with storage engines:
+Inject `AppState` into your Axum handlers to interact with storage engines without writing dialect-specific code:
 
 ```rust
 use axum::{extract::Extension, Json};
@@ -112,7 +159,7 @@ pub async fn create_article_handler(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<serde_json::Value>,
 ) -> AppResult<Json<ApiResponse<serde_json::Value>>> {
-    // 1. Create a dynamic record via Zero-DDL model engine
+    // Create a dynamic record via Zero-DDL model engine
     let record = state
         .db
         .records()
@@ -135,7 +182,7 @@ pub async fn create_article_handler(
 }
 ```
 
-### Store Engines Overview:
+### Store Engines Overview
 
 | Domain Store | Accessor | Key Methods |
 |---|---|---|
@@ -148,30 +195,71 @@ pub async fn create_article_handler(
 
 ---
 
-## 5. MySQL Universal Single-Table Engine & Performance Tuning
+## 5. Engine Architecture & Performance Strategies
 
-For MySQL/MariaDB environments, Foundry implements a **Universal Single-Table Engine**:
+### 5.1 PostgreSQL Engine
+- **Storage Strategy**: Relational tables with native `JSONB` document storage.
+- **Indexing**: GIN inverted index (`CREATE INDEX ... USING gin (data)`) enables sub-millisecond query performance on arbitrary nested JSON fields.
+- **Consistency**: Uses atomic `INSERT ... RETURNING *` for instant record hydration.
 
-### 5.1 Composite Covering Index
-```sql
-CREATE TABLE IF NOT EXISTS model_records (
-    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    model_id BIGINT NOT NULL,
-    system_id VARCHAR(32) NOT NULL,
-    model_slug VARCHAR(48) NOT NULL,
-    data JSON NOT NULL,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    deleted_at DATETIME(6) NULL,
-    INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
-    INDEX idx_system_query (system_id, deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+### 5.2 MySQL Universal Single-Table Engine
+- **Covering Index**:
+  ```sql
+  INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
+  INDEX idx_system_query (system_id, deleted_at)
+  ```
+- **Deferred Join Pagination**: Scans only the covering index to fetch matching primary keys first, then joins back to retrieve the `data` JSON payload. Eliminates disk I/O bottlenecks during deep pagination.
+- **Atomic Re-Fetch**: Atomically orchestrates `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT` in a single transaction to maintain consistency across engines.
+
+### 5.3 MariaDB Engine
+- **Protocol Adaptation**: Accepts `mariadb://` connection strings with automated parameter normalization.
+- **Dialect Optimization**: Tailored DDL migration with UTF8MB4 collations and high-concurrency InnoDB row formats.
+- **Performance**: Shares the deferred join pagination architecture while leveraging MariaDB-specific JSON functional indexes.
+
+### 5.4 MongoDB Native Document Engine
+- **Storage Strategy**: Native BSON documents stored in collection `model_records`.
+- **Atomic `i64` Sequence Counter**: Uses a dedicated `_counters` collection with `findOneAndUpdate` (`$inc`) to provide strictly increasing 64-bit integer IDs, guaranteeing 100% contract compatibility with SQL engines.
+- **Wildcard Indexing**: Automatically builds a wildcard index on dynamic payload attributes:
+  ```javascript
+  db.model_records.createIndex({ "data.$**": 1 })
+  ```
+  This allows queries filtering on dynamic model fields (e.g. `data.category = "tech"`) to leverage index acceleration out of the box.
+- **Native Document Filtering**: Translates pagination, soft-deletion (`deleted_at: null`), and tenancy scopes into native MongoDB aggregation and query filters.
+
+---
+
+## 6. Typed Configurations & Custom Migrations
+
+### Strongly Typed System Configurations
+You can deserialize dynamic configurations directly into Rust structs:
+
+```rust
+#[derive(Debug, serde::Deserialize)]
+pub struct PaymentConfig {
+    pub api_key: String,
+    pub merchant_id: String,
+    pub sandbox: bool,
+}
+
+// In handler:
+let pay_cfg: Option<PaymentConfig> = state
+    .db
+    .get_typed_config(&ctx.system_slug, "payment_settings")
+    .await?;
 ```
 
-### 5.2 Deferred Join Pagination
-Deep pagination (e.g. `OFFSET 100000 LIMIT 20`) on large JSON tables typically causes severe disk IO. `MySqlRecordEngine` uses **Deferred Join**:
-1. Scan the index alone to obtain matching primary keys.
-2. Join back on the primary key to retrieve the full `data` payload.
+### Writing Native SQL Migrations
+If your subsystem needs custom physical tables, place migration scripts in the dialect directory:
 
-### 5.3 Atomic Re-Fetch on Insert
-MySQL lacks the `RETURNING` clause. Foundry atomically orchestrates `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT` in a single transaction, delivering strict consistency across all database engines.
+```text
+my-app/
+└── migrations/
+    ├── postgres/
+    │   └── 001_create_orders.sql
+    ├── mysql/
+    │   └── 001_create_orders.sql
+    └── mariadb/
+        └── 001_create_orders.sql
+```
+
+When `foundry migrate` runs or when `AUTO_MIGRATE=true`, Foundry detects the active database provider and runs the appropriate migrations automatically.

@@ -53,7 +53,7 @@ Foundry 模式：框架 = 独立 Crate 依赖（用户项目完全独立）
 | **语言** | Rust 2024 Edition (1.85+) | 高性能、类型安全 |
 | **异步运行时** | Tokio 1.44 | 异步 I/O |
 | **Web 框架** | Axum 0.8 | HTTP 路由与处理 |
-| **数据库** | 多数据库 SPI 架构（PostgreSQL 14-18、MySQL 8.0+/8.4+ 已稳定支持；MariaDB、MongoDB、Oracle DB 规划中） | 主数据存储（纯方法调用，底层驱动零泄露） |
+| **数据库** | 多数据库 SPI 架构（全面稳定支持 PostgreSQL 14-18、MySQL 8.0+/8.4+、MariaDB 10.5+、MongoDB 6.0+） | 主数据存储（纯方法调用，底层驱动零泄露） |
 | **缓存** | Redis 7-8 | 会话与缓存 |
 | **前端** | React 18 + TailwindCSS | 管理后台 |
 | **身份认证** | Argon2id + JWT | 安全认证 |

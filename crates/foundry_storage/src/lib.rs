@@ -22,3 +22,6 @@ pub use redis_client::{RedisPool, init_redis};
 pub use spi::{StorageDriverProvider, StorageEngineSet, StorageRegistry};
 pub use systems::{SystemQuery, SystemStore};
 pub use traits::*;
+
+#[cfg(feature = "mongodb")]
+pub use mongodb;

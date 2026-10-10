@@ -19,7 +19,14 @@ impl StorageDriverProvider for MySqlProvider {
     }
 
     fn supports(&self, connection_url: &str) -> bool {
-        connection_url.starts_with("mysql://") || connection_url.starts_with("mariadb://")
+        #[cfg(feature = "mariadb")]
+        {
+            connection_url.starts_with("mysql://")
+        }
+        #[cfg(not(feature = "mariadb"))]
+        {
+            connection_url.starts_with("mysql://") || connection_url.starts_with("mariadb://")
+        }
     }
 
     async fn create_engines(

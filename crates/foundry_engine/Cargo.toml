@@ -12,6 +12,8 @@ workspace = true
 default = ["postgres"]
 postgres = ["foundry_storage/postgres"]
 mysql = ["foundry_storage/mysql"]
+mariadb = ["foundry_storage/mariadb"]
+mongodb = ["foundry_storage/mongodb"]
 
 [dependencies]
 foundry_core = { workspace = true }

@@ -56,17 +56,16 @@ description: Foundry development milestones, completed features, versioning stra
   - [ ] Auto-generate OpenAPI schemas for dynamically created data models and subsystem routes.
   - [ ] Embedded Swagger UI explorer in Admin Shell.
 
-- [/] **2.3 Multi-Database Support & Pluggable Storage SPI (PostgreSQL 1st, MySQL 2nd, MariaDB 3rd, MongoDB 4th, Oracle DB 5th)**
+- [x] **2.3 Multi-Database Support & Pluggable Storage SPI (PostgreSQL, MySQL, MariaDB, MongoDB)**
   - [x] Complete architecture design & implementation roadmap: [Storage Engines & Multi-Database Architecture](/architecture/storage-engines/).
   - [x] **Storage Engine SPI & Smart Detection**: Abstract `StorageDriverProvider` and `StorageRegistry`, supporting protocol sniffing from `DATABASE_URL` and explicit selection via `DATABASE_TYPE`.
   - [x] **Method-Based Decoupling**: Encapsulate raw pools completely within the `Database` facade (`db.records()`, etc.).
-  - [ ] **Phased Implementation Matrix & Progress**:
-    - **Phase 0 (1st Integration - [x] Completed)**: Core SPI & Trait abstraction; refactor PostgreSQL into `PostgresProvider` with 100% backward compatibility.
+  - [x] **Phased Implementation Matrix & Progress**:
+    - **Phase 0 (1st Integration - [x] Completed)**: Core SPI & Trait abstraction; refactor PostgreSQL into `PostgresProvider` with JSONB & GIN inverted index.
     - **Phase 1 (2nd Integration - [x] Completed)**: MySQL 8.0+ / 8.4+ strategy with auto-increment, `DATETIME(6)`, deferred join pagination, and transaction atomic re-query.
-    - **Phase 2 (3rd Integration - [ ] Pending)**: MariaDB 10.5+ dialect and driver adaptation, handling JSON alias and virtual column differences.
-    - **Phase 3 (4th Integration - [ ] Pending)**: MongoDB 6.0+ native document strategy with BSON mapping, `i64` sequence compatibility, and Wildcard indexing.
-    - **Phase 4 (5th Integration - [ ] Pending)**: Oracle DB 19c/21c/23ai engine with `IDENTITY` dialect and dedicated `spawn_blocking` thread pool for C ODPI-C isolation.
-    - **Phase 5 (Production-Readiness & Release)**: Upgrade `foundry migrate` for dialect-aware migrations and release multi-database guides.
+    - **Phase 2 (3rd Integration - [x] Completed)**: MariaDB 10.5+ dialect and driver adaptation, dedicated migration schema, and covering composite indexes.
+    - **Phase 3 (4th Integration - [x] Completed)**: MongoDB 6.0+ native document strategy with BSON mapping, atomic `_counters` sequence compatibility for `i64` primary keys, and Wildcard indexing (`data.$**`).
+    - **Phase 4 (Production-Readiness & Release - [x] Completed)**: Upgrade `foundry migrate` for dialect-aware migrations, containerized test suites, and developer guides. *(Oracle DB removed from scope due to heavy runtime dependencies).*
 
 ---
 

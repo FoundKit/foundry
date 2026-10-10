@@ -19,7 +19,7 @@ pub struct StorageEngineSet {
 
 #[async_trait]
 pub trait StorageDriverProvider: Send + Sync {
-    /// Unique driver identifier, e.g. "postgres", "mysql", "mariadb", "mongodb", "oracle", "sqlite"
+    /// Unique driver identifier, e.g. "postgres", "mysql", "mariadb", "mongodb", "sqlite"
     fn driver_name(&self) -> &'static str;
 
     /// Checks if this provider supports the given connection URL (e.g. starts_with("mysql://"))

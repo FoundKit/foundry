@@ -1,13 +1,19 @@
 ---
 title: 数据库与存储引擎开发指南
-description: Foundry 多数据库 SPI 架构、PostgreSQL 与 MySQL 配置、Zero-DDL 动态模型引擎与容器化快速起步。
+description: Foundry 多数据库 SPI 架构、PostgreSQL、MySQL、MariaDB 与 MongoDB 配置、Zero-DDL 动态模型引擎与容器化快速起步。
 ---
 
 # 数据库与存储引擎开发指南
 
-Foundry 采用全新的 **多数据库 SPI (Service Provider Interface) 插件化存储架构**。业务层、领域逻辑服务、AutoCRUD 引擎与 Axum 状态统一依赖 `Database` 门面与标准 Store Traits，**彻底实现底层网络驱动零泄露**。
+Foundry 采用现代化的 **多数据库 SPI (Service Provider Interface) 插件化存储架构**。业务层、领域逻辑服务、AutoCRUD 引擎与 Axum 处理器统一依赖 `Database` 门面与标准 Store Traits，**彻底实现底层网络驱动零泄露**。
 
-根据平台接入规划，支持矩阵按序推进：**PostgreSQL (第一，已完成)** $\rightarrow$ **MySQL (第二，已完成)** $\rightarrow$ **MariaDB (第三，待对接)** $\rightarrow$ **MongoDB (第四，待对接)** $\rightarrow$ **Oracle DB (第五，待对接)**。当前已稳定接入并支持 **PostgreSQL (14+)** 与 **MySQL (8.0+)**。
+Foundry 官方原生支持四大企业级主流数据库：
+1. **PostgreSQL (14+)** - 关系型引擎，支持原生 JSONB 存储与 GIN 倒排索引加速。
+2. **MySQL (8.0+)** - 通用单表引擎，具备覆盖索引与延迟关联 (Deferred Join) 深度分页优化。
+3. **MariaDB (10.5+)** - 针对 MariaDB 方言特化优化，专属连接协议与高效 InnoDB 覆盖索引。
+4. **MongoDB (6.0+)** - 原生 BSON 文档引擎，通过原子 `_counters` 序列提供 `i64` 主键兼容，结合 Wildcard 全量动态索引加速。
+
+*(注：经架构评审，Oracle DB 鉴于其过重的运行时依赖、繁琐的 C 动态库前置条件以及开源社区维护活跃度不足，已正式从路线图中移除。)*
 
 ---
 
@@ -28,17 +34,21 @@ flowchart TD
 
     subgraph Engines ["底层驱动实现 (按需编译)"]
         Registry -->|"postgres:// / postgresql://"| PgEngine["PostgresProvider (JSONB + GIN 倒排索引)"]
-        Registry -->|"mysql:// / mariadb://"| MySqlEngine["MySqlProvider (通用单表 + 覆盖索引 + 延迟关联)"]
+        Registry -->|"mysql://"| MySqlEngine["MySqlProvider (通用单表 + 覆盖索引 + 延迟关联)"]
+        Registry -->|"mariadb://"| MariaEngine["MariaDbProvider (专属方言 + 覆盖索引)"]
+        Registry -->|"mongodb:// / mongodb+srv://"| MongoEngine["MongoProvider (原生 BSON + 原子计数器 + Wildcard 索引)"]
     end
 ```
 
 ### 核心特性
-1. **面向方法调用，驱动零泄露**：上层业务代码无需关心底层是 PostgreSQL 还是 MySQL，统一通过 `state.db.records().create(...)`、`state.db.records().list(...)` 等 Trait 方法访问数据。
+1. **面向方法调用，驱动零泄露**：上层业务代码无需关心底层是 PostgreSQL、MySQL、MariaDB 还是 MongoDB，统一通过 `state.db.records().create(...)`、`state.db.records().list(...)` 等 Trait 方法访问数据。无任何底层连接池类型泄露。
 2. **智能协议自适应**：系统启动时自动分析 `DATABASE_URL` 的协议头并激活对应驱动：
    - `postgres://` 或 `postgresql://` $\rightarrow$ 自动激活 PostgreSQL
-   - `mysql://` 或 `mariadb://` $\rightarrow$ 自动激活 MySQL / MariaDB
-   - 亦可通过环境变量 `DATABASE_TYPE=mysql` 或 `DATABASE_TYPE=postgres` 显式强制指定。
-3. **Cargo Feature 按需编译**：底层驱动通过 Feature Flags 控制，避免不必要的依赖编译膨胀。
+   - `mysql://` $\rightarrow$ 自动激活 MySQL
+   - `mariadb://` $\rightarrow$ 自动激活 MariaDB
+   - `mongodb://` 或 `mongodb+srv://` $\rightarrow$ 自动激活 MongoDB
+   - 亦可通过环境变量 `DATABASE_TYPE=postgres|mysql|mariadb|mongodb` 显式强制指定。
+3. **Cargo Feature 按需编译**：底层驱动通过 Feature Flags 控制，避免不必要的依赖编译膨胀与构建耗时。
 
 ---
 
@@ -46,57 +56,92 @@ flowchart TD
 
 ### Cargo.toml 依赖配置
 
-Foundry 默认开启 `postgres` 特性。若需使用 MySQL，只需在应用的 `Cargo.toml` 中开启 `mysql` 特性：
+Foundry 默认开启 `postgres` 特性。根据你选用的底层数据库，在应用 `Cargo.toml` 中开启对应特性：
 
 ```toml
 [dependencies]
-# 仅使用 PostgreSQL (默认)
+# 1. 仅使用 PostgreSQL (默认)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
-# 或者开启 MySQL 支持
+# 2. 开启 MySQL 支持
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mysql"] }
 
-# 或者同时支持 PostgreSQL 与 MySQL 双驱动
-foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["postgres", "mysql"] }
+# 3. 开启 MariaDB 支持
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mariadb"] }
+
+# 4. 开启 MongoDB 支持
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["mongodb"] }
+
+# 5. 同时开启全部四种数据库引擎
+foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
 ```
 
 ### 环境变量配置 (`.env`)
 
 #### 使用 PostgreSQL：
 ```bash
-DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry_dev
+DATABASE_TYPE=postgres
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-#### 使用 MySQL / MariaDB：
+#### 使用 MySQL：
 ```bash
-DATABASE_URL=mysql://root:root@localhost:3306/foundry
+DATABASE_URL=mysql://root:root@localhost:3306/foundry_dev
+DATABASE_TYPE=mysql
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-> **提示**：当 `AUTO_MIGRATE=true` 时，服务启动时会自动检测数据库是否存在；若不存在会自动建库，并执行对应数据库方言的初始化迁移脚本（包括表结构、索引与默认超级管理员账号）。
+#### 使用 MariaDB：
+```bash
+DATABASE_URL=mariadb://root:root@127.0.0.1:3307/foundry_dev
+DATABASE_TYPE=mariadb
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+#### 使用 MongoDB：
+```bash
+DATABASE_URL=mongodb://127.0.0.1:27017/foundry_dev
+DATABASE_TYPE=mongodb
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+AUTO_MIGRATE=true
+```
+
+> **提示**：当 `AUTO_MIGRATE=true` 时，服务启动时会自动检测数据库是否存在；若不存在会自动建库（SQL 引擎自动建库与执行表结构迁移；MongoDB 自动创建集合与索引），并初始化超级管理员账号。
 
 ---
 
-## 3. 容器化本地开发环境 (Docker / Nerdctl / Podman)
+## 3. 容器化本地开发环境 (Docker / Podman)
 
-通过 `foundry new` 脚手架创建的项目在 `dev/` 目录中预置了 `dev/docker-compose.yml`，也可直接通过容器运行 PostgreSQL、MySQL 与 Redis 服务：
-
-### 启动本地数据库容器：
+通过 `foundry new` 脚手架创建的项目预置了容器化配置文件，你也可以直接通过 Docker 单独启动任意数据库：
 
 ```bash
-# 在生成的工程目录中启动：
-docker compose -f dev/docker-compose.yml up -d
-```
+# PostgreSQL 16
+docker run -d --name foundry-postgres -p 5432:5432 \
+  -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry_dev postgres:16-alpine
 
-默认端口与凭证：
-- **MySQL 8.4**：端口 `3306`，账号 `root`，密码 `root`，数据库 `foundry`。
-- **PostgreSQL 18.6**：端口 `5432`，账号 `postgres`，密码 `postgrespassword`，数据库 `foundry`。
-- **Redis 8.0**：端口 `6379`。
+# MySQL 8.4
+docker run -d --name foundry-mysql -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry_dev mysql:8.4
+
+# MariaDB 11.4
+docker run -d --name foundry-mariadb -p 3307:3306 \
+  -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=foundry_dev mariadb:11.4
+
+# MongoDB 7.0
+docker run -d --name foundry-mongodb -p 27017:27017 \
+  mongo:7.0
+
+# Redis 8.0
+docker run -d --name foundry-redis -p 6379:6379 redis:alpine
+```
 
 ---
 
@@ -150,48 +195,36 @@ pub async fn create_article_handler(
 
 ---
 
-## 5. MySQL 通用单表架构与深度调优
+## 5. 存储引擎架构与深度调优
 
-针对 MySQL 无 GIN 倒排索引的特性，Foundry 落地了**单表通用存储 (Universal Single-Table) 架构**：
+### 5.1 PostgreSQL 引擎
+- **存储方案**：标准关系表 + 原生 `JSONB` 格式。
+- **倒排索引**：通过 `CREATE INDEX ... USING gin (data)` 建立 GIN 倒排索引，使得对任意深度嵌套的 JSON 属性查询达到毫秒级响应。
+- **原子性保障**：利用 `INSERT ... RETURNING *` 原生语法，单次网络往返即可完成记录插入并提取完整字段。
 
-### 5.1 覆盖复合索引设计
-```sql
-CREATE TABLE IF NOT EXISTS model_records (
-    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    model_id BIGINT NOT NULL,
-    system_id VARCHAR(32) NOT NULL,
-    model_slug VARCHAR(48) NOT NULL,
-    data JSON NOT NULL,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    deleted_at DATETIME(6) NULL,
-    INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
-    INDEX idx_system_query (system_id, deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+### 5.2 MySQL 通用单表引擎
+- **覆盖索引设计**：
+  ```sql
+  INDEX idx_model_query (model_id, deleted_at, created_at DESC, id DESC),
+  INDEX idx_system_query (system_id, deleted_at)
+  ```
+- **延迟关联 (Deferred Join) 优化**：在百万级深度分页时（如 `OFFSET 100000 LIMIT 20`），先仅扫描索引获取目标主键 ID，再回表获取完整的 JSON 数据，从根本上解决扫描大 JSON 字段带来的 IO 瓶颈。
+- **原子事务重查**：通过事务内部原子组合 `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT`，统一对外提供强一致返回。
 
-### 5.2 延迟关联分页 (Deferred Join) 优化
-当数据量达到百万级时，传统 `SELECT * LIMIT 100000, 20` 会因扫描大 JSON 列导致严重的内存与 IO 开销。Foundry 的 `MySqlRecordEngine` 自动采用**延迟关联分页**：
+### 5.3 MariaDB 专属引擎
+- **协议自适应**：支持 `mariadb://` 专属连接串，并在底层进行自动参数兼容与规范化。
+- **方言脚本**：提供针对 MariaDB 10.5+ 的特化初始化脚本，采用高效 UTF8MB4 字符集与高并发 InnoDB 配置。
+- **性能优化**：继承延迟关联索引架构，充分发挥 MariaDB 查询优化器在单表 JSON 场景下的性能潜力。
 
-```sql
--- 1. 先仅扫描覆盖索引获取目标主键 ID (极速 Index Scan)
--- 2. 再通过主键回表拉取对应的完整 data JSON
-SELECT r.id, r.system_id, r.model_slug, r.data, r.created_at, r.updated_at, r.deleted_at
-FROM model_records r
-INNER JOIN (
-    SELECT id
-    FROM model_records
-    WHERE model_id = ? AND deleted_at IS NULL
-    ORDER BY created_at DESC, id DESC
-    LIMIT ? OFFSET ?
-) t ON r.id = t.id
-ORDER BY r.created_at DESC, r.id DESC;
-```
-
-此优化将深度分页的执行时间从秒级降至毫秒级，彻底消除性能瓶颈。
-
-### 5.3 解决 MySQL 无 `RETURNING` 语法的原子重查
-在数据插入时，PostgreSQL 支持 `INSERT ... RETURNING *`，而 MySQL 仅返回受影响行数与自增 ID。Foundry 在事务内部原子组合 `INSERT` $\rightarrow$ `last_insert_id()` $\rightarrow$ `SELECT`，对外统一呈现原子创建并返回完整实体的强一致体验。
+### 5.4 MongoDB 原生文档引擎
+- **原生文档存储**：直接将动态记录以 BSON 格式持久化在 `model_records` 集合中。
+- **原子自增序列保证**：通过独立的 `_counters` 集合与 `findOneAndUpdate` 原语（`$inc`），保证动态记录生成严格单调自增的 64 位整数主键 (`id: i64`)，确保与 SQL 引擎公共契约 100% 保持一致。
+- **Wildcard 全量动态索引**：服务初始化时自动在数据属性上创建 Wildcard 索引：
+  ```javascript
+  db.model_records.createIndex({ "data.$**": 1 })
+  ```
+  对动态模型中的任意属性（例如 `data.category = "tech"`）过滤查询时，无需手动创建独立索引即可自动享受索引加速。
+- **原生管道与过滤器**：将分页参数、软删除 (`deleted_at: null`) 与租户隔离范围直接转换为高效的原生 BSON 查询与投影过滤器。
 
 ---
 
@@ -200,7 +233,7 @@ ORDER BY r.created_at DESC, r.id DESC;
 通过 `db.get_typed_config::<T>(&system_slug, key)` 可以直接将动态配置反序列化为类型安全的结构体：
 
 ```rust
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct PaymentConfig {
     pub api_key: String,
     pub merchant_id: String,
@@ -218,15 +251,17 @@ let pay_cfg: Option<PaymentConfig> = state
 
 ## 7. 编写业务自定义原生 SQL 迁移
 
-如果你的业务子系统需要独立的实体物理表，可直接在 `migrations/` 目录下追加 SQL 迁移脚本：
+如果你的业务子系统需要独立的物理实体表，可直接在 `migrations/` 目录下追加 SQL 迁移脚本：
 
 ```text
 my-app/
 └── migrations/
     ├── postgres/
     │   └── 001_create_orders.sql
-    └── mysql/
+    ├── mysql/
+    │   └── 001_create_orders.sql
+    └── mariadb/
         └── 001_create_orders.sql
 ```
 
-系统会根据当前激活的数据库引擎自动执行对应方言目录下的迁移。
+系统在执行 `foundry migrate` 或 `AUTO_MIGRATE=true` 时，会自动感知当前激活的数据库引擎，并执行对应方言目录下的迁移脚本。

@@ -379,9 +379,11 @@ impl SubsystemModule for SampleSubsystem {
     // 9. .env.example
     let env_example = r#"HOST=0.0.0.0
 PORT=8080
-# Database Connection URL (Auto-routes by scheme: postgres:// or mysql://)
+# Database Connection URL (Auto-routes by scheme: postgres://, mysql://, mariadb://, mongodb://)
 DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 # DATABASE_URL=mysql://root:root@localhost:3306/foundry
+# DATABASE_URL=mariadb://root:root@localhost:3307/foundry
+# DATABASE_URL=mongodb://127.0.0.1:27017/foundry
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 # Auto-migrate database schema on server startup (true: automatic sync; false: strict manual DBA control)

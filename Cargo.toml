@@ -57,6 +57,7 @@ validator = { version = "0.20", features = ["derive"] }
 # Database & Caching
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "chrono", "uuid", "json", "macros"] }
 redis = { version = "0.29", features = ["tokio-comp", "aio", "connection-manager"] }
+mongodb = { version = "3.2" }
 
 # Primitives & Utilities
 uuid = { version = "1.15", features = ["v4", "v7", "serde"] }

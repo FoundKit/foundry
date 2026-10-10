@@ -134,7 +134,7 @@ async fn main() -> anyhow::Result<()> {
 1. **Framework & Application Total Decoupling**: Application developers build inside their own Git repository. Upgrading Foundry requires only `cargo update` with zero upstream git merge conflicts.
 2. **High-Level Facade (`foundry`) & Public APIs**: Intuitive `FoundryApp::builder()` API, type-safe error envelopes (`AppError`, `AppResult`), standardized response wrappers (`ApiResponse`), and rich re-exports in `foundry::prelude::*`.
 3. **Subsystem Architecture**: Organize business domains into self-contained subsystems implementing `SubsystemModule` (controllers, logic services, validation DTOs, and custom admin views).
-4. **Zero-DDL Dynamic Storage & Multi-Database SPI**: Define system configs and dynamic data models visually without DDL migrations. Built-in pluggable support for PostgreSQL and MySQL 8.0+, with MariaDB (3rd), MongoDB (4th), and Oracle DB (5th) planned in sequence.
+4. **Zero-DDL Dynamic Storage & Multi-Database SPI**: Define system configs and dynamic data models visually without DDL migrations. Built-in pluggable support for PostgreSQL, MySQL 8.0+, MariaDB 10.5+, and MongoDB 6.0+ via clean SPI plugin architecture.
 5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/v1/s/{system_slug}/{model_slug}`) with pagination and search across all supported databases.
 6. **Decoupled Admin Shell & SDK Bridge**: The Admin SPA (`apps/admin`) embeds subsystem custom pages (HTML, React, Vue) inside sandboxed views, injecting JWT authentication and theme settings automatically via `postMessage` protocol.
 7. **Hierarchical RBAC**: Fine-grained role-based access control with Super Admins (`super_admin`), Platform Admins (`admin`), and Topic-Scoped Admins (`topic_admin`).
@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
 |---|---|
 | [`foundry`](crates/foundry) | Top-level facade crate providing `FoundryApp`, `FoundryBuilder`, and `prelude`. |
 | [`foundry_core`](crates/foundry_core) | Core primitives, `SystemContext`, `SubsystemModule`, `AppError`, and response models. |
-| [`foundry_storage`](crates/foundry_storage) | Multi-Database SPI (PostgreSQL, MySQL; MariaDB, MongoDB, Oracle DB planned), Redis cache, Zero-DDL dynamic models, and migrations. |
+| [`foundry_storage`](crates/foundry_storage) | Multi-Database SPI (PostgreSQL, MySQL, MariaDB, MongoDB), Redis cache, Zero-DDL dynamic models, and migrations. |
 | [`foundry_auth`](crates/foundry_auth) | Admin identities, Argon2id hashing, JWT token service, and Topic RBAC guards. |
 | [`foundry_engine`](crates/foundry_engine) | Unified Axum routing, Auto-CRUD handler engine, and audit logging middleware. |
 | [`foundry_extension`](crates/foundry_extension) | Lifecycle mutation hook pipelines and extension mechanisms. |

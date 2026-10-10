@@ -85,6 +85,63 @@ impl Database {
         }
     }
 
+    /// Creates an offline dummy Database instance for route and controller tests when running with MariaDB only
+    #[cfg(all(feature = "mariadb", not(feature = "postgres"), not(feature = "mysql")))]
+    pub fn dummy() -> Self {
+        let pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://dummy:dummy@localhost:3307/dummy")
+            .expect("Failed to create dummy pool");
+        Self {
+            records: Arc::new(crate::engines::mysql::records::MySqlRecordEngine::new(
+                pool.clone(),
+            )),
+            models: Arc::new(crate::engines::mysql::stores::MySqlModelEngine::new(
+                pool.clone(),
+            )),
+            systems: Arc::new(crate::engines::mysql::stores::MySqlSystemEngine::new(
+                pool.clone(),
+            )),
+            configs: Arc::new(crate::engines::mysql::stores::MySqlConfigEngine::new(
+                pool.clone(),
+            )),
+            admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(
+                pool.clone(),
+            )),
+            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(pool)),
+        }
+    }
+
+    /// Creates an offline dummy Database instance for route and controller tests when running with MongoDB only
+    #[cfg(all(
+        feature = "mongodb",
+        not(feature = "postgres"),
+        not(feature = "mysql"),
+        not(feature = "mariadb")
+    ))]
+    pub fn dummy() -> Self {
+        let client = mongodb::Client::with_uri_str("mongodb://127.0.0.1:27017")
+            .expect("Failed to create dummy MongoDB client");
+        let db = client.database("dummy");
+        Self {
+            records: Arc::new(crate::engines::mongodb::records::MongoRecordEngine::new(
+                db.clone(),
+            )),
+            models: Arc::new(crate::engines::mongodb::stores::MongoModelEngine::new(
+                db.clone(),
+            )),
+            systems: Arc::new(crate::engines::mongodb::stores::MongoSystemEngine::new(
+                db.clone(),
+            )),
+            configs: Arc::new(crate::engines::mongodb::stores::MongoConfigEngine::new(
+                db.clone(),
+            )),
+            admins: Arc::new(crate::engines::mongodb::stores::MongoAdminEngine::new(
+                db.clone(),
+            )),
+            audit: Arc::new(crate::engines::mongodb::stores::MongoAuditEngine::new(db)),
+        }
+    }
+
     /// Automatically routes by protocol or explicit DATABASE_TYPE env var
     pub async fn connect(url: &str, max_connections: u32, auto_migrate: bool) -> AppResult<Self> {
         let explicit_type = std::env::var("DATABASE_TYPE").ok();
