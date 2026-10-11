@@ -47,10 +47,6 @@ cd my-app
 ```text
 my-app/
 ├── Cargo.toml                # 预先配置了 foundry = { git = "...", branch = "main" }
-├── dev/                      # 本地开发专用资源目录 (.gitignore 忽略)
-│   ├── docker-compose.yml    # 本地 PostgreSQL 18 与 Redis 7 容器编排 (挂载 init.sql 自动初始化)
-│   ├── init-db.sh            # 本地数据库初始化与重置脚本
-│   └── init-dev-db.sql       # 独立本地数据库创建引导脚本
 ├── src/
 │   ├── main.rs               # 应用启动入口 (FoundryApp::builder)
 │   └── systems/
@@ -61,8 +57,7 @@ my-app/
 │           ├── dto/          # 请求参数与 validator 校验
 │           ├── custom_pages/ # 自定义 Admin 运营看板 (HTML/React)
 │           └── mod.rs
-├── migrations/               # 业务专属数据库迁移脚本目录
-│   └── init.sql              # 平台初始化全量表结构与初始超管账号 (可自由审查与严格管控)
+├── migrations/               # （可选）按需生成的方言迁移脚本目录 (执行 `foundry ddl` 时生成)
 ├── .env                      # 本地环境变量配置 (含 AUTO_MIGRATE 开关)
 └── README.md
 ```
@@ -94,18 +89,22 @@ async-trait = "0.1"
 
 ### 3. 启动并初始化数据库与缓存服务
 
-#### 方式一：脚手架本地开发容器（推荐开发使用）
-通过 `foundry new` 脚手架生成的应用在 `dev/` 目录中预置了容器编排配置（`dev/docker-compose.yml`）：
+Foundry 应用通过 `.env` 中的 `DATABASE_URL` 连接底层数据库。
+
+#### 方式一：使用 Docker 启动本地数据库容器
+可直接使用 Docker 启动所需的数据库与 Redis 容器：
 
 ```bash
-# 在生成的应用目录中启动本地数据库与 Redis
-docker compose -f dev/docker-compose.yml up -d
+# PostgreSQL 18 与 Redis 7
+docker run -d --name my-postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry postgres:18-alpine
+docker run -d --name my-redis -p 6379:6379 redis:7-alpine
+
+# 或使用 MySQL 8.4：
+# docker run -d --name my-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry mysql:8.4
 ```
 
-容器启动时会自动将 `migrations/` 初始化脚本挂载到容器中，首次启动自动完成建库、建表、覆盖索引创建与初始超级管理员账号注入。
-
 #### 方式二：连接已有独立数据库
-如果连接已有实例，系统在 `AUTO_MIGRATE=true` 时会自动完成数据库初始化。
+如果连接已有实例，将 `.env` 中的 `DATABASE_URL` 与 `DATABASE_TYPE` 调整为对应的连接串即可。当 `AUTO_MIGRATE=true` 时，执行 `cargo run` 框架会自动完成建库/集合、创建覆盖索引并注入超级管理员账号。
 
 检查项目根目录下的 `.env` 配置，根据所选数据库类型配置连接串：
 

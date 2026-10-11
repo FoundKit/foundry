@@ -126,24 +126,31 @@ crates/foundry_storage/
     │   ├── mod.rs
     │   ├── provider.rs                # StorageDriverProvider trait 定义
     │   └── registry.rs                # StorageRegistry: 驱动注册与根据连接串查找
+    ├── orm/                           # 【ORM 优先架构层】Prisma 风格强类型模型与查询构建器
+    │   ├── mod.rs
+    │   ├── compiler.rs                # 动态方言 DDL 编译器 (PostgreSQL, MySQL, MariaDB)
+    │   ├── dialect.rs                 # 方言枚举与参数占位符 ($1 vs ?)
+    │   ├── models.rs                  # 7 大核心平台表的 EntitySchema 规范定义
+    │   ├── query.rs                   # 封装的 CRUD 查询构建器 (OrmSelect, OrmInsert, OrmUpdate, OrmDelete)
+    │   └── registry.rs                # 线程安全全局 ORM 模型注册表 (OrmRegistry)
     └── engines/                       # 【具体策略实现层】各个数据库的特化方言与驱动实现
         ├── mod.rs
         ├── postgres/                  # PostgreSQL 引擎实现
         │   ├── mod.rs
-        │   ├── provider.rs            # PostgresProvider
-        │   ├── records.rs             # GIN 索引与 JSONB 操作
+        │   ├── provider.rs            # PostgresProvider (ORM 编译 DDL)
+        │   ├── records.rs             # ORM 查询构建器 CRUD、GIN 索引与 JSONB 操作
         │   └── stores.rs              # models, systems, admins 等实现
         ├── mysql/                     # MySQL 引擎实现
         │   ├── mod.rs
-        │   ├── provider.rs            # MySqlProvider
-        │   ├── records.rs             # MySQL JSON 操作、自增主键与延迟关联分页
+        │   ├── provider.rs            # MySqlProvider (ORM 编译 DDL)
+        │   ├── records.rs             # ORM 查询构建器 CRUD、自增主键与延迟关联分页
         │   └── stores.rs              # 各基础表实现
         ├── mariadb/                   # MariaDB 专属引擎实现
         │   ├── mod.rs
-        │   └── provider.rs            # MariaDbProvider
-        └── mongodb/                   # MongoDB 原生文档引擎
+        │   └── provider.rs            # MariaDbProvider (ORM 编译 DDL)
+        └── mongodb/                   # MongoDB 原生文档引擎 (Fallback 策略)
             ├── mod.rs
-            ├── provider.rs            # MongoProvider
+            ├── provider.rs            # MongoProvider (init.js 脚本)
             ├── records.rs             # 原生 BSON 文档 CRUD 与 Wildcard 动态索引
             ├── counters.rs            # 保证外部 i64 主键兼容的原子计数器序列
             └── stores.rs              # 集合存储实现
@@ -173,6 +180,14 @@ pub trait StorageDriverProvider: Send + Sync {
 
     /// 执行该数据库特有的初始化与方言迁移脚本
     async fn run_migrations(&self, connection_url: &str) -> AppResult<()>;
+
+    /// 获取由代码 ORM 动态编译或内嵌在二进制驱动中的基准方言 DDL / 初始化脚本
+    fn get_baseline_ddl(&self) -> String;
+
+    /// 默认迁移脚本文件名 (如 init.sql 或 init.js)
+    fn default_migration_filename(&self) -> &'static str {
+        "init.sql"
+    }
 }
 ```
 

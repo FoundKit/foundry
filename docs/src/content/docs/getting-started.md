@@ -47,10 +47,6 @@ The CLI generates a clean, self-contained Rust project with a pre-configured Git
 ```text
 my-app/
 ├── Cargo.toml                # Pre-configured with: foundry = { git = "...", branch = "main" }
-├── dev/                      # Dedicated local dev resources (.gitignore'd)
-│   ├── docker-compose.yml    # Local PostgreSQL 18 & Redis 7 stack (auto-initializes via init.sql mount)
-│   ├── init-db.sh            # Local database initialization & reset script
-│   └── init-dev-db.sql       # Standalone local database bootstrap script
 ├── src/
 │   ├── main.rs               # Application bootstrap with FoundryApp::builder()
 │   └── systems/
@@ -61,8 +57,7 @@ my-app/
 │           ├── dto/          # Request validation schemas
 │           ├── custom_pages/ # Custom Admin UI Studio
 │           └── mod.rs
-├── migrations/               # User database migrations directory
-│   └── init.sql              # Platform schema & initial superadmin seed (reviewable & strictly controllable)
+├── migrations/               # (Optional) On-demand generated via `foundry ddl` (init.sql / init.js)
 ├── .env                      # Local environment configuration (with AUTO_MIGRATE switch)
 └── README.md
 ```
@@ -94,18 +89,22 @@ async-trait = "0.1"
 
 ### 3. Start & Initialize Database Services
 
-#### Option 1: Scaffolded Dev Stack (Recommended for Local Dev)
-Projects generated via `foundry new` include a ready-to-use local development container stack in `dev/docker-compose.yml`:
+Foundry connects to your database via `DATABASE_URL` in `.env`.
+
+#### Option 1: Run Local Containers (Docker)
+You can start your preferred database and Redis instance using standard Docker commands:
 
 ```bash
-# Start local development database and Redis in your application
-docker compose -f dev/docker-compose.yml up -d
+# PostgreSQL 18 & Redis 7
+docker run -d --name my-postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry postgres:18-alpine
+docker run -d --name my-redis -p 6379:6379 redis:7-alpine
+
+# Or for MySQL 8.4:
+# docker run -d --name my-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry mysql:8.4
 ```
 
-The compose file automatically mounts dialect migration scripts from `migrations/` into the container, bootstrapping the schema, covering indexes, and initial superadmin credentials on first startup.
-
 #### Option 2: Connect Existing Databases
-If connecting to an external database, Foundry will automatically run schema checks when `AUTO_MIGRATE=true`.
+If connecting to an external database, simply update `DATABASE_URL` and `DATABASE_TYPE` in `.env`. When `AUTO_MIGRATE=true`, Foundry will automatically run schema checks, initialize tables/indexes, and seed the superadmin user on startup (`cargo run`).
 
 Configure your `.env` for your preferred database:
 

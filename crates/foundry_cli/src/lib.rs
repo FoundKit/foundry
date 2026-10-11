@@ -20,6 +20,9 @@ enum Commands {
     New {
         /// Project directory name (e.g. my-app, blog-server)
         name: String,
+        /// Target database engine (postgres, mysql, mariadb, mongodb)
+        #[arg(long, short = 'd', alias = "database", default_value = "postgres")]
+        db: String,
         /// Optional path to local foundry crate (useful for local development or monorepos)
         #[arg(long)]
         path: Option<String>,
@@ -38,10 +41,35 @@ enum Commands {
         #[command(subcommand)]
         action: SystemCommands,
     },
-    /// Apply database migrations
+    /// Apply database migrations, or generate dialect DDL files
     Migrate {
         #[arg(short, long, env = "DATABASE_URL")]
         database_url: Option<String>,
+        /// Explicit database type override (postgres, mysql, mariadb, mongodb)
+        #[arg(long, short = 'd', alias = "database", env = "DATABASE_TYPE")]
+        database_type: Option<String>,
+        /// Generate dialect DDL migration file into migrations/ without applying to database
+        #[arg(long, short = 'g', alias = "gen")]
+        generate: bool,
+        /// Target output file path when generating DDL (defaults to migrations/init.sql or init.js)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+    /// Generate dialect-specific DDL / migration scripts
+    #[command(alias = "generate-ddl", alias = "gen-ddl")]
+    Ddl {
+        /// Target database engine (postgres, mysql, mariadb, mongodb)
+        #[arg(
+            long,
+            short = 'd',
+            alias = "database",
+            env = "DATABASE_TYPE",
+            default_value = "postgres"
+        )]
+        db: String,
+        /// Target output file path (defaults to migrations/init.sql or migrations/init.js, or '-' for stdout)
+        #[arg(short, long)]
+        output: Option<String>,
     },
     /// Validate project structure and manifest integrity
     Validate {
@@ -72,6 +100,169 @@ enum SystemCommands {
     },
 }
 
+/// Supported database engines for scaffolding and migrations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatabaseKind {
+    Postgres,
+    MySql,
+    MariaDb,
+    MongoDb,
+}
+
+impl std::str::FromStr for DatabaseKind {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "postgres" | "postgresql" | "pg" => Ok(DatabaseKind::Postgres),
+            "mysql" => Ok(DatabaseKind::MySql),
+            "mariadb" => Ok(DatabaseKind::MariaDb),
+            "mongodb" | "mongo" => Ok(DatabaseKind::MongoDb),
+            other => anyhow::bail!(
+                "Unsupported database '{}'. Supported databases are: postgres, mysql, mariadb, mongodb.",
+                other
+            ),
+        }
+    }
+}
+
+const MONGO_README: &str = r#"# MongoDB Initialization & Migrations
+
+Foundry adopts a **Zero-DDL Document Architecture** with MongoDB:
+- **No SQL DDL migrations needed**: Dynamic schema models and entity records are stored in native BSON collections.
+- **Automatic Initialization**: When `AUTO_MIGRATE=true` (default), the Foundry server creates all collections, indexes, and the default superadmin user automatically upon startup.
+- **Manual DBA Control**: When `AUTO_MIGRATE=false`, DBA or deployment pipelines can execute the initialization script manually:
+  ```bash
+  mongosh "mongodb://127.0.0.1:27017/foundry" migrations/init.js
+  ```
+"#;
+
+impl DatabaseKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DatabaseKind::Postgres => "postgres",
+            DatabaseKind::MySql => "mysql",
+            DatabaseKind::MariaDb => "mariadb",
+            DatabaseKind::MongoDb => "mongodb",
+        }
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            DatabaseKind::Postgres => "PostgreSQL (14+)",
+            DatabaseKind::MySql => "MySQL (8.0+)",
+            DatabaseKind::MariaDb => "MariaDB (10.5+)",
+            DatabaseKind::MongoDb => "MongoDB (6.0+)",
+        }
+    }
+
+    pub fn default_url(&self, db_name: &str) -> String {
+        match self {
+            DatabaseKind::Postgres => {
+                format!(
+                    "postgres://postgres:postgrespassword@localhost:5432/{}",
+                    db_name
+                )
+            }
+            DatabaseKind::MySql => format!("mysql://root:root@localhost:3306/{}", db_name),
+            DatabaseKind::MariaDb => format!("mariadb://root:root@localhost:3307/{}", db_name),
+            DatabaseKind::MongoDb => format!("mongodb://127.0.0.1:27017/{}", db_name),
+        }
+    }
+
+    pub fn ddl_content(&self) -> String {
+        foundry_storage::Database::get_ddl(self.as_str())
+            .unwrap_or_else(|_| self.fallback_ddl().to_string())
+    }
+
+    pub fn default_migration_filename(&self) -> &'static str {
+        foundry_storage::Database::get_default_migration_filename(self.as_str()).unwrap_or(
+            match self {
+                DatabaseKind::MongoDb => "init.js",
+                _ => "init.sql",
+            },
+        )
+    }
+
+    fn fallback_ddl(&self) -> &'static str {
+        match self {
+            DatabaseKind::Postgres => {
+                include_str!("../../foundry_storage/migrations/postgres/init.sql")
+            }
+            DatabaseKind::MySql => include_str!("../../foundry_storage/migrations/mysql/init.sql"),
+            DatabaseKind::MariaDb => {
+                include_str!("../../foundry_storage/migrations/mariadb/init.sql")
+            }
+            DatabaseKind::MongoDb => {
+                include_str!("../../foundry_storage/migrations/mongodb/init.js")
+            }
+        }
+    }
+
+    pub fn docker_run_hint(&self, pkg_name: &str) -> String {
+        match self {
+            DatabaseKind::Postgres => format!(
+                r#"```bash
+# 启动本地 PostgreSQL 18
+docker run -d --name {pkg_name}-postgres -p 5432:5432 \
+  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry \
+  postgres:18-alpine
+
+# 启动本地 Redis 7
+docker run -d --name {pkg_name}-redis -p 6379:6379 redis:7-alpine
+```"#
+            ),
+            DatabaseKind::MySql => format!(
+                r#"```bash
+# 启动本地 MySQL 8.4
+docker run -d --name {pkg_name}-mysql -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry \
+  mysql:8.4
+
+# 启动本地 Redis 7
+docker run -d --name {pkg_name}-redis -p 6379:6379 redis:7-alpine
+```"#
+            ),
+            DatabaseKind::MariaDb => format!(
+                r#"```bash
+# 启动本地 MariaDB 11
+docker run -d --name {pkg_name}-mariadb -p 3307:3306 \
+  -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=foundry \
+  mariadb:11
+
+# 启动本地 Redis 7
+docker run -d --name {pkg_name}-redis -p 6379:6379 redis:7-alpine
+```"#
+            ),
+            DatabaseKind::MongoDb => format!(
+                r#"```bash
+# 启动本地 MongoDB 7
+docker run -d --name {pkg_name}-mongodb -p 27017:27017 \
+  mongo:7
+
+# 启动本地 Redis 7
+docker run -d --name {pkg_name}-redis -p 6379:6379 redis:7-alpine
+```"#
+            ),
+        }
+    }
+
+    pub fn dba_migration_hint(&self) -> &'static str {
+        match self {
+            DatabaseKind::Postgres => {
+                "psql -h 127.0.0.1 -U postgres -d foundry -f migrations/init.sql"
+            }
+            DatabaseKind::MySql => "mysql -h 127.0.0.1 -u root -p foundry < migrations/init.sql",
+            DatabaseKind::MariaDb => {
+                "mariadb -h 127.0.0.1 -P 3307 -u root -p foundry < migrations/init.sql"
+            }
+            DatabaseKind::MongoDb => {
+                "mongosh \"mongodb://127.0.0.1:27017/foundry\" migrations/init.js"
+            }
+        }
+    }
+}
+
 pub async fn run_cli() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
     let cli = Cli::parse();
@@ -79,6 +270,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
     match cli.command {
         Commands::New {
             name,
+            db,
             path,
             git,
             branch,
@@ -91,6 +283,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
                     git: git.as_deref(),
                     branch: branch.as_deref(),
                     version: version.as_deref(),
+                    db: Some(&db),
                 },
             )?;
         }
@@ -106,18 +299,57 @@ pub async fn run_cli() -> anyhow::Result<()> {
                 list_subsystems(&path)?;
             }
         },
-        Commands::Migrate { database_url } => {
+        Commands::Migrate {
+            database_url,
+            database_type,
+            generate,
+            output,
+        } => {
+            if generate {
+                let explicit_type = database_type
+                    .or_else(|| std::env::var("DATABASE_TYPE").ok())
+                    .unwrap_or_else(|| "postgres".to_string());
+                let db_kind = explicit_type.parse::<DatabaseKind>()?;
+                if output.as_deref() == Some("-") {
+                    print!("{}", db_kind.ddl_content());
+                } else {
+                    let path =
+                        generate_ddl(Path::new("."), db_kind, output.as_deref().map(Path::new))?;
+                    println!(
+                        "✅ Generated {} DDL migration at {:?}",
+                        db_kind.display_name(),
+                        path
+                    );
+                }
+                return Ok(());
+            }
+
             let db_url = database_url.unwrap_or_else(|| {
                 std::env::var("DATABASE_URL").unwrap_or_else(|_| {
                     "postgres://postgres:postgrespassword@localhost:5432/foundry".to_string()
                 })
             });
+            let explicit_type = database_type.or_else(|| std::env::var("DATABASE_TYPE").ok());
             println!(
-                "Connecting to database and running migrations for {}...",
-                db_url
+                "Connecting to database and running migrations for {} (type: {:?})...",
+                db_url,
+                explicit_type.as_deref().unwrap_or("auto-detect")
             );
-            foundry_storage::Database::run_migrations(&db_url, None).await?;
+            foundry_storage::Database::run_migrations(&db_url, explicit_type.as_deref()).await?;
             println!("✅ Database migrations applied successfully.");
+        }
+        Commands::Ddl { db, output } => {
+            let db_kind = db.parse::<DatabaseKind>()?;
+            if output.as_deref() == Some("-") {
+                print!("{}", db_kind.ddl_content());
+            } else {
+                let path = generate_ddl(Path::new("."), db_kind, output.as_deref().map(Path::new))?;
+                println!(
+                    "✅ Generated {} DDL migration at {:?}",
+                    db_kind.display_name(),
+                    path
+                );
+            }
         }
         Commands::Validate { path } => {
             validate_project(&path)?;
@@ -127,6 +359,43 @@ pub async fn run_cli() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Generate dialect DDL / migration files into the target project or directory.
+/// When output is None, creates `migrations/` under `base_dir` and writes the dialect script.
+pub fn generate_ddl(
+    base_dir: &Path,
+    db_kind: DatabaseKind,
+    output: Option<&Path>,
+) -> anyhow::Result<PathBuf> {
+    let content = db_kind.ddl_content();
+    let target_path = match output {
+        Some(p) => {
+            let full_path = if p.is_absolute() {
+                p.to_path_buf()
+            } else {
+                base_dir.join(p)
+            };
+            if let Some(parent) = full_path.parent()
+                && !parent.as_os_str().is_empty()
+            {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(&full_path, &content)?;
+            full_path
+        }
+        None => {
+            let dir = base_dir.join("migrations");
+            fs::create_dir_all(&dir)?;
+            let file_path = dir.join(db_kind.default_migration_filename());
+            fs::write(&file_path, &content)?;
+            if db_kind == DatabaseKind::MongoDb {
+                let _ = fs::write(dir.join("README.md"), MONGO_README);
+            }
+            file_path
+        }
+    };
+    Ok(target_path)
+}
+
 /// Project scaffolding options
 #[derive(Debug, Clone, Default)]
 pub struct ProjectOptions<'a> {
@@ -134,6 +403,7 @@ pub struct ProjectOptions<'a> {
     pub git: Option<&'a str>,
     pub branch: Option<&'a str>,
     pub version: Option<&'a str>,
+    pub db: Option<&'a str>,
 }
 
 /// Create a new standalone user application
@@ -147,29 +417,51 @@ pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<
         anyhow::bail!("Directory '{:?}' already exists.", project_dir);
     }
 
-    println!("🚀 Creating new Foundry application: {}...", name);
+    let db_kind = opts.db.unwrap_or("postgres").parse::<DatabaseKind>()?;
+
+    println!(
+        "🚀 Creating new Foundry application: {} (Database: {})...",
+        name,
+        db_kind.display_name()
+    );
 
     fs::create_dir_all(project_dir.join("src/systems/sample/controllers"))?;
     fs::create_dir_all(project_dir.join("src/systems/sample/logic"))?;
     fs::create_dir_all(project_dir.join("src/systems/sample/dto"))?;
     fs::create_dir_all(project_dir.join("src/systems/sample/custom_pages"))?;
-    fs::create_dir_all(project_dir.join("migrations"))?;
-    fs::write(
-        project_dir.join("migrations/init.sql"),
-        include_str!("../../foundry_storage/migrations/init.sql"),
-    )?;
     fs::create_dir_all(project_dir.join("config"))?;
-    fs::create_dir_all(project_dir.join("dev"))?;
 
     // 1. Cargo.toml
-    let foundry_dep = if let Some(p) = opts.local_path {
-        format!(r#"foundry = {{ path = "{}" }}"#, p)
-    } else if let Some(v) = opts.version {
-        format!(r#"foundry = "{}"#, v)
+    let foundry_dep = if db_kind == DatabaseKind::Postgres {
+        if let Some(p) = opts.local_path {
+            format!(r#"foundry = {{ path = "{}" }}"#, p)
+        } else if let Some(v) = opts.version {
+            format!(r#"foundry = "{}"#, v)
+        } else {
+            let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
+            let branch = opts.branch.unwrap_or("main");
+            format!(r#"foundry = {{ git = "{}", branch = "{}" }}"#, repo, branch)
+        }
     } else {
-        let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
-        let branch = opts.branch.unwrap_or("main");
-        format!(r#"foundry = {{ git = "{}", branch = "{}" }}"#, repo, branch)
+        let feat = db_kind.as_str();
+        if let Some(p) = opts.local_path {
+            format!(
+                r#"foundry = {{ path = "{}", default-features = false, features = ["standard", "{}"] }}"#,
+                p, feat
+            )
+        } else if let Some(v) = opts.version {
+            format!(
+                r#"foundry = {{ version = "{}", default-features = false, features = ["standard", "{}"] }}"#,
+                v, feat
+            )
+        } else {
+            let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
+            let branch = opts.branch.unwrap_or("main");
+            format!(
+                r#"foundry = {{ git = "{}", branch = "{}", default-features = false, features = ["standard", "{}"] }}"#,
+                repo, branch, feat
+            )
+        }
     };
 
     let cargo_toml = format!(
@@ -376,142 +668,48 @@ impl SubsystemModule for SampleSubsystem {
 "#;
     fs::write(project_dir.join("src/systems/sample/mod.rs"), sample_mod)?;
 
-    // 9. .env.example
-    let env_example = r#"HOST=0.0.0.0
+    // 9. .env.example & .env
+    let active_url = db_kind.default_url("foundry");
+    let active_type = db_kind.as_str();
+
+    let env_example = format!(
+        r#"HOST=0.0.0.0
 PORT=8080
-# Database Connection URL (Auto-routes by scheme: postgres://, mysql://, mariadb://, mongodb://)
-DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+# Database Configuration ({db_display})
+DATABASE_URL={active_url}
+DATABASE_TYPE={active_type}
+
+# Alternative Database Options:
+# DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 # DATABASE_URL=mysql://root:root@localhost:3306/foundry
 # DATABASE_URL=mariadb://root:root@localhost:3307/foundry
 # DATABASE_URL=mongodb://127.0.0.1:27017/foundry
+
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 # Auto-migrate database schema on server startup (true: automatic sync; false: strict manual DBA control)
 AUTO_MIGRATE=true
-"#;
-    fs::write(project_dir.join(".env.example"), env_example)?;
-    fs::write(project_dir.join(".env"), env_example)?;
-
-    // 10. dev/docker-compose.yml
-    let docker_compose = format!(
-        r#"services:
-  postgres:
-    image: postgres:18-alpine
-    container_name: {pkg_name}-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: foundry
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql
-      - ../migrations/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    container_name: {pkg_name}-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  postgres_data:
-  redis_data:
 "#,
-        pkg_name = pkg_name
+        db_display = db_kind.display_name(),
+        active_url = active_url,
+        active_type = active_type,
     );
-    fs::write(project_dir.join("dev/docker-compose.yml"), docker_compose)?;
+    fs::write(project_dir.join(".env.example"), &env_example)?;
+    fs::write(project_dir.join(".env"), &env_example)?;
 
-    // 10.1 dev/init-db.sh
-    let init_db_sh = r#"#!/usr/bin/env bash
-# ==============================================================================
-# Local Development Database Initialization & Reset Script
-# ==============================================================================
-set -e
-
-DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$DEV_DIR/.." && pwd)"
-INIT_SQL="$PROJECT_ROOT/migrations/init.sql"
-
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_PORT="${DB_PORT:-5432}"
-DB_USER="${DB_USER:-postgres}"
-DB_PASSWORD="${DB_PASSWORD:-postgrespassword}"
-DB_NAME="${DB_NAME:-foundry}"
-
-echo "🚀 Initializing Foundry Development Database ($DB_NAME)..."
-
-if [ ! -f "$INIT_SQL" ]; then
-    echo "❌ Error: $INIT_SQL not found!"
-    exit 1
-fi
-
-if command -v docker &>/dev/null && docker compose -f "$DEV_DIR/docker-compose.yml" ps --status running | grep -q "postgres"; then
-    echo "📦 Applying migrations/init.sql via docker compose exec..."
-    docker compose -f "$DEV_DIR/docker-compose.yml" exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -f /docker-entrypoint-initdb.d/01_init.sql
-elif command -v psql &>/dev/null; then
-    echo "🐘 Applying migrations/init.sql via local psql..."
-    PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$INIT_SQL"
-else
-    echo "⚠️ Neither active docker container nor local psql CLI found."
-    echo "Please ensure the database container is running: docker compose -f dev/docker-compose.yml up -d"
-    exit 1
-fi
-
-echo "✅ Development database initialized successfully!"
-"#;
-    fs::write(project_dir.join("dev/init-db.sh"), init_db_sh)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(
-            project_dir.join("dev/init-db.sh"),
-            fs::Permissions::from_mode(0o755),
-        );
-    }
-
-    // 10.2 dev/init-dev-db.sql
-    let init_dev_db_sql = r#"-- ==============================================================================
--- Foundry Development Database Bootstrap Script
--- Usage with local PostgreSQL superuser:
---   psql -U postgres -f dev/init-dev-db.sql
--- ==============================================================================
-
-SELECT 'CREATE DATABASE foundry'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'foundry')\gexec
-
-\c foundry
-
-\i ../migrations/init.sql
-"#;
-    fs::write(project_dir.join("dev/init-dev-db.sql"), init_dev_db_sql)?;
-
-    // 11. .gitignore
+    // 10. .gitignore
     let gitignore = r#"/target
 .env
 *.log
 .DS_Store
-
-# Local development resources
-dev/
 "#;
     fs::write(project_dir.join(".gitignore"), gitignore)?;
 
-    // 12. README.md
+    // 11. README.md
+    let docker_cmd = db_kind.docker_run_hint(pkg_name);
+    let dba_cmd = db_kind.dba_migration_hint();
+    let db_display = db_kind.display_name();
+
     let readme = format!(
         r#"# {name}
 
@@ -521,30 +719,46 @@ dev/
 
 ## ⚡ 快速上手
 
-### 1. 启动基础依赖（PostgreSQL & Redis）
+### 1. 数据库与缓存准备
 
-项目在 `dev/` 目录中预置了本地开发所需的容器编排配置：
+本项目初始化配置使用的数据库引擎为：**{db_display}**。
 
-```bash
-# 启动本地 PostgreSQL 18 与 Redis 7 容器
-docker compose -f dev/docker-compose.yml up -d
+在 `.env` 中确认你的数据库与 Redis 连接配置（已预置）：
+
+```env
+DATABASE_URL={active_url}
+DATABASE_TYPE={active_type}
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
-**服务与默认连接信息（与 `.env` 保持一致）：**
+**本地数据库启动方式（二选一）：**
 
-| 服务 | 连接地址 | 说明 |
-| :--- | :--- | :--- |
-| **PostgreSQL 18** | `postgres://postgres:postgrespassword@localhost:5432/foundry` | 首次启动自动执行 `migrations/init.sql` 初始化库表与超管 |
-| **Redis 7** | `redis://127.0.0.1:6379` | 提供系统缓存与会话存储 |
+* **方式一：已有独立数据库**：直接将 `.env` 中的 `DATABASE_URL` 与 `REDIS_URL` 改为你现有的实例连接串即可。
+* **方式二：使用 Docker 启动本地依赖**：
 
-> **数据库运维与管控说明**：
-> - **开发库重置**：执行 `bash dev/init-db.sh` 快速重置开发库并重新导入初始脚本；或执行 `docker compose -f dev/docker-compose.yml down -v` 清空数据卷。
-> - **DBA 手动导入（严格管控）**：支持直接通过原生命令导入：`psql -h 127.0.0.1 -U postgres -d foundry -f migrations/init.sql`。
-> - **发布管控**：在 `.env` 中设置 `AUTO_MIGRATE=false` 可关闭后端启动时的自动迁移检测，实现严格的手动发布审计。
+{docker_cmd}
+
+### 2. 数据库初始化与管控说明
+
+* **全自动初始化（默认推荐）**：
+  在 `.env` 中保持 `AUTO_MIGRATE=true`，执行 `cargo run` 启动应用时，Foundry 框架会自动检测并完成数据库表结构/集合、覆盖索引创建以及初始超级管理员（`admin` / `admin123456`）账号注入。无需任何手动建表操作。
+
+* **DBA 手动执行与严格管控（生产环境）**：
+  若生产环境需严格审计，将 `.env` 中的 `AUTO_MIGRATE=false` 关闭自动迁移。
+  本项目默认不预设 `migrations/` 目录，如需获取针对 **{db_display}** 的方言 DDL 脚本，请在当前工程下执行：
+  ```bash
+  foundry ddl
+  # 或显式指定方言：foundry ddl --db {db_engine}
+  # 或使用迁移命令生成：foundry migrate --generate
+  ```
+  执行后将在当前工程下生成 `migrations/` 目录及方言脚本，随后可交由 DBA 在上线前执行初始化：
+  ```bash
+  {dba_cmd}
+  ```
 
 ---
 
-### 2. 启动应用服务
+### 3. 启动应用服务
 
 ```bash
 cargo run
@@ -608,10 +822,58 @@ foundry system new billing --name "账单与支付中心"
 
 ## 🗄️ 数据存储与模型开发
 
-Foundry 提供两种开发范式，可按业务场景自由组合：
+Foundry 支持以 **ORM 优先 (ORM-First, Prisma 风格)** 的架构进行数据模型定义与增删改查：
 
-### 模式 A：Zero-DDL 动态模型（免表迁移、即开即用）
-适用于中后台配置、内容发布、快速迭代原型。无需手写 DDL 建表，数据按子系统自动隔离并自动提供 RESTful 接口。
+### 模式 A：Code-First ORM 实体模型（Prisma 风格强类型，推荐）
+支持在子系统代码中通过强类型定义 ORM Schema。`foundry migrate` 与 `foundry ddl` 命令会自动读取代码中的 ORM 模型，编译为对应数据库方言（PostgreSQL, MySQL, MariaDB）的 DDL 结构：
+
+```rust
+use foundry::prelude::*;
+
+impl SubsystemModule for BillingSubsystem {{
+    fn slug(&self) -> &'static str {{ "billing" }}
+    fn display_name(&self) -> &'static str {{ "账单中心" }}
+
+    // 类似 Prisma 的代码定义 ORM 模型
+    fn orm_models(&self) -> Vec<EntitySchema> {{
+        vec![
+            EntitySchema::new("billing_invoices")
+                .column(ColumnDef::bigint("id").primary_key().auto_increment())
+                .column(ColumnDef::varchar("system_id", 32).not_null())
+                .column(ColumnDef::varchar("invoice_no", 64).not_null().unique())
+                .column(ColumnDef::decimal("amount", 10, 2).not_null())
+                .column(ColumnDef::varchar("status", 24).not_null())
+                .column(ColumnDef::json("metadata").default_empty_json())
+                .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+                .index(IndexDef::new("idx_invoices_sys", &["system_id"]))
+        ]
+    }}
+}}
+```
+
+增删改查同样使用 ORM 构建器（或仓储层封装方法），底层自动适配各方言参数占位符（`$1` vs `?`）：
+```rust
+use foundry::prelude::*;
+
+// ORM 插入
+let (sql, binds) = OrmInsert::into_table("billing_invoices")
+    .value("system_id", "billing")
+    .value("invoice_no", "INV-2026-001")
+    .value("amount", 99.50)
+    .to_sql(Dialect::Postgres);
+
+// ORM 分页查询
+let (sql, binds) = OrmSelect::from_table("billing_invoices")
+    .where_eq("system_id", "billing")
+    .order_by_desc("created_at")
+    .limit(20)
+    .offset(0)
+    .to_sql(Dialect::Postgres);
+```
+
+### 模式 B：Zero-DDL 动态模型（免表迁移、即开即用）
+适用于中后台配置、内容发布、快速迭代原型。无需手写 DDL 建表，数据按子系统自动隔离并自动提供 RESTful 接口。对于关系型数据库底层自动利用统一模型表，MongoDB 底层自动存入原生 BSON 文档集合：
 
 ```rust
 use foundry_storage::models::RecordStore;
@@ -630,38 +892,8 @@ let record = RecordStore::create(&db, &ctx.system_slug, "articles", json!({{
 ```
 *提示：可在管理后台（`/admin`）可视化添加模型定义与动态字段。*
 
-### 模式 B：原生 SQL 迁移与强类型模型（高并发、事务、复杂关联）
-适用于核心交易、复杂多表 Join、高性能严谨业务。
-
-1. **编写 SQL 迁移**：在 `migrations/` 下新增脚本（如 `001_create_articles.sql`）：
-   ```sql
-   CREATE TABLE IF NOT EXISTS articles (
-       id BIGSERIAL PRIMARY KEY,
-       system_slug VARCHAR(64) NOT NULL,
-       title VARCHAR(255) NOT NULL,
-       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   CREATE INDEX IF NOT EXISTS idx_articles_system_slug ON articles(system_slug);
-   ```
-2. **应用迁移**：
-   ```bash
-   foundry migrate
-   # 注：若 .env 中 AUTO_MIGRATE=true，应用启动时亦会自动检测并应用
-   ```
-3. **强类型查询（SQLx）**：
-   ```rust
-   #[derive(Debug, sqlx::FromRow, serde::Serialize)]
-   pub struct Article {{
-       pub id: i64,
-       pub system_slug: String,
-       pub title: String,
-   }}
-
-   let rows = sqlx::query_as::<_, Article>("SELECT * FROM articles WHERE system_slug = $1")
-       .bind(&ctx.system_slug)
-       .fetch_all(&db)
-       .await?;
-   ```
+### 模式 C：原生 SQL / 脚本逃生通道（特殊触发器、复杂统计、MongoDB 脚本）
+对于无关系型 ORM 的数据库（如 MongoDB）或特殊存储引擎，可通过 `migration_ddl` 或 `migrations/` 目录编写特定脚本。
 
 ---
 
@@ -679,23 +911,37 @@ foundry system list
 # 3. 手动执行数据库迁移
 foundry migrate
 
-# 4. 校验当前工程规范与子系统目录结构
+# 4. 生成特定数据库方言的 DDL 迁移脚本
+foundry ddl --db postgres   # 或 mysql / mariadb / mongodb
+
+# 5. 校验当前工程规范与子系统目录结构
 foundry validate
 ```
 
 > 💡 **提示**：管理员账号增删、角色分配及权限管控，直接登录管理后台（`/admin`）进行可视化操作即可，无需在终端处理。
 "#,
-        name = name
+        name = name,
+        db_display = db_display,
+        db_engine = db_kind.as_str(),
+        active_url = active_url,
+        active_type = active_type,
+        docker_cmd = docker_cmd,
+        dba_cmd = dba_cmd,
     );
     fs::write(project_dir.join("README.md"), readme)?;
 
     println!(
-        "✅ Project '{}' created successfully at {:?}!",
-        name, project_dir
+        "✅ Project '{}' created successfully at {:?}! (Database: {})",
+        name,
+        project_dir,
+        db_kind.display_name()
     );
     println!("👉 Next steps:");
     println!("   cd {}", name);
-    println!("   docker compose -f dev/docker-compose.yml up -d");
+    println!(
+        "   # Ensure {} and Redis are accessible as configured in .env",
+        db_kind.as_str()
+    );
     println!("   cargo run");
 
     Ok(project_dir)
@@ -887,6 +1133,17 @@ impl SubsystemModule for {struct_name} {{
             }},
         ]
     }}
+
+    // Optional: Code-defined ORM schemas (Prisma-like) for relational databases
+    // fn orm_models(&self) -> Vec<EntitySchema> {{
+    //     vec![
+    //         EntitySchema::new("{slug}_items")
+    //             .column(ColumnDef::bigint("id").primary_key().auto_increment())
+    //             .column(ColumnDef::varchar("system_id", 32).not_null())
+    //             .column(ColumnDef::varchar("title", 100).not_null())
+    //             .column(ColumnDef::datetime("created_at").default_current_timestamp())
+    //     ]
+    // }}
 }}
 "#,
         struct_name = struct_name,
@@ -927,7 +1184,7 @@ fn validate_project(path: &str) -> anyhow::Result<()> {
 
     let cargo_toml = p.join("Cargo.toml");
     let main_rs = p.join("src/main.rs");
-    let dev_compose = p.join("dev/docker-compose.yml");
+    let migrations_dir = p.join("migrations");
 
     if !cargo_toml.exists() {
         println!("  ⚠️ Warning: Cargo.toml not found at {:?}", cargo_toml);
@@ -941,10 +1198,8 @@ fn validate_project(path: &str) -> anyhow::Result<()> {
         println!("  ✅ src/main.rs present");
     }
 
-    if !dev_compose.exists() {
-        println!("  ℹ️ Note: dev/docker-compose.yml not found (optional local dev environment)");
-    } else {
-        println!("  ✅ dev/docker-compose.yml present");
+    if migrations_dir.exists() {
+        println!("  ✅ migrations/ directory present");
     }
 
     list_subsystems(path)?;
@@ -957,9 +1212,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_scaffold_project_and_subsystem() {
+    fn test_scaffold_project_and_subsystem_default_postgres() {
         let temp_dir =
-            std::env::temp_dir().join(format!("foundry_test_cli_{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("foundry_test_cli_pg_{}", uuid::Uuid::new_v4()));
         let project_name = temp_dir.to_string_lossy().to_string();
 
         let path = scaffold_project(
@@ -972,19 +1227,34 @@ mod tests {
         .unwrap();
         assert!(path.join("Cargo.toml").exists());
         assert!(path.join("src/main.rs").exists());
-        assert!(path.join("dev/docker-compose.yml").exists());
-        let compose = fs::read_to_string(path.join("dev/docker-compose.yml")).unwrap();
-        assert!(compose.contains("postgres:18-alpine"));
-        assert!(compose.contains("postgres_data:/var/lib/postgresql\n"));
+        // Verify dev directory is NOT created
+        assert!(!path.join("dev").exists());
+        assert!(!path.join("dev/docker-compose.yml").exists());
+        assert!(!path.join("dev/init-db.sh").exists());
+        assert!(!path.join("dev/init-dev-db.sql").exists());
+
+        // Verify gitignore does not include dev/
         assert!(path.join(".gitignore").exists());
         let gitignore = fs::read_to_string(path.join(".gitignore")).unwrap();
-        assert!(gitignore.contains("dev/"));
-        assert!(path.join("src/systems/sample/mod.rs").exists());
-        assert!(path.join("src/systems/sample/controllers/mod.rs").exists());
+        assert!(!gitignore.contains("dev/"));
+
+        // Verify migrations directory is NOT created by default
+        assert!(!path.join("migrations").exists());
+
+        // Verify on-demand DDL generation creates migrations/
+        let ddl_path = generate_ddl(&path, DatabaseKind::Postgres, None).unwrap();
+        assert!(ddl_path.exists());
         assert!(path.join("migrations/init.sql").exists());
-        assert!(path.join("dev/init-db.sh").exists());
-        assert!(path.join("dev/init-dev-db.sql").exists());
-        assert!(compose.contains("01_init.sql"));
+        let sql = fs::read_to_string(path.join("migrations/init.sql")).unwrap();
+        assert!(sql.contains("CREATE TABLE IF NOT EXISTS systems"));
+        assert!(sql.contains("BIGSERIAL"));
+
+        // Verify README
+        assert!(path.join("README.md").exists());
+        let readme = fs::read_to_string(path.join("README.md")).unwrap();
+        assert!(!readme.contains("dev/docker-compose.yml"));
+        assert!(readme.contains("PostgreSQL"));
+        assert!(readme.contains("AUTO_MIGRATE=true"));
 
         // Scaffold additional subsystem
         scaffold_subsystem("orders", Some("Order Management"), &project_name).unwrap();
@@ -993,5 +1263,182 @@ mod tests {
 
         // Cleanup
         let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_scaffold_project_mysql() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("foundry_test_cli_mysql_{}", uuid::Uuid::new_v4()));
+        let project_name = temp_dir.to_string_lossy().to_string();
+
+        let path = scaffold_project(
+            &project_name,
+            ProjectOptions {
+                local_path: Some("../../../crates/foundry"),
+                db: Some("mysql"),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert!(!path.join("dev").exists());
+        // Verify migrations directory is NOT created by default
+        assert!(!path.join("migrations").exists());
+
+        // Verify on-demand DDL generation creates migrations/
+        let ddl_path = generate_ddl(&path, DatabaseKind::MySql, None).unwrap();
+        assert!(ddl_path.exists());
+        assert!(path.join("migrations/init.sql").exists());
+        let sql = fs::read_to_string(path.join("migrations/init.sql")).unwrap();
+        assert!(sql.contains("ENGINE=InnoDB"));
+        assert!(sql.contains("MySQL"));
+
+        let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+        assert!(cargo_toml.contains(r#"features = ["standard", "mysql"]"#));
+
+        let env_file = fs::read_to_string(path.join(".env")).unwrap();
+        assert!(env_file.contains("DATABASE_TYPE=mysql"));
+        assert!(env_file.contains("mysql://"));
+
+        let readme = fs::read_to_string(path.join("README.md")).unwrap();
+        assert!(!readme.contains("dev/docker-compose.yml"));
+        assert!(readme.contains("MySQL"));
+
+        let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_scaffold_project_mariadb() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("foundry_test_cli_mariadb_{}", uuid::Uuid::new_v4()));
+        let project_name = temp_dir.to_string_lossy().to_string();
+
+        let path = scaffold_project(
+            &project_name,
+            ProjectOptions {
+                local_path: Some("../../../crates/foundry"),
+                db: Some("mariadb"),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert!(!path.join("dev").exists());
+        // Verify migrations directory is NOT created by default
+        assert!(!path.join("migrations").exists());
+
+        // Verify on-demand DDL generation creates migrations/
+        let ddl_path = generate_ddl(&path, DatabaseKind::MariaDb, None).unwrap();
+        assert!(ddl_path.exists());
+        assert!(path.join("migrations/init.sql").exists());
+        let sql = fs::read_to_string(path.join("migrations/init.sql")).unwrap();
+        assert!(sql.contains("MariaDB"));
+
+        let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+        assert!(cargo_toml.contains(r#"features = ["standard", "mariadb"]"#));
+
+        let env_file = fs::read_to_string(path.join(".env")).unwrap();
+        assert!(env_file.contains("DATABASE_TYPE=mariadb"));
+        assert!(env_file.contains("mariadb://"));
+
+        let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_scaffold_project_mongodb() {
+        let temp_dir =
+            std::env::temp_dir().join(format!("foundry_test_cli_mongo_{}", uuid::Uuid::new_v4()));
+        let project_name = temp_dir.to_string_lossy().to_string();
+
+        let path = scaffold_project(
+            &project_name,
+            ProjectOptions {
+                local_path: Some("../../../crates/foundry"),
+                db: Some("mongodb"),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert!(!path.join("dev").exists());
+        // Verify migrations directory is NOT created by default
+        assert!(!path.join("migrations").exists());
+
+        // Verify on-demand DDL generation creates migrations/
+        let ddl_path = generate_ddl(&path, DatabaseKind::MongoDb, None).unwrap();
+        assert!(ddl_path.exists());
+        assert!(path.join("migrations/init.js").exists());
+        assert!(path.join("migrations/README.md").exists());
+        let js = fs::read_to_string(path.join("migrations/init.js")).unwrap();
+        assert!(js.contains("db.systems.createIndex"));
+
+        let cargo_toml = fs::read_to_string(path.join("Cargo.toml")).unwrap();
+        assert!(cargo_toml.contains(r#"features = ["standard", "mongodb"]"#));
+
+        let env_file = fs::read_to_string(path.join(".env")).unwrap();
+        assert!(env_file.contains("DATABASE_TYPE=mongodb"));
+        assert!(env_file.contains("mongodb://"));
+
+        let readme = fs::read_to_string(path.join("README.md")).unwrap();
+        assert!(!readme.contains("dev/docker-compose.yml"));
+        assert!(readme.contains("MongoDB"));
+
+        let _ = fs::remove_dir_all(temp_dir);
+    }
+
+    #[test]
+    fn test_database_kind_parsing_and_ddl_content() {
+        assert_eq!(
+            "postgres".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::Postgres
+        );
+        assert_eq!(
+            "postgresql".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::Postgres
+        );
+        assert_eq!(
+            "pg".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::Postgres
+        );
+        assert_eq!(
+            "mysql".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::MySql
+        );
+        assert_eq!(
+            "mariadb".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::MariaDb
+        );
+        assert_eq!(
+            "mongodb".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::MongoDb
+        );
+        assert_eq!(
+            "mongo".parse::<DatabaseKind>().unwrap(),
+            DatabaseKind::MongoDb
+        );
+        assert!("unknown".parse::<DatabaseKind>().is_err());
+
+        assert!(DatabaseKind::Postgres.ddl_content().contains("BIGSERIAL"));
+        assert!(DatabaseKind::MySql.ddl_content().contains("ENGINE=InnoDB"));
+        assert!(DatabaseKind::MariaDb.ddl_content().contains("MariaDB"));
+        assert!(DatabaseKind::MongoDb.ddl_content().contains("createIndex"));
+    }
+
+    #[test]
+    fn test_code_defined_ddl_extension() {
+        foundry_storage::clear_registered_ddl_extensions();
+        foundry_storage::register_ddl_extension(
+            "subsystem:billing",
+            "postgres",
+            "CREATE TABLE billing_invoices (id UUID PRIMARY KEY);",
+        );
+
+        let ddl = DatabaseKind::Postgres.ddl_content();
+        assert!(ddl.contains("BIGSERIAL"));
+        assert!(ddl.contains("CODE-DEFINED EXTENSION DDL"));
+        assert!(ddl.contains("billing_invoices"));
+
+        // Clean up
+        foundry_storage::clear_registered_ddl_extensions();
     }
 }

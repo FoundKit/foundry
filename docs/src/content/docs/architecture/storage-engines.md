@@ -126,24 +126,31 @@ crates/foundry_storage/
     │   ├── mod.rs
     │   ├── provider.rs                # StorageDriverProvider trait definition
     │   └── registry.rs                # StorageRegistry: driver registration & URL resolution
+    ├── orm/                           # ORM-First Architecture: Prisma-like models & query builders
+    │   ├── mod.rs
+    │   ├── compiler.rs                # Dynamic dialect DDL compiler (PostgreSQL, MySQL, MariaDB)
+    │   ├── dialect.rs                 # Dialect enum & parameter placeholders ($1 vs ?)
+    │   ├── models.rs                  # 7 Canonical platform table EntitySchemas
+    │   ├── query.rs                   # Encapsulated CRUD query builders (OrmSelect, OrmInsert, OrmUpdate, OrmDelete)
+    │   └── registry.rs                # Thread-safe global ORM model registry (OrmRegistry)
     └── engines/                       # Database-native strategy implementations
         ├── mod.rs
         ├── postgres/                  # PostgreSQL strategy
         │   ├── mod.rs
-        │   ├── provider.rs            # PostgresProvider
-        │   ├── records.rs             # GIN index & JSONB query handling
+        │   ├── provider.rs            # PostgresProvider (ORM compiled DDL)
+        │   ├── records.rs             # ORM query builder CRUD, GIN index & JSONB query handling
         │   └── stores.rs              # models, systems, admins implementations
         ├── mysql/                     # MySQL strategy
         │   ├── mod.rs
-        │   ├── provider.rs            # MySqlProvider
-        │   ├── records.rs             # MySQL JSON operations, last_insert_id re-fetch
+        │   ├── provider.rs            # MySqlProvider (ORM compiled DDL)
+        │   ├── records.rs             # ORM query builder CRUD, last_insert_id re-fetch
         │   └── stores.rs              # models, systems, admins implementations
         ├── mariadb/                   # MariaDB specialized strategy
         │   ├── mod.rs
-        │   └── provider.rs            # MariaDbProvider
-        └── mongodb/                   # MongoDB native document strategy
+        │   └── provider.rs            # MariaDbProvider (ORM compiled DDL)
+        └── mongodb/                   # MongoDB native document strategy (Fallback)
             ├── mod.rs
-            ├── provider.rs            # MongoProvider
+            ├── provider.rs            # MongoProvider (init.js script)
             ├── records.rs             # Native BSON CRUD & Wildcard index handling
             ├── counters.rs            # Atomic sequence counters for i64 ID compatibility
             └── stores.rs              # Document collections implementations
@@ -173,6 +180,14 @@ pub trait StorageDriverProvider: Send + Sync {
 
     /// Executes database-specific initialization and migration scripts
     async fn run_migrations(&self, connection_url: &str) -> AppResult<()>;
+
+    /// Returns the dialect DDL dynamically compiled from ORM or embedded in the driver
+    fn get_baseline_ddl(&self) -> String;
+
+    /// Default migration script filename (e.g. "init.sql" or "init.js")
+    fn default_migration_filename(&self) -> &'static str {
+        "init.sql"
+    }
 }
 ```
 

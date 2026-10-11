@@ -47,22 +47,15 @@ Foundry 框架仓库 (Framework)
             │
             ↓
 用户业务应用 (独立 Git 仓库)
-    ├── Cargo.toml                 # [dependencies] foundry = "0.1"
-    ├── dev/                       # 本地开发专用资源 (.gitignore 忽略)
-    │   ├── docker-compose.yml     # PostgreSQL 18.6 + Redis 本地容器编排
-    │   ├── init-db.sh             # 本地开发数据库初始化/重置脚本
-    │   └── init-dev-db.sql        # 独立开发数据库创建引导脚本
+    ├── Cargo.toml                 # [dependencies] foundry = "0.1" (自动配置所选数据库特性)
     ├── src/
     │   ├── main.rs                # 应用启动入口 (基于 FoundryApp::builder())
     │   └── systems/               # 用户业务子系统
     │       ├── blog/              # 控制器 + 领域逻辑 + DTO 校验 + 自定义 Admin 页面
     │       └── newsletter/
     ├── config/                    # 应用配置
-    └── migrations/                # 业务专属数据库迁移脚本
-        ├── postgres/              # PostgreSQL 平台初始化全量表结构与初始超管账号 Seed
-        │   └── init.sql
-        └── mysql/                 # MySQL 平台初始化全量表结构与初始超管账号 Seed
-            └── init.sql
+    └── migrations/                # （可选）按需生成的方言迁移脚本目录 (执行 `foundry ddl` 或 `foundry migrate -g` 时生成)
+        └── init.sql               # 平台初始化全量表结构与初始超管账号 (MongoDB 为 init.js)
 ```
 
 ---
@@ -75,16 +68,16 @@ Foundry 框架仓库 (Framework)
 # 1. 安装 Foundry CLI 命令行工具 (直接从 GitHub 仓库安装)
 cargo install --git https://github.com/foundkit/foundry foundry_cli
 
-# 2. 创建全新的独立应用工程
-foundry new my-app
+# 2. 创建全新的独立应用工程 (默认 PostgreSQL，或使用 --db mysql / mariadb / mongodb)
+foundry new my-app --db postgres
 cd my-app
 
-# 3. 启动本地开发数据库 (PostgreSQL 18.6 或 MySQL 8.4 + Redis 8)
-docker compose up -d postgres redis
-# 或者使用 MySQL / MariaDB：
-# docker compose up -d mysql redis
+# 3. 准备数据库服务 (使用现有数据库，或使用 Docker 启动本地依赖)
+# 以 Docker 启动 PostgreSQL 18 与 Redis 为例：
+docker run -d --name my-postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry postgres:18-alpine
+docker run -d --name my-redis -p 6379:6379 redis:7-alpine
 
-# 4. 启动后端服务
+# 4. 启动后端服务 (AUTO_MIGRATE=true 时自动完成库表初始化与超管注入)
 cargo run
 ```
 
@@ -160,25 +153,29 @@ async fn main() -> anyhow::Result<()> {
 
 Foundry 提供了精简高效的开发者命令行工具（`foundry` / `foundry-cli`），用于管理应用工程、业务子系统和数据模型。
 
-### 1. 本地开发数据库
-
-由脚手架创建的新工程在 `dev/` 目录中预置了本地开发所需的容器编排配置（`dev/docker-compose.yml`），针对不同数据库方言挂载对应初始化配置：
+### 1. 数据库配置与多引擎 CLI 支持
+ 
+Foundry 应用统一通过 `.env` 中的 `DATABASE_URL` 与 `DATABASE_TYPE` 连接底层数据库。可以在创建应用时直接指定数据库，或随时按需生成方言 DDL：
 
 ```bash
-# 启动本地基础依赖（PostgreSQL 18.6 或 MySQL 8.4 + Redis 8）
-docker compose up -d postgres redis   # PostgreSQL 组合
-# 或者选择 MySQL：
-docker compose up -d mysql redis      # MySQL 组合
+# 脚手架指定数据库（纯净代码骨架，migrations 目录按需生成）：
+foundry new my-app --db postgres    # PostgreSQL (默认)
+foundry new my-app --db mysql       # MySQL 8.0+
+foundry new my-app --db mariadb     # MariaDB 10.5+
+foundry new my-app --db mongodb     # MongoDB 6.0+
 
-# 查看服务运行状态
-docker compose ps
+# 随时生成指定数据库方言的 DDL 迁移脚本（自动创建 migrations/ 目录）：
+foundry ddl --db postgres           # 生成 PostgreSQL DDL 到 migrations/init.sql
+foundry ddl --db mysql              # 生成 MySQL DDL 到 migrations/init.sql
+foundry ddl --db mongodb            # 生成 MongoDB init.js 到 migrations/init.js
 
-# 停止本地数据库
-docker compose down
-
-# 重置本地数据库及其数据卷（全新重新初始化）
-docker compose down -v
+# 手动执行数据库迁移（或使用 --generate 生成迁移文件）：
+foundry migrate
+foundry migrate --generate          # 为当前项目生成 migrations/ 目录与方言脚本
 ```
+
+* **全自动初始化 (`AUTO_MIGRATE=true`)**：运行 `cargo run` 启动时，框架自动检测并完成数据库表结构/集合、覆盖索引创建与初始超管账号（`admin` / `admin123456`）注入。
+* **DBA 严格审计管控 (`AUTO_MIGRATE=false`)**：可由 DBA 在部署前手动执行 `migrations/` 下的原生脚本（`psql -f migrations/init.sql`、`mysql < migrations/init.sql`、`mongosh migrations/init.js` 等）。
 
 ### 2. 子系统（子项目）操作
 
@@ -201,16 +198,64 @@ foundry system list
 
 ### 3. 数据模型创建与存储
 
-支持在 Zero-DDL 动态模型与强类型 SQLx Schema 之间灵活选择：
+Foundry 支持 **ORM 优先 (ORM-First, Prisma 风格)** 的现代化开发架构，并提供灵活的多范式存储选择：
 
-#### 方式 A：Zero-DDL 动态数据模型（即刻生成 RESTful Auto-CRUD）
-无需编写任何 SQL DDL 迁移。通过可视化 Admin 控制台（`/admin`）动态定义模型，或在业务代码中直接操作记录：
+#### 方式 A：Code-First ORM 实体模型（Prisma 风格，推荐强类型）
+无需手写 SQL 方言迁移。在业务子系统中直接通过 Rust 代码定义实体结构（类似 Prisma Schema）。执行 `foundry migrate` 或 `foundry ddl` 时，Foundry 会自动将代码中的 ORM 模型编译为对应数据库方言（PostgreSQL, MySQL, MariaDB）的 DDL 结构并应用：
+
+```rust
+use foundry::prelude::*;
+
+impl SubsystemModule for BillingSubsystem {
+    fn slug(&self) -> &'static str { "billing" }
+    fn display_name(&self) -> &'static str { "账单与支付中心" }
+
+    // 代码定义 ORM 模型（Prisma 风格）
+    fn orm_models(&self) -> Vec<EntitySchema> {
+        vec![
+            EntitySchema::new("billing_invoices")
+                .column(ColumnDef::bigint("id").primary_key().auto_increment())
+                .column(ColumnDef::varchar("system_id", 32).not_null())
+                .column(ColumnDef::varchar("invoice_no", 64).not_null().unique())
+                .column(ColumnDef::decimal("amount", 10, 2).not_null())
+                .column(ColumnDef::varchar("status", 24).not_null())
+                .column(ColumnDef::json("metadata").default_empty_json())
+                .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+                .index(IndexDef::new("idx_invoices_sys", &["system_id"]))
+        ]
+    }
+}
+```
+
+CRUD 增删改查同样使用类型安全的 ORM 构建器（或仓储层封装方法），底层自动适配各方言参数占位符（`$1` vs `?`）：
+```rust
+use foundry::prelude::*;
+
+// ORM 插入
+let (sql, binds) = OrmInsert::into_table("billing_invoices")
+    .value("system_id", "billing")
+    .value("invoice_no", "INV-2026-001")
+    .value("amount", 99.50)
+    .to_sql(Dialect::Postgres);
+
+// ORM 分页查询
+let (sql, binds) = OrmSelect::from_table("billing_invoices")
+    .where_eq("system_id", "billing")
+    .order_by_desc("created_at")
+    .limit(20)
+    .offset(0)
+    .to_sql(Dialect::Postgres);
+```
+
+#### 方式 B：Zero-DDL 动态数据模型（免表迁移，即刻生成 RESTful Auto-CRUD）
+无需手写任何建表脚本。通过可视化 Admin 控制台（`/admin`）动态定义模型，或在业务代码中直接操作记录：
 
 ```rust
 use foundry_storage::models::RecordStore;
 use serde_json::json;
 
-// 创建动态记录（严格按 system_slug 与 model_slug 进行租户隔离）
+// 创建动态记录（严格按 system_slug 与 model_slug 进行隔离）
 let record = RecordStore::create(
     &db,
     &ctx.system_slug,  // 子系统标识 (subsystem slug)
@@ -220,28 +265,12 @@ let record = RecordStore::create(
 
 // 按 ID 查询或获取分页列表
 let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
-let list = RecordStore::list(&db, &ctx.system_slug, "articles", 1, 20).await?;
+let list = RecordStore::list(&db, &ctx.system_slug, "articles", query).await?;
 ```
 所有动态数据模型将自动挂载 REST API 接入点：`/api/v1/s/{system_slug}/{model_slug}`。
 
-#### 方式 B：原生 SQL 迁移与强类型模型（高并发与严苛事务场景）
-1. 在 `migrations/001_create_orders.sql` 中新增迁移脚本：
-   ```sql
-   CREATE TABLE IF NOT EXISTS orders (
-       id BIGSERIAL PRIMARY KEY,
-       system_slug VARCHAR(64) NOT NULL,
-       order_no VARCHAR(64) NOT NULL UNIQUE,
-       amount BIGINT NOT NULL,
-       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   CREATE INDEX IF NOT EXISTS idx_orders_system_slug ON orders(system_slug);
-   ```
-2. 执行迁移：
-   ```bash
-   foundry migrate
-   # 或者在 .env 中设置 AUTO_MIGRATE=true，服务启动时将自动应用
-   ```
-3. 使用 SQLx 配合 `#[derive(sqlx::FromRow)]` 进行强类型查询。
+#### 方式 C：原生 SQL / 脚本逃生通道（特殊触发器、MongoDB 脚本）
+对于无关系型 ORM 的数据库（如 MongoDB）或特殊复杂场景，可通过 `SubsystemModule::migration_ddl` 或 `migrations/` 目录添加自定义原生 SQL 或脚本，同样受 `foundry migrate` 统一管控。
 
 ### 4. 项目结构与子系统校验
 

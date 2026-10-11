@@ -920,6 +920,7 @@ dependencies = [
  "foundry_core",
  "foundry_storage",
  "jsonwebtoken",
+ "rand_core 0.6.4",
  "serde",
  "serde_json",
  "thiserror",
@@ -1011,6 +1012,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
  "uuid",
 ]

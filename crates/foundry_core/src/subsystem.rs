@@ -33,4 +33,17 @@ pub trait SubsystemModule: Send + Sync + 'static {
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
         vec![]
     }
+
+    /// Code-defined ORM schemas for this subsystem module.
+    /// Relational databases (PostgreSQL, MySQL, MariaDB) will automatically compile
+    /// these schemas into DDL migrations and tables.
+    fn orm_models(&self) -> Vec<crate::orm::EntitySchema> {
+        vec![]
+    }
+
+    /// Code-defined custom DDL migration scripts for this subsystem module.
+    /// Returns dialect-specific DDL/SQL statements for "postgres", "mysql", "mariadb", "mongodb", or "*"
+    fn migration_ddl(&self, _db_type: &str) -> Option<String> {
+        None
+    }
 }

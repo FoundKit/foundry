@@ -1,4 +1,7 @@
 use crate::entities::ModelRecordEntity;
+use crate::orm::{
+    bind_pg_query, bind_pg_query_as, Dialect, OrmInsert, OrmSelect, OrmUpdate,
+};
 use crate::traits::{RecordQuery, RecordStoreEngine};
 use async_trait::async_trait;
 use foundry_core::error::{AppError, AppResult};
@@ -28,36 +31,46 @@ impl RecordStoreEngine for PostgresRecordEngine {
         let page_size = query.page_size.unwrap_or(20).clamp(1, 100);
         let offset = (page - 1) * page_size;
 
-        let total_row: (i64,) = sqlx::query_as(
-            r#"
-            SELECT COUNT(*) FROM model_records
-            WHERE system_id = $1 AND model_slug = $2 AND deleted_at IS NULL
-            "#,
-        )
-        .bind(system_slug)
-        .bind(model_slug)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Count query failed: {}", e)))?;
+        // 1. Total count query via ORM
+        let (count_sql, count_binds) = OrmSelect::from_table("model_records")
+            .count()
+            .where_eq("system_id", system_slug)
+            .where_eq("model_slug", model_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
 
+        let count_query = bind_pg_query_as(sqlx::query_as::<_, (i64,)>(&count_sql), count_binds);
+        let total_row = count_query
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Count query failed: {}", e)))?;
         let total = total_row.0 as u64;
 
-        let records = sqlx::query_as::<_, ModelRecordEntity>(
-            r#"
-            SELECT id, system_id, model_slug, data, created_at, updated_at, deleted_at
-            FROM model_records
-            WHERE system_id = $1 AND model_slug = $2 AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $3 OFFSET $4
-            "#,
-        )
-        .bind(system_slug)
-        .bind(model_slug)
-        .bind(page_size as i64)
-        .bind(offset as i64)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Fetch records failed: {}", e)))?;
+        // 2. Select paginated records via ORM
+        let (select_sql, select_binds) = OrmSelect::from_table("model_records")
+            .columns(&[
+                "id",
+                "system_id",
+                "model_slug",
+                "data",
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            ])
+            .where_eq("system_id", system_slug)
+            .where_eq("model_slug", model_slug)
+            .where_null("deleted_at")
+            .order_by_desc("created_at")
+            .limit(page_size as i64)
+            .offset(offset as i64)
+            .to_sql(Dialect::Postgres);
+
+        let select_query =
+            bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&select_sql), select_binds);
+        let records = select_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Fetch records failed: {}", e)))?;
 
         Ok(PaginatedData::new(records, page, page_size, total))
     }
@@ -68,20 +81,28 @@ impl RecordStoreEngine for PostgresRecordEngine {
         model_slug: &str,
         id: i64,
     ) -> AppResult<ModelRecordEntity> {
-        let record = sqlx::query_as::<_, ModelRecordEntity>(
-            r#"
-            SELECT id, system_id, model_slug, data, created_at, updated_at, deleted_at
-            FROM model_records
-            WHERE id = $1 AND system_id = $2 AND model_slug = $3 AND deleted_at IS NULL
-            "#,
-        )
-        .bind(id)
-        .bind(system_slug)
-        .bind(model_slug)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Get record failed: {}", e)))?
-        .ok_or_else(|| AppError::NotFound(format!("Record #{} not found", id)))?;
+        let (sql, binds) = OrmSelect::from_table("model_records")
+            .columns(&[
+                "id",
+                "system_id",
+                "model_slug",
+                "data",
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            ])
+            .where_eq("id", id)
+            .where_eq("system_id", system_slug)
+            .where_eq("model_slug", model_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
+
+        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let record = query
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Get record failed: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Record #{} not found", id)))?;
 
         Ok(record)
     }
@@ -92,19 +113,26 @@ impl RecordStoreEngine for PostgresRecordEngine {
         model_slug: &str,
         data: Value,
     ) -> AppResult<ModelRecordEntity> {
-        let record = sqlx::query_as::<_, ModelRecordEntity>(
-            r#"
-            INSERT INTO model_records (system_id, model_slug, data)
-            VALUES ($1, $2, $3)
-            RETURNING id, system_id, model_slug, data, created_at, updated_at, deleted_at
-            "#,
-        )
-        .bind(system_slug)
-        .bind(model_slug)
-        .bind(data)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Create record failed: {}", e)))?;
+        let (sql, binds) = OrmInsert::into_table("model_records")
+            .value("system_id", system_slug)
+            .value("model_slug", model_slug)
+            .value("data", data)
+            .returning(&[
+                "id",
+                "system_id",
+                "model_slug",
+                "data",
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            ])
+            .to_sql(Dialect::Postgres);
+
+        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let record = query
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Create record failed: {}", e)))?;
 
         Ok(record)
     }
@@ -116,40 +144,48 @@ impl RecordStoreEngine for PostgresRecordEngine {
         id: i64,
         data: Value,
     ) -> AppResult<ModelRecordEntity> {
-        let record = sqlx::query_as::<_, ModelRecordEntity>(
-            r#"
-            UPDATE model_records
-            SET data = $1, updated_at = NOW()
-            WHERE id = $2 AND system_id = $3 AND model_slug = $4 AND deleted_at IS NULL
-            RETURNING id, system_id, model_slug, data, created_at, updated_at, deleted_at
-            "#,
-        )
-        .bind(data)
-        .bind(id)
-        .bind(system_slug)
-        .bind(model_slug)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Update record failed: {}", e)))?
-        .ok_or_else(|| AppError::NotFound(format!("Record #{} not found", id)))?;
+        let (sql, binds) = OrmUpdate::table("model_records")
+            .set("data", data)
+            .set_now("updated_at")
+            .where_eq("id", id)
+            .where_eq("system_id", system_slug)
+            .where_eq("model_slug", model_slug)
+            .where_null("deleted_at")
+            .returning(&[
+                "id",
+                "system_id",
+                "model_slug",
+                "data",
+                "created_at",
+                "updated_at",
+                "deleted_at",
+            ])
+            .to_sql(Dialect::Postgres);
+
+        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let record = query
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Update record failed: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Record #{} not found", id)))?;
 
         Ok(record)
     }
 
     async fn delete(&self, system_slug: &str, model_slug: &str, id: i64) -> AppResult<()> {
-        let result = sqlx::query(
-            r#"
-            UPDATE model_records
-            SET deleted_at = NOW()
-            WHERE id = $1 AND system_id = $2 AND model_slug = $3 AND deleted_at IS NULL
-            "#,
-        )
-        .bind(id)
-        .bind(system_slug)
-        .bind(model_slug)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Delete record failed: {}", e)))?;
+        let (sql, binds) = OrmUpdate::table("model_records")
+            .set_now("deleted_at")
+            .where_eq("id", id)
+            .where_eq("system_id", system_slug)
+            .where_eq("model_slug", model_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
+
+        let query = bind_pg_query(sqlx::query(&sql), binds);
+        let result = query
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Delete record failed: {}", e)))?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::NotFound(format!("Record #{} not found", id)));

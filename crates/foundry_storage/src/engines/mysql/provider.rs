@@ -109,7 +109,7 @@ impl StorageDriverProvider for MySqlProvider {
             }
         };
 
-        let init_sql = include_str!("../../../migrations/mysql/init.sql");
+        let init_sql = self.get_baseline_ddl();
 
         // Split statements by semicolon and execute each statement sequentially
         let statements = init_sql.split(';');
@@ -129,5 +129,9 @@ impl StorageDriverProvider for MySqlProvider {
 
         info!("MySQL/MariaDB database migration completed successfully.");
         Ok(())
+    }
+
+    fn get_baseline_ddl(&self) -> String {
+        crate::orm::compile_all_ddl(crate::orm::Dialect::MySql)
     }
 }

@@ -119,7 +119,20 @@ impl Database {
         not(feature = "mariadb")
     ))]
     pub fn dummy() -> Self {
-        let client = mongodb::Client::with_uri_str("mongodb://127.0.0.1:27017")
+        use std::future::IntoFuture;
+        let client_options = match tokio::runtime::Handle::try_current() {
+            Ok(handle) => tokio::task::block_in_place(|| {
+                handle.block_on(
+                    mongodb::options::ClientOptions::parse("mongodb://127.0.0.1:27017")
+                        .into_future(),
+                )
+            }),
+            Err(_) => tokio::runtime::Runtime::new().unwrap().block_on(
+                mongodb::options::ClientOptions::parse("mongodb://127.0.0.1:27017").into_future(),
+            ),
+        }
+        .expect("Failed to parse dummy MongoDB options");
+        let client = mongodb::Client::with_options(client_options)
             .expect("Failed to create dummy MongoDB client");
         let db = client.database("dummy");
         Self {
@@ -166,11 +179,69 @@ impl Database {
         Ok(Self::from_engines(engines))
     }
 
-    /// Run migrations for the specified database connection
+    /// Returns the complete dialect DDL or initialization script generated directly from the binary SPI,
+    /// including any code-defined DDL extensions registered by subsystems, plugins, or application code.
+    pub fn get_ddl(explicit_type: &str) -> AppResult<String> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider_by_type(explicit_type)?;
+        let baseline = provider.get_baseline_ddl();
+        let extensions =
+            crate::spi::registry::get_registered_ddl_extensions(provider.driver_name());
+
+        if extensions.is_empty() {
+            return Ok(baseline);
+        }
+
+        let mut full_ddl = baseline;
+        full_ddl.push_str(
+            "\n\n-- ============================================================================\n",
+        );
+        full_ddl.push_str("-- CODE-DEFINED EXTENSION DDL (Custom Subsystems & Extensions)\n");
+        full_ddl.push_str(
+            "-- ============================================================================\n\n",
+        );
+
+        for ext in extensions {
+            full_ddl.push_str(&format!(
+                "-- [Extension: {}] (Dialect: {})\n",
+                ext.identifier, ext.db_type
+            ));
+            full_ddl.push_str(&ext.content);
+            if !ext.content.ends_with('\n') {
+                full_ddl.push('\n');
+            }
+            full_ddl.push('\n');
+        }
+
+        Ok(full_ddl)
+    }
+
+    /// Returns the default migration script filename ("init.sql" or "init.js")
+    pub fn get_default_migration_filename(explicit_type: &str) -> AppResult<&'static str> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider_by_type(explicit_type)?;
+        Ok(provider.default_migration_filename())
+    }
+
+    /// Run migrations for the specified database connection, including any code-defined DDL extensions
     pub async fn run_migrations(url: &str, explicit_type: Option<&str>) -> AppResult<()> {
         let registry = StorageRegistry::default_registry();
         let provider = registry.find_provider(url, explicit_type)?;
-        provider.run_migrations(url).await
+        provider.run_migrations(url).await?;
+
+        // Apply registered code-defined DDL extensions for this dialect if present
+        let extensions =
+            crate::spi::registry::get_registered_ddl_extensions(provider.driver_name());
+        if !extensions.is_empty() {
+            crate::spi::registry::apply_code_extensions_migrations(
+                provider.driver_name(),
+                url,
+                &extensions,
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     pub fn records(&self) -> &dyn RecordStoreEngine {

@@ -67,13 +67,17 @@ impl StorageDriverProvider for PostgresProvider {
             .await
             .map_err(|e| AppError::Database(format!("Failed to connect for migrations: {}", e)))?;
 
-        let init_sql = include_str!("../../../migrations/postgres/init.sql");
-        sqlx::raw_sql(init_sql)
+        let init_sql = self.get_baseline_ddl();
+        sqlx::raw_sql(&init_sql)
             .execute(&pool)
             .await
             .map_err(|e| AppError::Database(format!("PostgreSQL migration failed: {}", e)))?;
 
         info!("PostgreSQL database migration completed successfully.");
         Ok(())
+    }
+
+    fn get_baseline_ddl(&self) -> String {
+        crate::orm::compile_all_ddl(crate::orm::Dialect::Postgres)
     }
 }

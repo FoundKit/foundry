@@ -115,7 +115,7 @@ impl StorageDriverProvider for MariaDbProvider {
             }
         };
 
-        let init_sql = include_str!("../../../migrations/mariadb/init.sql");
+        let init_sql = self.get_baseline_ddl();
 
         // Split statements by semicolon and execute each statement sequentially
         let statements = init_sql.split(';');
@@ -135,5 +135,9 @@ impl StorageDriverProvider for MariaDbProvider {
 
         info!("MariaDB database migration completed successfully.");
         Ok(())
+    }
+
+    fn get_baseline_ddl(&self) -> String {
+        crate::orm::compile_all_ddl(crate::orm::Dialect::MariaDb)
     }
 }

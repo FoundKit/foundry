@@ -104,6 +104,14 @@ impl StorageDriverProvider for MongoProvider {
         info!("MongoDB initialization completed successfully.");
         Ok(())
     }
+
+    fn get_baseline_ddl(&self) -> String {
+        include_str!("../../../migrations/mongodb/init.js").to_string()
+    }
+
+    fn default_migration_filename(&self) -> &'static str {
+        "init.js"
+    }
 }
 
 async fn init_mongodb_indexes(db: &Database) -> AppResult<()> {

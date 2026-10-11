@@ -11,7 +11,8 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["server", "storage", "auth", "extension", "postgres"]
+default = ["standard", "postgres"]
+standard = ["server", "storage", "auth", "extension"]
 server = ["dep:foundry_engine", "dep:axum", "dep:tower", "dep:tower-http", "dep:tokio"]
 storage = ["dep:foundry_storage", "dep:sqlx"]
 auth = ["dep:foundry_auth"]
@@ -20,6 +21,7 @@ postgres = ["foundry_storage?/postgres", "foundry_engine?/postgres"]
 mysql = ["foundry_storage?/mysql", "foundry_engine?/mysql"]
 mariadb = ["foundry_storage?/mariadb", "foundry_engine?/mariadb"]
 mongodb = ["foundry_storage?/mongodb", "foundry_engine?/mongodb"]
+all-databases = ["postgres", "mysql", "mariadb", "mongodb"]
 
 [dependencies]
 foundry_core = { workspace = true }

@@ -913,14 +913,13 @@ redis.set(&cache_key, &config, 3600).await?;
 ## 附录 A：关键命令速查表
 
 ```bash
-# 项目创建
-foundry new my-app
+# 项目创建 (支持 --db postgres | mysql | mariadb | mongodb)
+foundry new my-app --db postgres
 cd my-app
 
-# 数据库管理
-docker compose -f dev/docker-compose.yml up -d      # 启动数据库
-bash dev/init-db.sh                                  # 初始化数据库
-docker compose -f dev/docker-compose.yml down -v    # 清理重置
+# 数据库迁移与 DDL 生成
+foundry ddl --db postgres           # 生成方言 DDL
+foundry migrate                     # 手动执行迁移脚本
 
 # 子系统管理
 foundry system new <slug> --name "<Name>"           # 创建子系统

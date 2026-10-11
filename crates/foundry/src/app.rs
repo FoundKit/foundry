@@ -134,11 +134,39 @@ impl FoundryBuilder {
     }
 
     pub fn register_subsystem<S: SubsystemModule>(mut self, subsystem: S) -> Self {
+        let orm_models = subsystem.orm_models();
+        if !orm_models.is_empty() {
+            foundry_storage::register_orm_models(&orm_models);
+        }
+
+        for dialect in &["postgres", "mysql", "mariadb", "mongodb", "*"] {
+            if let Some(ddl) = subsystem.migration_ddl(dialect) {
+                foundry_storage::register_ddl_extension(
+                    format!("subsystem:{}", subsystem.slug()),
+                    *dialect,
+                    ddl,
+                );
+            }
+        }
         self.subsystems.push(Box::new(subsystem));
         self
     }
 
     pub fn register_boxed_subsystem(mut self, subsystem: Box<dyn SubsystemModule>) -> Self {
+        let orm_models = subsystem.orm_models();
+        if !orm_models.is_empty() {
+            foundry_storage::register_orm_models(&orm_models);
+        }
+
+        for dialect in &["postgres", "mysql", "mariadb", "mongodb", "*"] {
+            if let Some(ddl) = subsystem.migration_ddl(dialect) {
+                foundry_storage::register_ddl_extension(
+                    format!("subsystem:{}", subsystem.slug()),
+                    *dialect,
+                    ddl,
+                );
+            }
+        }
         self.subsystems.push(subsystem);
         self
     }

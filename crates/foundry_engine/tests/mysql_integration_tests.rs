@@ -43,11 +43,12 @@ mod mysql_tests {
         // 2. Admin Management & Authentication
         println!("Testing Admin creation and querying...");
         let admin_username = format!("superadmin_{}", uuid::Uuid::new_v4().simple());
+        let admin_email = format!("admin_{}@foundkit.org", uuid::Uuid::new_v4().simple());
         let admin = db
             .admins()
             .create(
                 &admin_username,
-                Some("admin@foundkit.org"),
+                Some(&admin_email),
                 "$argon2id$v=19$m=19456,t=2,p=1$fake_hash_for_test",
                 "superadmin",
                 serde_json::json!(["*"]),

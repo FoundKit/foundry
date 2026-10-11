@@ -47,22 +47,15 @@ Foundry Repository (Framework)
             │
             ↓
 User Application (Independent Git Repo)
-    ├── Cargo.toml                 # [dependencies] foundry = "0.1"
-    ├── dev/                       # Local development resources (.gitignore'd)
-    │   ├── docker-compose.yml     # PostgreSQL 18.6 + Redis local development stack
-    │   ├── init-db.sh             # Local dev database initialization/reset script
-    │   └── init-dev-db.sql        # Standalone dev database bootstrap script
+    ├── Cargo.toml                 # [dependencies] foundry = "0.1" (configured with chosen DB feature)
     ├── src/
     │   ├── main.rs                # Bootstrap with FoundryApp::builder()
     │   └── systems/               # User business subsystems
     │       ├── blog/              # Controllers + Domain Logic + DTOs + Admin Views
     │       └── newsletter/
     ├── config/                    # Application configuration
-    └── migrations/                # Application database migrations
-        ├── postgres/              # PostgreSQL platform schema & initial superadmin seed
-        │   └── init.sql
-        └── mysql/                 # MySQL platform schema & initial superadmin seed
-            └── init.sql
+    └── migrations/                # (Optional) On-demand generated via `foundry ddl` or `foundry migrate -g`
+        └── init.sql               # Platform schema & initial superadmin seed (init.js for MongoDB)
 ```
 
 ---
@@ -75,16 +68,16 @@ Creating and running a new Foundry project takes seconds:
 # 1. Install Foundry CLI (from GitHub repository)
 cargo install --git https://github.com/foundkit/foundry foundry_cli
 
-# 2. Scaffold a brand new standalone application
-foundry new my-app
+# 2. Scaffold a brand new standalone application (PostgreSQL by default, or --db mysql / mariadb / mongodb)
+foundry new my-app --db postgres
 cd my-app
 
-# 3. Start local development database (PostgreSQL 18.6 or MySQL 8.4 + Redis 8)
-docker compose up -d postgres redis
-# Or for MySQL / MariaDB:
-# docker compose up -d mysql redis
+# 3. Start local development database (or connect to existing database configured in .env)
+# Example using Docker:
+docker run -d --name my-postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry postgres:18-alpine
+docker run -d --name my-redis -p 6379:6379 redis:7-alpine
 
-# 4. Start the server
+# 4. Start the server (auto-initializes schema, indexes, and superadmin when AUTO_MIGRATE=true)
 cargo run
 ```
 
@@ -160,25 +153,29 @@ async fn main() -> anyhow::Result<()> {
 
 Foundry provides a streamlined developer CLI (`foundry` / `foundry-cli`) to manage applications, subsystems, and models.
 
-### 1. Local Development Database
+### 1. Database Setup & Multi-Engine CLI
 
-Scaffolded projects include local container compose specifications (in `dev/docker-compose.yml`), pre-configured to mount dialect-specific initializations:
+Foundry connects to your database via `DATABASE_URL` and `DATABASE_TYPE` in `.env`. Choose your database during scaffolding or generate DDL on demand:
 
 ```bash
-# Start local database stack (PostgreSQL 18.6 or MySQL 8.4 + Redis 8)
-docker compose up -d postgres redis   # PostgreSQL stack
-# Or for MySQL:
-docker compose up -d mysql redis      # MySQL stack
+# Scaffold application for a specific database (pure code skeleton, migrations generated on-demand):
+foundry new my-app --db postgres    # PostgreSQL (default)
+foundry new my-app --db mysql       # MySQL 8.0+
+foundry new my-app --db mariadb     # MariaDB 10.5+
+foundry new my-app --db mongodb     # MongoDB 6.0+
 
-# Check service status
-docker compose ps
+# Generate dialect-specific DDL scripts anytime (creates migrations/):
+foundry ddl --db postgres           # Writes PostgreSQL schema to migrations/init.sql
+foundry ddl --db mysql              # Writes MySQL schema to migrations/init.sql
+foundry ddl --db mongodb            # Writes MongoDB init.js to migrations/init.js
 
-# Stop local database
-docker compose down
-
-# Reset local database and volumes (clean re-initialization)
-docker compose down -v
+# Apply migrations manually via CLI (or generate with --generate):
+foundry migrate
+foundry migrate --generate          # Generates migrations/ for current project database
 ```
+
+* **Zero-Setup Startup (`AUTO_MIGRATE=true`)**: Running `cargo run` automatically initializes tables/collections, covering indexes, and superadmin seed (`admin` / `admin123456`).
+* **Strict DBA Auditing (`AUTO_MIGRATE=false`)**: Execute generated migration scripts directly (`psql -f migrations/init.sql`, `mysql < migrations/init.sql`, etc.).
 
 ### 2. Subsystem (Subproject) Operations
 
@@ -201,9 +198,57 @@ foundry system list
 
 ### 3. Data Model Creation & Storage
 
-Choose between Zero-DDL dynamic models and strongly-typed SQLx schemas:
+Foundry supports an **ORM-First (Prisma-like)** architecture along with flexible multi-paradigm storage models:
 
-#### Option A: Zero-DDL Dynamic Models (Instant RESTful Auto-CRUD)
+#### Option A: Code-First ORM Models (Prisma-like Strong Typing, Recommended)
+Define strongly-typed ORM schemas directly in subsystem code without manually writing raw SQL dialect migrations. When running `foundry migrate` or `foundry ddl`, Foundry compiles the code-defined ORM schemas into target database dialect DDL (PostgreSQL, MySQL, MariaDB) automatically:
+
+```rust
+use foundry::prelude::*;
+
+impl SubsystemModule for BillingSubsystem {
+    fn slug(&self) -> &'static str { "billing" }
+    fn display_name(&self) -> &'static str { "Billing Center" }
+
+    // Code-defined ORM schemas (Prisma-like)
+    fn orm_models(&self) -> Vec<EntitySchema> {
+        vec![
+            EntitySchema::new("billing_invoices")
+                .column(ColumnDef::bigint("id").primary_key().auto_increment())
+                .column(ColumnDef::varchar("system_id", 32).not_null())
+                .column(ColumnDef::varchar("invoice_no", 64).not_null().unique())
+                .column(ColumnDef::decimal("amount", 10, 2).not_null())
+                .column(ColumnDef::varchar("status", 24).not_null())
+                .column(ColumnDef::json("metadata").default_empty_json())
+                .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+                .index(IndexDef::new("idx_invoices_sys", &["system_id"]))
+        ]
+    }
+}
+```
+
+CRUD operations are executed via strongly-typed ORM query builders, automatically adapting parameter placeholders (`$1` vs `?`):
+```rust
+use foundry::prelude::*;
+
+// ORM Insert
+let (sql, binds) = OrmInsert::into_table("billing_invoices")
+    .value("system_id", "billing")
+    .value("invoice_no", "INV-2026-001")
+    .value("amount", 99.50)
+    .to_sql(Dialect::Postgres);
+
+// ORM Paginated Select
+let (sql, binds) = OrmSelect::from_table("billing_invoices")
+    .where_eq("system_id", "billing")
+    .order_by_desc("created_at")
+    .limit(20)
+    .offset(0)
+    .to_sql(Dialect::Postgres);
+```
+
+#### Option B: Zero-DDL Dynamic Models (Instant RESTful Auto-CRUD)
 No SQL DDL migrations needed. Define models dynamically via the Admin UI (`/admin`) or manipulate records directly in code:
 
 ```rust
@@ -220,28 +265,12 @@ let record = RecordStore::create(
 
 // Retrieve by ID or query paginated list
 let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
-let list = RecordStore::list(&db, &ctx.system_slug, "articles", 1, 20).await?;
+let list = RecordStore::list(&db, &ctx.system_slug, "articles", query).await?;
 ```
 Dynamic models automatically receive REST endpoints at `/api/v1/s/{system_slug}/{model_slug}`.
 
-#### Option B: Native SQL Migrations & Typed Models (High-concurrency & Transactions)
-1. Add migration in `migrations/001_create_orders.sql`:
-   ```sql
-   CREATE TABLE IF NOT EXISTS orders (
-       id BIGSERIAL PRIMARY KEY,
-       system_slug VARCHAR(64) NOT NULL,
-       order_no VARCHAR(64) NOT NULL UNIQUE,
-       amount BIGINT NOT NULL,
-       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-   );
-   CREATE INDEX IF NOT EXISTS idx_orders_system_slug ON orders(system_slug);
-   ```
-2. Apply migration:
-   ```bash
-   foundry migrate
-   # Or set AUTO_MIGRATE=true in .env to auto-apply on startup
-   ```
-3. Query via SQLx with `#[derive(sqlx::FromRow)]`.
+#### Option C: Native SQL / Script Escape Hatch (Special Triggers, MongoDB Scripts)
+For databases without relational ORM support (such as MongoDB) or specialized SQL needs, write custom scripts via `SubsystemModule::migration_ddl` or under `migrations/`.
 
 ### 4. Project Validation & Operations
 
