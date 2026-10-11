@@ -1,7 +1,5 @@
 use crate::entities::ModelRecordEntity;
-use crate::orm::{
-    bind_mysql_query, bind_mysql_query_as, Dialect, OrmInsert, OrmSelect, OrmUpdate,
-};
+use crate::orm::{Dialect, OrmInsert, OrmSelect, OrmUpdate, bind_mysql_query, bind_mysql_query_as};
 use crate::traits::{RecordQuery, RecordStoreEngine};
 use async_trait::async_trait;
 use foundry_core::error::{AppError, AppResult};
@@ -62,8 +60,7 @@ impl RecordStoreEngine for MySqlRecordEngine {
             .where_null("deleted_at")
             .to_sql(Dialect::MySql);
 
-        let count_query =
-            bind_mysql_query_as(sqlx::query_as::<_, (i64,)>(&count_sql), count_binds);
+        let count_query = bind_mysql_query_as(sqlx::query_as::<_, (i64,)>(&count_sql), count_binds);
         let total_row = count_query
             .fetch_one(&self.pool)
             .await

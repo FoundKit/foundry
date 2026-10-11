@@ -1,7 +1,5 @@
 use crate::entities::ModelRecordEntity;
-use crate::orm::{
-    bind_pg_query, bind_pg_query_as, Dialect, OrmInsert, OrmSelect, OrmUpdate,
-};
+use crate::orm::{Dialect, OrmInsert, OrmSelect, OrmUpdate, bind_pg_query, bind_pg_query_as};
 use crate::traits::{RecordQuery, RecordStoreEngine};
 use async_trait::async_trait;
 use foundry_core::error::{AppError, AppResult};
@@ -65,8 +63,10 @@ impl RecordStoreEngine for PostgresRecordEngine {
             .offset(offset as i64)
             .to_sql(Dialect::Postgres);
 
-        let select_query =
-            bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&select_sql), select_binds);
+        let select_query = bind_pg_query_as(
+            sqlx::query_as::<_, ModelRecordEntity>(&select_sql),
+            select_binds,
+        );
         let records = select_query
             .fetch_all(&self.pool)
             .await

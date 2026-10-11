@@ -186,10 +186,7 @@ pub fn audit_logs_schema() -> EntitySchema {
             "idx_audit_logs_path",
             &["path", "created_at"],
         ))
-        .index(IndexDef::new(
-            "idx_audit_logs_created_at",
-            &["created_at"],
-        ))
+        .index(IndexDef::new("idx_audit_logs_created_at", &["created_at"]))
         .comment("Admin non-GET request audit log trail")
 }
 

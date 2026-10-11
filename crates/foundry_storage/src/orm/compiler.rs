@@ -11,14 +11,18 @@ pub fn compile_schemas(schemas: &[EntitySchema], dialect: Dialect) -> String {
         Dialect::MariaDb => "MariaDB",
     };
 
-    out.push_str("-- ============================================================================\n");
+    out.push_str(
+        "-- ============================================================================\n",
+    );
     out.push_str(&format!(
         "-- FOUNDRY ORM AUTO-GENERATED DDL MIGRATION ({})\n",
         dialect_name
     ));
     out.push_str(&format!("-- Target Database Dialect: {}\n", dialect_name));
     out.push_str("-- Generated directly from code-defined ORM schemas\n");
-    out.push_str("-- ============================================================================\n\n");
+    out.push_str(
+        "-- ============================================================================\n\n",
+    );
 
     if dialect == Dialect::Postgres {
         out.push_str("-- Enable required PostgreSQL extensions\n");
@@ -46,9 +50,13 @@ pub fn compile_schemas(schemas: &[EntitySchema], dialect: Dialect) -> String {
             .collect();
 
         if !tables_with_updated_at.is_empty() {
-            out.push_str("-- ============================================================================\n");
+            out.push_str(
+                "-- ============================================================================\n",
+            );
             out.push_str("-- AUTOMATIC TIMESTAMP TRIGGER\n");
-            out.push_str("-- ============================================================================\n");
+            out.push_str(
+                "-- ============================================================================\n",
+            );
             out.push_str("CREATE OR REPLACE FUNCTION trigger_set_timestamp()\n");
             out.push_str("RETURNS TRIGGER AS $$\n");
             out.push_str("BEGIN\n");
@@ -73,9 +81,13 @@ pub fn compile_schemas(schemas: &[EntitySchema], dialect: Dialect) -> String {
 
     // Default Seed Admin if `admins` table exists
     if schemas.iter().any(|s| s.table_name == "admins") {
-        out.push_str("-- ============================================================================\n");
+        out.push_str(
+            "-- ============================================================================\n",
+        );
         out.push_str("-- DEFAULT SEED DATA (admin / admin123456)\n");
-        out.push_str("-- ============================================================================\n");
+        out.push_str(
+            "-- ============================================================================\n",
+        );
         match dialect {
             Dialect::Postgres => {
                 out.push_str(
@@ -120,7 +132,10 @@ pub fn compile_schema(schema: &EntitySchema, dialect: Dialect) -> String {
 
 fn compile_pg_schema(schema: &EntitySchema) -> String {
     let mut out = String::new();
-    out.push_str(&format!("CREATE TABLE IF NOT EXISTS {} (\n", schema.table_name));
+    out.push_str(&format!(
+        "CREATE TABLE IF NOT EXISTS {} (\n",
+        schema.table_name
+    ));
 
     let mut col_lines = Vec::new();
     for col in &schema.columns {

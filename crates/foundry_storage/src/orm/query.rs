@@ -226,12 +226,14 @@ impl OrmSelect {
     }
 
     pub fn where_eq(mut self, col: impl Into<String>, val: impl Into<OrmValue>) -> Self {
-        self.conditions.push(OrmCondition::Eq(col.into(), val.into()));
+        self.conditions
+            .push(OrmCondition::Eq(col.into(), val.into()));
         self
     }
 
     pub fn where_ne(mut self, col: impl Into<String>, val: impl Into<OrmValue>) -> Self {
-        self.conditions.push(OrmCondition::Ne(col.into(), val.into()));
+        self.conditions
+            .push(OrmCondition::Ne(col.into(), val.into()));
         self
     }
 
@@ -455,7 +457,8 @@ impl OrmUpdate {
     }
 
     pub fn where_eq(mut self, col: impl Into<String>, val: impl Into<OrmValue>) -> Self {
-        self.conditions.push(OrmCondition::Eq(col.into(), val.into()));
+        self.conditions
+            .push(OrmCondition::Eq(col.into(), val.into()));
         self
     }
 
@@ -535,7 +538,8 @@ impl OrmDelete {
     }
 
     pub fn where_eq(mut self, col: impl Into<String>, val: impl Into<OrmValue>) -> Self {
-        self.conditions.push(OrmCondition::Eq(col.into(), val.into()));
+        self.conditions
+            .push(OrmCondition::Eq(col.into(), val.into()));
         self
     }
 
