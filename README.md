@@ -299,6 +299,7 @@ Explore [`examples/blog_platform`](examples/blog_platform) for a complete refere
 
 - 🌐 [Official Documentation](https://foundkit.github.io/foundry/)
 - 📘 [Getting Started Guide](docs/src/content/docs/getting-started.md)
+- 🚀 [Complete System Development Guide](docs/src/content/docs/guides/system-development.md)
 - 🏗️ [Architecture Blueprint](docs/src/content/docs/architecture/blueprint.md)
 - 🔌 [Subsystems & Extensions Guide](docs/src/content/docs/guides/extensions.md)
 - 🗺️ [Development Roadmap](docs/src/content/docs/roadmap.md)

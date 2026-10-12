@@ -5,6 +5,9 @@ description: Foundry Multi-Database SPI architecture, PostgreSQL, MySQL, MariaDB
 
 # Database & Storage Engine Guide
 
+> [!TIP]
+> **Complete System Development Manual**: For ThinkPHP-style chainable ORM query builders (`OrmSelect`, `OrmInsert`, `OrmUpdate`, `OrmDelete`), Code-First entity schemas, and end-to-end practical walkthroughs, refer to the [Complete System Development Guide](./system-development/).
+
 Foundry features a modern **Multi-Database SPI (Service Provider Interface) pluggable storage architecture**. Business layers, domain services, the AutoCRUD engine, and Axum handlers exclusively depend on the `Database` facade and standard store traits, **achieving absolute zero driver leakage**.
 
 Foundry officially supports four enterprise-grade databases:

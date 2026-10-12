@@ -299,6 +299,7 @@ foundry validate
 
 - 🌐 [官方文档站点](https://foundkit.github.io/foundry/zh/)
 - 📘 [快速入门指南](docs/src/content/docs/zh/getting-started.md)
+- 🚀 [系统开发完全指南](docs/src/content/docs/zh/guides/system-development.md)
 - 🏗️ [架构设计蓝图](docs/src/content/docs/zh/architecture/blueprint.md)
 - 🔌 [子系统与扩展开发指南](docs/src/content/docs/zh/guides/extensions.md)
 - 🗺️ [项目开发路线图](docs/src/content/docs/zh/roadmap.md)

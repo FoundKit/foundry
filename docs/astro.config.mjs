@@ -612,6 +612,13 @@ export default defineConfig({
           },
           items: [
             {
+              label: 'System Development Guide',
+              translations: {
+                'zh-CN': '系统开发完全指南',
+              },
+              link: '/guides/system-development/',
+            },
+            {
               label: 'Subsystems & Custom Features',
               translations: {
                 'zh-CN': '子系统与自定义功能开发',

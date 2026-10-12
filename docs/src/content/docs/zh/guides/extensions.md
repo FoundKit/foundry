@@ -5,6 +5,9 @@ description: 学习如何使用 Foundry 开发模块化业务子系统、数据�
 
 # 子系统与自定义功能开发指南
 
+> [!TIP]
+> **完整系统开发手册**：如果你希望从宏观架构、ThinkPHP 式开发流程到实战案例全面了解如何构建完整系统，请参阅全新的 [系统开发完全指南](./system-development/)。
+
 Foundry 提倡高内聚、低耦合的模块化设计。业务开发者可以将独立业务组织为 **子系统 (Subsystem)** 与 **生命周期钩子 (Mutation Hook)**。
 
 ---
@@ -65,25 +68,22 @@ pub struct ArticleService;
 impl ArticleService {
     pub async fn create_article(
         ctx: &SystemContext,
-        db: &DbPool,
+        db: &Database,
         req: CreateArticleRequest,
     ) -> AppResult<ArticleResponse> {
-        // 执行原生数据库写入或复杂事务
-        let row: (i64,) = sqlx::query_as(
-            "INSERT INTO articles (system_slug, title, content, author, created_at)
-             VALUES ($1, $2, $3, $4, NOW())
-             RETURNING id"
-        )
-        .bind(&ctx.system_slug)
-        .bind(&req.title)
-        .bind(&req.content)
-        .bind(&req.author)
-        .fetch_one(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        // 方式 A: 使用多数据库透明的动态模型持久化
+        let record = db.records().create(
+            &ctx.system_slug,
+            "articles",
+            serde_json::json!({
+                "title": req.title,
+                "content": req.content,
+                "author": req.author
+            })
+        ).await?;
 
         Ok(ArticleResponse {
-            id: row.0,
+            id: record.id,
             title: req.title,
             content: req.content,
             author: req.author,
@@ -92,7 +92,7 @@ impl ArticleService {
 }
 ```
 
-### 步骤 3: 编写 HTTP 控制器并提取 DbPool (`controllers/mod.rs`)
+### 步骤 3: 编写 HTTP 控制器并提取 Database 门面 (`controllers/mod.rs`)
 
 ```rust
 use axum::{extract::Extension, routing::post, Json, Router};
@@ -107,12 +107,12 @@ pub fn build_routes() -> Router {
 
 pub async fn handle_create_article(
     Extension(ctx): Extension<SystemContext>,
-    Extension(db): Extension<DbPool>,
+    Extension(db): Extension<Database>,
     Json(payload): Json<CreateArticleRequest>,
 ) -> AppResult<Json<ApiResponse<ArticleResponse>>> {
     payload.validate()?;
     let article = ArticleService::create_article(&ctx, &db, payload).await?;
-    Ok(Json(ApiResponse::success(article)))
+    Ok(Json(ApiResponse::created(article)))
 }
 ```
 

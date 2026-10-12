@@ -5,6 +5,9 @@ description: Learn how to develop modular business subsystems, custom endpoints,
 
 # Subsystems & Custom Features Guide
 
+> [!TIP]
+> **Complete System Development Manual**: If you are looking for an end-to-end guide covering architecture, ThinkPHP-style development workflows, and a full e-commerce practical walkthrough, please refer to the new [Complete System Development Guide](./system-development/).
+
 Foundry empowers developers to build modular, maintainable backend applications by organizing business capabilities into **Subsystems** and **Lifecycle Hooks**.
 
 ---
@@ -65,25 +68,22 @@ pub struct ArticleService;
 impl ArticleService {
     pub async fn create_article(
         ctx: &SystemContext,
-        db: &DbPool,
+        db: &Database,
         req: CreateArticleRequest,
     ) -> AppResult<ArticleResponse> {
-        // Execute database query or business transactions
-        let row: (i64,) = sqlx::query_as(
-            "INSERT INTO articles (system_slug, title, content, author, created_at)
-             VALUES ($1, $2, $3, $4, NOW())
-             RETURNING id"
-        )
-        .bind(&ctx.system_slug)
-        .bind(&req.title)
-        .bind(&req.content)
-        .bind(&req.author)
-        .fetch_one(db)
-        .await
-        .map_err(|e| AppError::Database(e.to_string()))?;
+        // Multi-database provider-agnostic dynamic model persistence
+        let record = db.records().create(
+            &ctx.system_slug,
+            "articles",
+            serde_json::json!({
+                "title": req.title,
+                "content": req.content,
+                "author": req.author
+            })
+        ).await?;
 
         Ok(ArticleResponse {
-            id: row.0,
+            id: record.id,
             title: req.title,
             content: req.content,
             author: req.author,
@@ -92,7 +92,7 @@ impl ArticleService {
 }
 ```
 
-### Step 3: Implement HTTP Controller (`controllers/mod.rs`)
+### Step 3: Implement HTTP Controller with Database Facade (`controllers/mod.rs`)
 
 ```rust
 use axum::{extract::Extension, routing::post, Json, Router};
@@ -107,12 +107,12 @@ pub fn build_routes() -> Router {
 
 pub async fn handle_create_article(
     Extension(ctx): Extension<SystemContext>,
-    Extension(db): Extension<DbPool>,
+    Extension(db): Extension<Database>,
     Json(payload): Json<CreateArticleRequest>,
 ) -> AppResult<Json<ApiResponse<ArticleResponse>>> {
     payload.validate()?;
     let article = ArticleService::create_article(&ctx, &db, payload).await?;
-    Ok(Json(ApiResponse::success(article)))
+    Ok(Json(ApiResponse::created(article)))
 }
 ```
 
