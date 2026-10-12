@@ -39,7 +39,7 @@ flowchart TD
         App_Main["src/main.rs (FoundryApp::builder()...)"]
         App_Systems["src/systems/* (User business subsystems: APIs, logic, DTOs)"]
         App_Admin["custom_pages/* (User custom admin iframe views)"]
-        App_Config["config/ & migrations/ (Application configs & migrations)"]
+        App_Config[".env & migrations/ (Environment configs & migrations)"]
     end
 
     CratesIO -->|"cargo update"| UserApp

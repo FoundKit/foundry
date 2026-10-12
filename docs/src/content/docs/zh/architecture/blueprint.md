@@ -39,7 +39,7 @@ flowchart TD
         App_Main["src/main.rs (FoundryApp::builder()...)"]
         App_Systems["src/systems/* (业务子系统: API 控制器, 领域服务, DTO 校验)"]
         App_Admin["custom_pages/* (业务自定义 Admin 运营大屏页面)"]
-        App_Config["config/ 与 migrations/ (业务配置与迁移)"]
+        App_Config[".env 与 migrations/ (环境变量与按需迁移)"]
     end
 
     CratesIO -->|"cargo update"| UserApp

@@ -48,12 +48,12 @@ Foundry 框架仓库 (Framework)
             ↓
 用户业务应用 (独立 Git 仓库)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1" (自动配置所选数据库特性)
+    ├── .env                       # 环境变量配置 (包含 .env.example)
     ├── src/
     │   ├── main.rs                # 应用启动入口 (基于 FoundryApp::builder())
     │   └── systems/               # 用户业务子系统
     │       ├── blog/              # 控制器 + 领域逻辑 + DTO 校验 + 自定义 Admin 页面
     │       └── newsletter/
-    ├── config/                    # 应用配置
     └── migrations/                # （可选）按需生成的方言迁移脚本目录 (执行 `foundry ddl` 或 `foundry migrate -g` 时生成)
         └── init.sql               # 平台初始化全量表结构与初始超管账号 (MongoDB 为 init.js)
 ```

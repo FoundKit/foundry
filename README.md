@@ -48,12 +48,12 @@ Foundry Repository (Framework)
             ↓
 User Application (Independent Git Repo)
     ├── Cargo.toml                 # [dependencies] foundry = "0.1" (configured with chosen DB feature)
+    ├── .env                       # Environment configuration (.env.example included)
     ├── src/
     │   ├── main.rs                # Bootstrap with FoundryApp::builder()
     │   └── systems/               # User business subsystems
     │       ├── blog/              # Controllers + Domain Logic + DTOs + Admin Views
     │       └── newsletter/
-    ├── config/                    # Application configuration
     └── migrations/                # (Optional) On-demand generated via `foundry ddl` or `foundry migrate -g`
         └── init.sql               # Platform schema & initial superadmin seed (init.js for MongoDB)
 ```

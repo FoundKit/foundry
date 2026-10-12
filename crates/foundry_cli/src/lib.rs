@@ -429,7 +429,6 @@ pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<
     fs::create_dir_all(project_dir.join("src/systems/sample/logic"))?;
     fs::create_dir_all(project_dir.join("src/systems/sample/dto"))?;
     fs::create_dir_all(project_dir.join("src/systems/sample/custom_pages"))?;
-    fs::create_dir_all(project_dir.join("config"))?;
 
     // 1. Cargo.toml
     let foundry_dep = if db_kind == DatabaseKind::Postgres {
@@ -1227,11 +1226,12 @@ mod tests {
         .unwrap();
         assert!(path.join("Cargo.toml").exists());
         assert!(path.join("src/main.rs").exists());
-        // Verify dev directory is NOT created
+        // Verify dev and config directories are NOT created
         assert!(!path.join("dev").exists());
         assert!(!path.join("dev/docker-compose.yml").exists());
         assert!(!path.join("dev/init-db.sh").exists());
         assert!(!path.join("dev/init-dev-db.sql").exists());
+        assert!(!path.join("config").exists());
 
         // Verify gitignore does not include dev/
         assert!(path.join(".gitignore").exists());
@@ -1282,6 +1282,7 @@ mod tests {
         .unwrap();
 
         assert!(!path.join("dev").exists());
+        assert!(!path.join("config").exists());
         // Verify migrations directory is NOT created by default
         assert!(!path.join("migrations").exists());
 
@@ -1324,6 +1325,7 @@ mod tests {
         .unwrap();
 
         assert!(!path.join("dev").exists());
+        assert!(!path.join("config").exists());
         // Verify migrations directory is NOT created by default
         assert!(!path.join("migrations").exists());
 
@@ -1361,6 +1363,7 @@ mod tests {
         .unwrap();
 
         assert!(!path.join("dev").exists());
+        assert!(!path.join("config").exists());
         // Verify migrations directory is NOT created by default
         assert!(!path.join("migrations").exists());
 
