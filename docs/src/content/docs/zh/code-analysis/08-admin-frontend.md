@@ -1288,7 +1288,7 @@ server {
 
 ### 后端（Rust）
 - **Core**: SystemContext、AppError、ApiResponse、SubsystemModule trait
-- **Storage**: 多数据库 SPI (PostgreSQL / MySQL) + SQLx、Redis、RecordStore（Zero-DDL）
+- **Storage**: 多数据库 SPI (PostgreSQL / MySQL / MariaDB / MongoDB) + SQLx、MongoDB 原生驱动、Redis、RecordStore（Zero-DDL）
 - **Auth**: Argon2id、JWT、RBAC
 - **Extension**: MutationHook、HookPipeline
 - **Engine**: Axum、Auto-CRUD、中间件

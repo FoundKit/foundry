@@ -323,15 +323,19 @@ impl Database {
 ```text
 DATABASE_URL:
 postgres://... 或 postgresql://... ──► 自动激活 PostgresProvider (sqlx::PgPool)
-mysql://... 或 mariadb://...       ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
-环境变量 DATABASE_TYPE=mysql / postgres ──► 显式强制指定驱动类型
+mysql://...                        ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
+mariadb://...                      ──► 自动激活 MariaDbProvider (sqlx::MySqlPool)
+mongodb://... 或 mongodb+srv://... ──► 自动激活 MongoProvider (mongodb::Client)
+环境变量 DATABASE_TYPE=postgres | mysql | mariadb | mongodb ──► 显式强制指定驱动类型
 ```
 
 ### 2.3 多数据库方言迁移机制
 
 每个数据库提供者实现 `StorageDriverProvider` 的 `run_migrations` 契约，自动按需执行特化的初始化脚本与防重锁：
 - **PostgreSQL**：执行 `migrations/postgres/init.sql`（创建 `BIGSERIAL`、`JSONB`、`GIN(data)` 倒排索引与超管账号 Seed）。
-- **MySQL / MariaDB**：执行 `migrations/mysql/init.sql`（先探测/自动建库，创建 `BIGINT AUTO_INCREMENT`、`JSON` 字段、覆盖索引与超管账号 Seed）。
+- **MySQL**：执行 `migrations/mysql/init.sql`（先探测/自动建库，创建 `BIGINT AUTO_INCREMENT`、`JSON` 字段、覆盖索引与超管账号 Seed）。
+- **MariaDB**：执行 `migrations/mariadb/init.sql`（MariaDB 专属方言，创建 `BIGINT AUTO_INCREMENT`、`JSON` 字段、优化覆盖索引与超管账号 Seed）。
+- **MongoDB**：执行原生 Driver 集合与索引初始化 / `migrations/mongodb/init.js`（自动创建全量 BSON 集合、唯一/通配符索引并注入默认超管 Document，无需任何 SQL DDL 迁移）。
 
 ---
 

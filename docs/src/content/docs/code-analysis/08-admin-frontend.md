@@ -1284,41 +1284,41 @@ server {
 
 ---
 
-## 18. 总结：Foundry 完整技术栈
+## 18. Summary: Foundry Complete Technology Stack
 
-### 后端（Rust）
-- **Core**: SystemContext、AppError、ApiResponse、SubsystemModule trait
-- **Storage**: 多数据库 SPI (PostgreSQL / MySQL) + SQLx、Redis、RecordStore（Zero-DDL）
-- **Auth**: Argon2id、JWT、RBAC
-- **Extension**: MutationHook、HookPipeline
-- **Engine**: Axum、Auto-CRUD、中间件
-- **Foundry**: FoundryApp、FoundryBuilder
+### Backend (Rust)
+- **Core**: `SystemContext`, `AppError`, `ApiResponse`, `SubsystemModule` trait
+- **Storage**: Multi-Database SPI (PostgreSQL / MySQL / MariaDB / MongoDB) + SQLx, MongoDB native driver, Redis, `RecordStore` (Zero-DDL)
+- **Auth**: Argon2id, JWT, RBAC
+- **Extension**: `MutationHook`, `HookPipeline`
+- **Engine**: Axum, Auto-CRUD, middleware
+- **Foundry**: `FoundryApp`, `FoundryBuilder`
 
-### 前端（TypeScript）
-- **UI**: React 18、TailwindCSS、Lucide Icons
-- **构建**: Vite、TypeScript、ESLint、Prettier
-- **路由**: 自实现客户端路由（History API）
-- **状态**: useState + props drilling（无 Redux）
-- **API**: fetch + 自封装 request 函数
-- **国际化**: i18next（中英文）
-- **主题**: 暗黑模式（class 切换）
+### Frontend (TypeScript)
+- **UI**: React 18, TailwindCSS, Lucide Icons
+- **Build**: Vite, TypeScript, ESLint, Prettier
+- **Routing**: Lightweight client-side router (History API)
+- **State**: `useState` + props drilling (zero bloated Redux dependencies)
+- **API**: `fetch` + encapsulated `request` client
+- **i18n**: i18next (English & Simplified Chinese)
+- **Theming**: Dark mode (HTML class switching)
 
-### 部署
-- **开发环境**: Vite dev server (3000) + Cargo run (8080)
-- **生产环境**: Rust 后端 + 静态文件服务（或 Nginx 反向代理）
+### Deployment
+- **Development**: Vite dev server (port 3000) + Cargo run (port 8080)
+- **Production**: Single bundled Rust server serving embedded static assets (or behind Nginx reverse proxy)
 
 ---
 
-**Stage 8 完成！你已经完整掌握了 Foundry 项目的所有代码！**
+**Stage 8 Complete! You now have a complete end-to-end understanding of the entire Foundry codebase!**
 
-现在你可以：
-1. 修改任意模块而不会破坏架构
-2. 添加新的子系统和功能
-3. 优化性能和安全性
-4. 定制前端 UI 和交互
-5. 部署到生产环境
+You are now fully equipped to:
+1. Extend or modify any module without breaking architectural boundaries.
+2. Build new domain subsystems and custom business logic.
+3. Optimize performance and database indexing.
+4. Customize Admin UI layouts and custom pages.
+5. Package and deploy production bundles.
 
-🎉 **恭喜！你现在完全掌控了 Foundry 框架！**
+🎉 **Congratulations! You have mastered the Foundry Framework!**
 
 ---
 

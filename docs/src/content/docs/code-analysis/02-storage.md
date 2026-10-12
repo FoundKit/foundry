@@ -321,19 +321,23 @@ impl Database {
 }
 ```
 
-**连接与协议路由规则：**
+**Connection & Protocol Routing Rules:**
 ```text
 DATABASE_URL:
-postgres://... 或 postgresql://... ──► 自动激活 PostgresProvider (sqlx::PgPool)
-mysql://... 或 mariadb://...       ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
-环境变量 DATABASE_TYPE=mysql / postgres ──► 显式强制指定驱动类型
+postgres://... or postgresql://... ──► Automatically activates PostgresProvider (sqlx::PgPool)
+mysql://...                        ──► Automatically activates MySqlProvider (sqlx::MySqlPool)
+mariadb://...                      ──► Automatically activates MariaDbProvider (sqlx::MySqlPool)
+mongodb://... or mongodb+srv://... ──► Automatically activates MongoProvider (mongodb::Client)
+Environment variable DATABASE_TYPE=postgres|mysql|mariadb|mongodb ──► Explicit driver type override
 ```
 
-### 2.3 多数据库方言迁移机制
+### 2.3 Multi-Database Dialect Migration Mechanism
 
-每个数据库提供者实现 `StorageDriverProvider` 的 `run_migrations` 契约，自动按需执行特化的初始化脚本与防重锁：
-- **PostgreSQL**：执行 `migrations/postgres/init.sql`（创建 `BIGSERIAL`、`JSONB`、`GIN(data)` 倒排索引与超管账号 Seed）。
-- **MySQL / MariaDB**：执行 `migrations/mysql/init.sql`（先探测/自动建库，创建 `BIGINT AUTO_INCREMENT`、`JSON` 字段、覆盖索引与超管账号 Seed）。
+Each database driver implements the `run_migrations` contract in `StorageDriverProvider` to execute dialect-specific initialization scripts or driver operations:
+- **PostgreSQL**: Executes `migrations/postgres/init.sql` (creates `BIGSERIAL`, `JSONB`, `GIN(data)` inverted index, and seeds the superadmin).
+- **MySQL**: Executes `migrations/mysql/init.sql` (creates database if absent, `BIGINT AUTO_INCREMENT`, `JSON` column, covering index, and seeds the superadmin).
+- **MariaDB**: Executes `migrations/mariadb/init.sql` (MariaDB dialect, `BIGINT AUTO_INCREMENT`, `JSON` column, covering index, and seeds the superadmin).
+- **MongoDB**: Executes native driver initialization / `migrations/mongodb/init.js` (creates BSON collections, unique & wildcard indexes, and seeds the default superadmin document without SQL DDL).
 
 ---
 
