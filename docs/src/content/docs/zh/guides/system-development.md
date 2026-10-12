@@ -14,45 +14,18 @@ Foundry 秉持 **“平台与业务完全解耦”、“约定优于配置”** 
 ## 目录导航
 
 ```mermaid
-mindmap
-  root((Foundry 系统开发))
-    1. 基础架构与生命周期
-      架构分层
-      请求全生命周期
-      核心上下文与门面
-    2. 路由与子系统路由
-      路由命名空间
-      Auto-CRUD 与扩展路由
-      路由组织模式
-    3. 控制器与响应规范
-      Axum 控制器编写
-      ApiResponse 响应封装
-      AppError 异常处理
-    4. 请求验证器 DTO
-      Validator 注解规则
-      强类型参数校验
-    5. 模型与持久化
-      Code-First ORM 模型
-      ThinkPHP 风格链式查询
-      Zero-DDL 动态模型
-      配置中心与事务
-    6. 中间件与权限控制
-      JWT 鉴权机制
-      主题域细粒度 RBAC
-      自动化审计日志
-    7. 生命周期钩子
-      MutationHook 接口
-      数据拦截与业务联动
-    8. 管理后台集成
-      CustomAdminPageSpec 声明
-      iframe 与 postMessage 桥接
-    9. 实战：电商订单系统
-      从 0 到 1 完整实现
-      代码清单与链路追踪
-    10. 架构最佳实践
-      三层架构规范
-      连接池与缓存策略
-      生产安全与容器部署
+flowchart TD
+    Root["Foundry 系统开发体系"]
+    Root --> C1["1. 基础架构与生命周期"]
+    Root --> C2["2. 路由与子系统路由"]
+    Root --> C3["3. 控制器与响应规范"]
+    Root --> C4["4. 请求验证器 DTO"]
+    Root --> C5["5. 模型与数据持久化"]
+    Root --> C6["6. 中间件与权限控制"]
+    Root --> C7["7. 生命周期突变钩子"]
+    Root --> C8["8. 管理后台无缝集成"]
+    Root --> C9["9. 实战：电商系统实现"]
+    Root --> C10["10. 架构最佳实践建议"]
 ```
 
 ---
@@ -374,11 +347,12 @@ pub struct OrderResponse {
 Foundry 提供三套针对不同业务场景的数据持久化范式：
 
 ```mermaid
-graph LR
-    subgraph 存储范式选择
-        Mode1["1. Code-First ORM 模式<br/>(强类型 / 自动 DDL / 严谨业务)"]
-        Mode2["2. Zero-DDL 动态模型<br/>(无模式 / 快速迭代 / Auto-CRUD)"]
-        Mode3["3. 原生事务与连接池<br/>(复杂金融结算 / 原生 SQL)"]
+flowchart LR
+    subgraph StorageModes ["存储范式选择"]
+        direction TB
+        Mode1["1. Code-First ORM 模式 (强类型 / 自动 DDL / 严谨业务)"]
+        Mode2["2. Zero-DDL 动态模型 (无模式 / 快速迭代 / Auto-CRUD)"]
+        Mode3["3. 原生事务与连接池 (复杂金融结算 / 原生 SQL)"]
     end
 ```
 

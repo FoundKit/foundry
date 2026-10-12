@@ -960,7 +960,7 @@ module.exports = {
 ### 场景：在 Blog 子系统中创建一篇文章
 
 **1. 用户操作流程**：
-```
+```text
 登录 → 选择 Blog 子系统 → 点击"数据浏览器" → 选择"posts"模型 → 点击"创建记录" 
 → 填写表单（title、content、author） → 点击"提交"
 ```
@@ -1014,7 +1014,7 @@ Content-Type: application/json
 ```
 
 **4. 后端处理**（对应 Stage 5）：
-```
+```text
 extract_context → audit_middleware → auth_middleware 
 → handlers::autocrud::create
 → validate_record → execute_before_create (Hook)
@@ -1212,7 +1212,7 @@ pnpm build
 ```
 
 **输出**：
-```
+```text
 apps/admin/dist/
 ├── index.html
 ├── assets/

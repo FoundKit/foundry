@@ -23,7 +23,7 @@ description: "Stage 3: In-depth analysis of Admin models, password hashing, JWT 
 - **基于角色的访问控制（RBAC）**
 
 **依赖关系：**
-```
+```text
 foundry_core (基础类型) → foundry_auth (认证)
 foundry_storage (数据访问) → foundry_auth (查询管理员)
 ```
@@ -38,7 +38,7 @@ foundry_storage (数据访问) → foundry_auth (查询管理员)
 
 ## 架构总览
 
-```
+```text
 foundry_auth
 ├── password.rs    # 密码哈希与验证（Argon2id）
 ├── jwt.rs         # JWT 令牌服务 + AdminClaims
@@ -111,7 +111,7 @@ pub fn hash_password(password: &str) -> AppResult<String> {
    - 输出：PHC 格式字符串
 
 3. **PHC 格式输出**
-   ```
+   ```text
    $argon2id$v=19$m=19456,t=2,p=1$saltbase64$hashbase64
    ```
    - `argon2id`：算法标识
@@ -326,7 +326,7 @@ pub fn generate_token(
 ```
 
 **JWT 结构：**
-```
+```text
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZjY3...Uw.SflKxwRJ...MeJf36
 |____________Header_____________|.|________Payload________|.|_Signature_|
 ```
@@ -336,7 +336,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZjY3...Uw.SflKxwRJ...MeJf36
 - **Signature**：HMAC-SHA256(Header + Payload, secret)
 
 **签名算法：**
-```
+```text
 HMAC-SHA256(
     base64UrlEncode(header) + "." + base64UrlEncode(payload),
     secret
@@ -446,7 +446,7 @@ pub fn check_system_access(
 
 **授权逻辑图：**
 
-```
+```text
 请求访问 system_slug
     ↓
 ┌────────────────────────────────────┐
@@ -873,7 +873,7 @@ async fn force_https_middleware(
 ### 6.1 无状态认证（Stateless Authentication）
 
 **传统 Session：**
-```
+```text
 服务器存储 Session
   ↓
 需要 Redis/Memcached
@@ -882,7 +882,7 @@ async fn force_https_middleware(
 ```
 
 **JWT 令牌：**
-```
+```text
 Token 自包含所有信息
   ↓
 服务器无状态
@@ -925,7 +925,7 @@ hash = Argon2id(password, salt)
 
 ## 7. 与其他 Crates 的交互
 
-```
+```text
 foundry_auth
     ↓ 被使用
 ┌───────────────────────────────────────┐

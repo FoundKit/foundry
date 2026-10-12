@@ -334,7 +334,7 @@ Adding a new database engine requires **zero modifications to core code**:
 
 ## 📅 7. Implementation Roadmap & Milestones
 
-```
+```text
 [Phase 0: Core SPI & PostgreSQL (Completed)] ➔ [Phase 1: MySQL 8.0+ Engine (Completed)]
                                                          │
 [Phase 4: Release & CLI Tooling] ⬅ [Phase 3: MongoDB (Completed)] ⬅ [Phase 2: MariaDB (Completed)]

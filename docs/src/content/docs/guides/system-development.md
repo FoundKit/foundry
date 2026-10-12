@@ -14,45 +14,18 @@ Foundry adheres to **"total framework-application decoupling"**, **"convention o
 ## Guide Sitemap
 
 ```mermaid
-mindmap
-  root((Foundry System Development))
-    1. Architecture & Lifecycle
-      Architectural Layering
-      HTTP Request Flow
-      Contexts & Facades
-    2. Routing & Namespaces
-      Route Namespaces
-      Auto-CRUD vs Extension Routes
-      Route Assembly Patterns
-    3. Controllers & Response Standards
-      Axum Handlers
-      ApiResponse Formatting
-      AppError & AppResult
-    4. Validation & DTOs
-      Validator Annotations
-      Type-safe Input Guards
-    5. Models & Persistence
-      Code-First ORM Schemas
-      Chainable Query Builders
-      Zero-DDL Dynamic Models
-      Config Store & Transactions
-    6. Middleware & RBAC Security
-      JWT Authentication
-      Topic-Scoped RBAC
-      Audit Log Pipeline
-    7. Lifecycle Mutation Hooks
-      MutationHook Trait
-      Interception & Side-effects
-    8. Admin Console Integration
-      CustomAdminPageSpec
-      postMessage Bridge Protocol
-    9. Practical Walkthrough: E-Commerce Store
-      End-to-End Implementation
-      Full Code Walkthrough
-    10. Best Practices & Deployment
-      Layered Architecture Rules
-      Connection Pools & Caching
-      Production Security & Docker
+flowchart TD
+    Root["Foundry System Development Framework"]
+    Root --> C1["1. Architecture & Lifecycle"]
+    Root --> C2["2. Routing & Namespaces"]
+    Root --> C3["3. Controllers & Response Standards"]
+    Root --> C4["4. Validation & DTOs"]
+    Root --> C5["5. Models & Data Persistence"]
+    Root --> C6["6. Middleware & RBAC Security"]
+    Root --> C7["7. Lifecycle Mutation Hooks"]
+    Root --> C8["8. Admin Console Integration"]
+    Root --> C9["9. Practical Walkthrough: E-Commerce"]
+    Root --> C10["10. Architectural Best Practices"]
 ```
 
 ---
@@ -374,11 +347,12 @@ pub struct OrderResponse {
 Foundry provides three complementary storage paradigms:
 
 ```mermaid
-graph LR
-    subgraph Storage Paradigms
-        Mode1["1. Code-First ORM Mode<br/>(Strong Typing / Automatic DDL)"]
-        Mode2["2. Zero-DDL Dynamic Models<br/>(Schemaless / Auto-CRUD)"]
-        Mode3["3. Native Transactions & SPI<br/>(Financial Transactions / Raw SQL)"]
+flowchart LR
+    subgraph StorageModes ["Storage Paradigms"]
+        direction TB
+        Mode1["1. Code-First ORM Mode (Strong Typing / Automatic DDL)"]
+        Mode2["2. Zero-DDL Dynamic Models (Schemaless / Auto-CRUD)"]
+        Mode3["3. Native Transactions & SPI (Financial Transactions / Raw SQL)"]
     end
 ```
 

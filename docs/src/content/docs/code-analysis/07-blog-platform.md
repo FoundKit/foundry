@@ -21,7 +21,7 @@ description: "Stage 7: In-depth analysis of a complete real-world multi-subsyste
 
 ## 1. 项目结构
 
-```
+```text
 examples/blog_platform/
 ├── Cargo.toml                   # 依赖配置
 ├── src/
@@ -357,7 +357,7 @@ pub async fn handle_publish_post(
 
 Newsletter 和 Blog 的结构完全一致，也采用三层架构：
 
-```
+```text
 newsletter/
 ├── mod.rs              # NewsletterSubsystem (SubsystemModule 实现)
 ├── dto/mod.rs          # SubscribeRequest, SubscriberResponse
@@ -431,7 +431,7 @@ impl NewsletterService {
 
 当启动 `blog_platform` 应用后，完整的路由树为：
 
-```
+```text
 /api/v1/
 ├── auth/                        # 认证路由（Stage 5）
 │   ├── POST /login
@@ -504,7 +504,7 @@ Content-Type: application/json
 **执行流程**：
 
 1. **中间件层** (Stage 5)
-   ```
+   ```text
    extract_context → audit_middleware → auth_middleware
    ```
    - 提取 JWT，验证权限
@@ -512,7 +512,7 @@ Content-Type: application/json
    - 记录审计日志
 
 2. **路由匹配**
-   ```
+   ```text
    /s/blog/ext/posts → BlogSubsystem 的 controllers::handle_create_post
    ```
 

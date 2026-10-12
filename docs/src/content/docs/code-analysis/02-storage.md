@@ -27,7 +27,7 @@ description: "Stage 2: In-depth analysis of database pool, Redis session caching
 - **Tenant-isolated Storage**: Configurations, subsystems, admins, and audit logs
 
 **Dependencies:**
-```
+```text
 foundry_core (Types & Errors) → foundry_storage (Multi-DB SPI Storage)
 ```
 
@@ -42,7 +42,7 @@ foundry_core (Types & Errors) → foundry_storage (Multi-DB SPI Storage)
 
 ## Architecture Overview
 
-```
+```text
 foundry_storage
 ├── traits/            # Domain Store Trait contracts (RecordStoreEngine, etc.)
 ├── spi/               # SPI driver interface & registry (StorageRegistry)
@@ -322,7 +322,7 @@ impl Database {
 ```
 
 **连接与协议路由规则：**
-```
+```text
 DATABASE_URL:
 postgres://... 或 postgresql://... ──► 自动激活 PostgresProvider (sqlx::PgPool)
 mysql://... 或 mariadb://...       ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
@@ -1322,7 +1322,7 @@ async fn test_create_and_fetch_record() {
 
 ## 12. 与其他 Crates 的交互
 
-```
+```text
 foundry_storage
     ↓ 被使用
 ┌───────────────────────────────────────┐

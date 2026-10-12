@@ -47,7 +47,7 @@ pub struct SystemContext {
 
 #### A. 为什么同时有 `system_id` 和 `system_slug`？
 
-```
+```text
 system_id (UUID):
   - 数据库主键（不可变）
   - 用于数据库 JOIN 和外键引用
@@ -117,7 +117,7 @@ let ctx = SystemContext::with_details(
 
 ### 1.4 在请求中的传递路径
 
-```
+```text
 HTTP 请求
    ↓
 中间件提取路径参数 (:system_slug)
@@ -655,7 +655,7 @@ let total_pages = if page_size == 0 { 0 } else { ... };
 
 ## 9. 与其他 Crates 的交互
 
-```
+```text
 foundry_core (本 crate)
     ↓ 被依赖
 ┌───────────────────────────────────────┐

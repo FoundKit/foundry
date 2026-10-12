@@ -27,7 +27,7 @@ description: "Stage 5: In-depth analysis of Axum route assembly, middleware stac
 **这是框架的"大脑"，将所有底层组件整合在一起。**
 
 **依赖关系：**
-```
+```text
 foundry_core, foundry_storage, foundry_auth, foundry_extension
                     ↓
               foundry_engine (组装)
@@ -43,7 +43,7 @@ foundry_core, foundry_storage, foundry_auth, foundry_extension
 
 ## 架构总览
 
-```
+```text
 foundry_engine
 ├── state.rs          # AppState：应用全局状态
 ├── router.rs         # 路由树构建
@@ -159,7 +159,7 @@ let state = AppState::new(
 
 ### 2.1 路由树结构
 
-```
+```text
 /
 ├── /                            → Redirect to /admin/
 ├── /__health                    → Health check
@@ -253,7 +253,7 @@ pub fn build_router(state: AppState) -> Router {
 
 ### 2.3 中间件层级
 
-```
+```text
 HTTP 请求
     ↓
 [TraceLayer]           ← 日志追踪
@@ -498,7 +498,7 @@ pub async fn audit_interceptor(
 
 **零代码 CRUD：** 只需定义模型（Model + Fields），自动生成 RESTful API。
 
-```
+```text
 定义模型
     ↓
 POST /api/v1/admin/s/blog/models
@@ -560,7 +560,7 @@ pub async fn create_record_handler(
 
 **完整流程图：**
 
-```
+```text
 HTTP POST /api/v1/s/blog/articles
     ↓
 [extract_system_context]       ← 提取 SystemContext
@@ -789,7 +789,7 @@ async fn handler(
 
 ### 6.3 约定优于配置（Convention over Configuration）
 
-```
+```text
 模型定义：/api/v1/admin/s/:slug/models
          ↓ 自动生成
 CRUD API：/api/v1/s/:slug/:model
@@ -861,7 +861,7 @@ CorsLayer::new()
 
 ## 9. 与其他 Crates 的交互
 
-```
+```text
 foundry_engine
     ↓ 使用
 ┌────────────────────────────────────┐

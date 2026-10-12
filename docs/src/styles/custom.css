@@ -43,6 +43,18 @@
   --fk-card-shadow-hover: 0 12px 32px -4px rgba(234, 88, 12, 0.25);
   --fk-hero-glow: rgba(234, 88, 12, 0.12);
   --fk-img-glow: rgba(249, 115, 22, 0.25);
+
+  /* Inline code & code block tokens (light) */
+  --fk-code-bg: rgba(234, 88, 12, 0.08);
+  --fk-code-border: rgba(234, 88, 12, 0.22);
+  --fk-code-text: #c2410c;
+  --fk-code-block-bg: #f8fafc;
+  --fk-code-block-header: #f1f5f9;
+  --fk-code-block-border: rgba(15, 23, 42, 0.12);
+
+  /* Expressive Code variable overrides */
+  --ec-brdRad: 0.75rem;
+  --ec-codeFontFml: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* --------------------------------------------------------------------------
@@ -83,6 +95,18 @@
   --fk-card-shadow-hover: 0 12px 32px -4px rgba(234, 88, 12, 0.2);
   --fk-hero-glow: rgba(234, 88, 12, 0.15);
   --fk-img-glow: rgba(249, 115, 22, 0.35);
+
+  /* Inline code & code block tokens (dark) */
+  --fk-code-bg: rgba(234, 88, 12, 0.12);
+  --fk-code-border: rgba(234, 88, 12, 0.32);
+  --fk-code-text: #fb923c;
+  --fk-code-block-bg: #090d16;
+  --fk-code-block-header: #0e1422;
+  --fk-code-block-border: rgba(255, 255, 255, 0.1);
+
+  /* Expressive Code variable overrides */
+  --ec-brdRad: 0.75rem;
+  --ec-codeFontFml: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* --------------------------------------------------------------------------
@@ -744,3 +768,141 @@ body.mermaid-modal-open {
     gap: 0.75rem;
   }
 }
+
+/* ==========================================================================
+   Code Styling: Inline Code & Expressive Code Blocks
+   ========================================================================== */
+
+/* 1. Inline Code Badges */
+.sl-markdown-content code:not(:where(.not-content *)) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.85em !important;
+  font-weight: 500 !important;
+  padding: 0.16rem 0.45rem !important;
+  margin: 0 0.15rem !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid var(--fk-code-border) !important;
+  background-color: var(--fk-code-bg) !important;
+  color: var(--fk-code-text) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: all 0.15s ease !important;
+}
+
+/* Inline code inside links */
+.sl-markdown-content a code:not(:where(.not-content *)) {
+  color: inherit !important;
+  text-decoration: underline dotted var(--fk-code-border);
+  text-underline-offset: 3px;
+}
+
+.sl-markdown-content a:hover code:not(:where(.not-content *)) {
+  background-color: rgba(234, 88, 12, 0.18) !important;
+  border-color: rgba(234, 88, 12, 0.5) !important;
+  color: var(--fk-accent-text) !important;
+}
+
+/* Inline code inside headings */
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) code:not(:where(.not-content *)) {
+  font-size: 0.82em !important;
+  padding: 0.12rem 0.38rem !important;
+  vertical-align: 0.08em;
+}
+
+/* Inline code inside tables */
+.sl-markdown-content table code:not(:where(.not-content *)) {
+  font-size: 0.82em !important;
+  white-space: nowrap;
+}
+
+/* 2. Expressive Code Blocks & Frames */
+.expressive-code {
+  margin: 1.75rem 0 !important;
+}
+
+.expressive-code figure.frame {
+  border-radius: 0.75rem !important;
+  border: 1px solid var(--fk-code-block-border) !important;
+  box-shadow: var(--fk-card-shadow) !important;
+  overflow: hidden !important;
+  position: relative !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.expressive-code figure.frame:hover {
+  border-color: rgba(234, 88, 12, 0.4) !important;
+  box-shadow: 0 8px 30px -4px rgba(234, 88, 12, 0.15), 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.expressive-code figure.frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--fk-border-shine), transparent);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.expressive-code .header {
+  background: var(--fk-code-block-header) !important;
+  border-bottom: 1px solid var(--fk-code-block-border) !important;
+  padding: 0.45rem 1rem !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.03em;
+}
+
+.expressive-code pre {
+  background: var(--fk-code-block-bg) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 0.88rem !important;
+  line-height: 1.65 !important;
+  padding: 1.1rem 1.25rem !important;
+}
+
+.expressive-code pre code {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Copy button */
+.expressive-code .copy button {
+  border-radius: 0.375rem !important;
+  border: 1px solid var(--fk-border) !important;
+  background: var(--fk-surface-2) !important;
+  backdrop-filter: blur(8px) !important;
+  transition: all 0.2s ease !important;
+}
+
+.expressive-code .copy button:hover {
+  background: rgba(234, 88, 12, 0.2) !important;
+  border-color: rgba(234, 88, 12, 0.5) !important;
+  color: #ea580c !important;
+}
+
+/* Scrollbar for code blocks */
+.expressive-code pre::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.expressive-code pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.expressive-code pre::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+.expressive-code pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(234, 88, 12, 0.5);
+}
+

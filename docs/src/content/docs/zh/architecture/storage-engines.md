@@ -315,7 +315,7 @@ impl Database {
 
 ## 📅 七、 实施落地路线图
 
-```
+```text
 [阶段 0: 核心 SPI 与 PostgreSQL (已完成)] ➔ [阶段 1: MySQL 8.0+ 引擎 (已完成)]
                                                  │
 [阶段 4: 生态发布与 CLI 工具链] ⬅ [阶段 3: MongoDB (已完成)] ⬅ [阶段 2: MariaDB (已完成)]

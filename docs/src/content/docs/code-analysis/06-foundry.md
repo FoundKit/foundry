@@ -26,7 +26,7 @@ description: "Stage 6: In-depth analysis of FoundryApp, FoundryBuilder pattern, 
 **这是用户直接使用的唯一 crate，隐藏了底层复杂性。**
 
 **依赖关系：**
-```
+```text
 foundry_core, foundry_storage, foundry_auth, foundry_extension, foundry_engine
                            ↓
                        foundry (门面)
@@ -40,7 +40,7 @@ foundry_core, foundry_storage, foundry_auth, foundry_extension, foundry_engine
 
 ### 1.1 门面模式（Facade Pattern）
 
-```
+```text
 ┌──────────────────────────────────────────┐
 │            foundry (Facade)              │
 │  ┌────────────────────────────────────┐ │
@@ -357,7 +357,7 @@ impl FoundryBuilder {
 
 **构建流程图：**
 
-```
+```text
 FoundryBuilder::new()
     ↓
 配置（host, port, database_url...）
@@ -634,7 +634,7 @@ async fn test_health_check() {
 
 ### 7.1 门面模式（Facade Pattern）
 
-```
+```text
 foundry crate
     ↓ 简化接口
 7 个复杂的底层 crates
@@ -767,7 +767,7 @@ async fn main() -> anyhow::Result<()> {
 
 ## 10. 与其他 Crates 的关系
 
-```
+```text
 用户代码
     ↓ 使用
 foundry (门面)

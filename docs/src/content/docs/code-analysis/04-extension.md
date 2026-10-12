@@ -25,7 +25,7 @@ description: "Stage 4: In-depth analysis of HookContext, ExtensionRegistry, Hook
 **核心理念：** 在不修改框架核心代码的前提下，通过钩子拦截和扩展实体的生命周期事件。
 
 **依赖关系：**
-```
+```text
 foundry_core (基础类型) → foundry_extension (钩子定义)
                             ↓
                         foundry_engine (钩子执行)
@@ -40,7 +40,7 @@ foundry_core (基础类型) → foundry_extension (钩子定义)
 
 ## 架构总览
 
-```
+```text
 foundry_extension
 ├── hooks.rs       # MutationHook trait + HookPipeline
 └── lib.rs         # 统一导出
@@ -127,7 +127,7 @@ pub trait MutationHook: Send + Sync + 'static {
 
 ### 1.2 钩子生命周期图
 
-```
+```text
 CREATE 操作
     ↓
 before_create(ctx, model_slug, &mut data)  ← 可修改 data
@@ -828,7 +828,7 @@ mod tests {
 
 ### 6.1 观察者模式（Observer Pattern）
 
-```
+```text
 Subject (RecordStore)
     ↓ 通知
 Observer 1 (AutoFieldsHook)
@@ -843,7 +843,7 @@ Observer 3 (AuditLogHook)
 
 ### 6.2 责任链模式（Chain of Responsibility）
 
-```
+```text
 Request → Hook 1 → Hook 2 → Hook 3 → Response
 ```
 
@@ -956,7 +956,7 @@ async fn after_create(...) -> AppResult<()> {
 
 ## 8. 与其他 Crates 的交互
 
-```
+```text
 foundry_extension (MutationHook)
     ↓ 被使用
 ┌───────────────────────────────────────┐

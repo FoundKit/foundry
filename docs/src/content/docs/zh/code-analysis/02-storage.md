@@ -25,7 +25,7 @@ description: "阶段 2：深度剖析数据库连接池、Redis 会话缓存、�
 - **租户隔离的配置、系统、管理员、审计日志存储**
 
 **依赖关系：**
-```
+```text
 foundry_core (基础类型) → foundry_storage (多数据库 SPI 存储)
 ```
 
@@ -40,7 +40,7 @@ foundry_core (基础类型) → foundry_storage (多数据库 SPI 存储)
 
 ## 架构总览
 
-```
+```text
 foundry_storage
 ├── traits/            # 领域 Store Trait 抽象契约 (RecordStoreEngine 等)
 ├── spi/               # SPI 插件接口与驱动注册中心 (StorageRegistry)
@@ -320,7 +320,7 @@ impl Database {
 ```
 
 **连接与协议路由规则：**
-```
+```text
 DATABASE_URL:
 postgres://... 或 postgresql://... ──► 自动激活 PostgresProvider (sqlx::PgPool)
 mysql://... 或 mariadb://...       ──► 自动激活 MySqlProvider (sqlx::MySqlPool)
@@ -1320,7 +1320,7 @@ async fn test_create_and_fetch_record() {
 
 ## 12. 与其他 Crates 的交互
 
-```
+```text
 foundry_storage
     ↓ 被使用
 ┌───────────────────────────────────────┐

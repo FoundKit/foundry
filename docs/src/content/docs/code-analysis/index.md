@@ -41,7 +41,7 @@ description: "Systematic learning path, architecture overview, data flow, and re
 Foundry 是一个**现代化、模块化、解耦的 Rust 后端平台与框架**，专为构建多系统后端服务与内置管理控制面板而设计。
 
 **核心定位差异：**
-```
+```text
 传统框架模式：框架 = 模板（Fork 后修改）
 Foundry 模式：框架 = 独立 Crate 依赖（用户项目完全独立）
 ```
@@ -62,7 +62,7 @@ Foundry 模式：框架 = 独立 Crate 依赖（用户项目完全独立）
 
 ### 1.3 项目结构总览
 
-```
+```text
 foundry/
 ├── crates/                    # 核心框架 Crates（7 个模块）
 │   ├── foundry               # [门面] 统一入口与 Prelude
@@ -85,7 +85,7 @@ foundry/
 
 ### 2.1 分层架构图
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    用户应用层 (User App)                      │
 │  ┌────────────────────────────────────────────────────────┐ │
@@ -375,7 +375,7 @@ require_super_admin()
 
 **路由结构：**
 
-```
+```text
 /api/v1
   ├── /auth                   # 认证端点
   ├── /systems                # 子系统管理
@@ -487,7 +487,7 @@ app.run().await?;  // 绑定端口，开始监听
 
 **场景：** `POST /api/v1/s/blog/articles` 创建文章
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────┐
 │ 1. HTTP 请求到达                                               │
 │    POST /api/v1/s/blog/articles                               │
