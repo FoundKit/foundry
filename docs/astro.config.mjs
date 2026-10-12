@@ -436,7 +436,7 @@ export default defineConfig({
         var pre = pres[i];
         var code = extractCode(pre);
         if (!code) continue;
-        var container = pre.closest('.expressive-code') || pre;
+        var ecContainer = pre.closest('.expressive-code');
         var chartDiv = document.createElement('div');
         chartDiv.className = 'mermaid-chart not-content';
         chartDiv.dataset.mermaidSource = code;
@@ -445,7 +445,17 @@ export default defineConfig({
         try {
           var res = await mermaid.render(id, code);
           chartDiv.innerHTML = res.svg;
-          container.parentNode.replaceChild(chartDiv, container);
+          if (ecContainer) {
+            // Replace only the inner <figure class="frame"> (or pre).
+            // NEVER remove .expressive-code itself, because Starlight / Expressive Code
+            // injects the page-wide stylesheet (<link>) and copy-button module (<script>)
+            // inside the very first .expressive-code container on the page.
+            var frame = ecContainer.querySelector('figure.frame') || pre;
+            frame.parentNode.replaceChild(chartDiv, frame);
+            ecContainer.style.margin = '0';
+          } else {
+            pre.parentNode.replaceChild(chartDiv, pre);
+          }
           attachChartInteractions(chartDiv);
         } catch (err) {
           console.error('Mermaid render error for index ' + i + ':', err);
