@@ -39,6 +39,7 @@ pub fn system_configs_schema() -> EntitySchema {
         )
         .column(ColumnDef::datetime("created_at").default_current_timestamp())
         .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+        .column(ColumnDef::datetime("deleted_at").nullable())
         .index(IndexDef::new("uk_system_configs_key", &["system_id", "key"]).unique())
         .index(IndexDef::new(
             "idx_system_configs_tenant",
@@ -95,6 +96,7 @@ pub fn model_fields_schema() -> EntitySchema {
         )
         .column(ColumnDef::datetime("created_at").default_current_timestamp())
         .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+        .column(ColumnDef::datetime("deleted_at").nullable())
         .index(IndexDef::new("uk_model_fields_name", &["model_id", "name"]).unique())
         .index(IndexDef::new(
             "idx_model_fields_sort",
@@ -150,6 +152,7 @@ pub fn admins_schema() -> EntitySchema {
         )
         .column(ColumnDef::datetime("created_at").default_current_timestamp())
         .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+        .column(ColumnDef::datetime("deleted_at").nullable())
         .index(IndexDef::new("idx_admins_username", &["username"]))
         .index(IndexDef::new("idx_admins_role", &["role"]))
         .index(IndexDef::new("idx_admins_status", &["status"]))

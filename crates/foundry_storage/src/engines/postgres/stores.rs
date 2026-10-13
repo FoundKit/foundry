@@ -107,9 +107,9 @@ impl ModelStoreEngine for PostgresModelEngine {
     async fn list_fields(&self, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
         let rows = sqlx::query_as::<_, ModelFieldEntity>(
             r#"
-            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at
+            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
             FROM model_fields
-            WHERE model_id = $1
+            WHERE model_id = $1 AND deleted_at IS NULL
             ORDER BY sort_order ASC, id ASC
             "#,
         )
@@ -137,7 +137,7 @@ impl ModelStoreEngine for PostgresModelEngine {
             r#"
             INSERT INTO model_fields (model_id, name, label, field_type, is_required, default_value, options, sort_order)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at
+            RETURNING id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
             "#,
         )
         .bind(model_id)
@@ -153,6 +153,30 @@ impl ModelStoreEngine for PostgresModelEngine {
         .map_err(|e| AppError::Database(format!("Failed to add model field: {}", e)))?;
 
         Ok(row)
+    }
+
+    async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE models
+            SET deleted_at = NOW()
+            WHERE system_id = $1 AND slug = $2 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(system_slug)
+        .bind(model_slug)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete model: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!(
+                "Model '{}' not found in system '{}'",
+                model_slug, system_slug
+            )));
+        }
+
+        Ok(())
     }
 }
 
@@ -474,6 +498,26 @@ impl SystemStoreEngine for PostgresSystemEngine {
 
         Ok(row)
     }
+
+    async fn delete(&self, id: Uuid) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE systems
+            SET deleted_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete system: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!("Sub-system #{} not found", id)));
+        }
+
+        Ok(())
+    }
 }
 
 // ============================================================================
@@ -495,9 +539,9 @@ impl ConfigStoreEngine for PostgresConfigEngine {
     async fn list(&self, system_slug: &str) -> AppResult<Vec<SystemConfigEntity>> {
         let rows = sqlx::query_as::<_, SystemConfigEntity>(
             r#"
-            SELECT id, system_id, key, label, value_type, value, options, sort_order, created_at, updated_at
+            SELECT id, system_id, key, label, value_type, value, options, sort_order, created_at, updated_at, deleted_at
             FROM system_configs
-            WHERE system_id = $1
+            WHERE system_id = $1 AND deleted_at IS NULL
             ORDER BY sort_order ASC, id ASC
             "#,
         )
@@ -614,8 +658,9 @@ impl AdminStoreEngine for PostgresAdminEngine {
     async fn list(&self) -> AppResult<Vec<AdminEntity>> {
         let rows = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
+            WHERE deleted_at IS NULL
             ORDER BY created_at ASC
             "#,
         )
@@ -629,9 +674,9 @@ impl AdminStoreEngine for PostgresAdminEngine {
     async fn get_by_id(&self, id: Uuid) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE id = $1
+            WHERE id = $1 AND deleted_at IS NULL
             "#,
         )
         .bind(id)
@@ -646,9 +691,9 @@ impl AdminStoreEngine for PostgresAdminEngine {
     async fn get_by_username(&self, username: &str) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE username = $1
+            WHERE username = $1 AND deleted_at IS NULL
             "#,
         )
         .bind(username)
@@ -663,9 +708,9 @@ impl AdminStoreEngine for PostgresAdminEngine {
     async fn get_by_email(&self, email: &str) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE email = $1
+            WHERE email = $1 AND deleted_at IS NULL
             "#,
         )
         .bind(email)

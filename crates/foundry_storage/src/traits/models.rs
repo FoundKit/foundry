@@ -32,4 +32,7 @@ pub trait ModelStoreEngine: Send + Sync {
         options: Option<Value>,
         sort_order: i32,
     ) -> AppResult<ModelFieldEntity>;
+
+    /// Soft delete a dynamic data model (sets deleted_at, never executes physical DELETE)
+    async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()>;
 }

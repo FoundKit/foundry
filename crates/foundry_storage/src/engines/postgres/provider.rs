@@ -73,6 +73,26 @@ impl StorageDriverProvider for PostgresProvider {
             .await
             .map_err(|e| AppError::Database(format!("PostgreSQL migration failed: {}", e)))?;
 
+        // Ensure soft-deletion column exists on any pre-existing tables
+        let alter_sql = r#"
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'systems') THEN
+                    ALTER TABLE systems ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'system_configs') THEN
+                    ALTER TABLE system_configs ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'model_fields') THEN
+                    ALTER TABLE model_fields ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admins') THEN
+                    ALTER TABLE admins ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+                END IF;
+            END $$;
+        "#;
+        let _ = sqlx::raw_sql(alter_sql).execute(&pool).await;
+
         info!("PostgreSQL database migration completed successfully.");
         Ok(())
     }

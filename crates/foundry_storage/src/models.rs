@@ -141,6 +141,7 @@ mod tests {
             sort_order: 1,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            deleted_at: None,
         }
     }
 

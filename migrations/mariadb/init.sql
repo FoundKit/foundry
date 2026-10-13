@@ -29,8 +29,10 @@ CREATE TABLE IF NOT EXISTS system_configs (
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
     UNIQUE KEY uk_system_configs_key (system_id, `key`),
-    INDEX idx_system_configs_tenant (system_id, sort_order ASC)
+    INDEX idx_system_configs_tenant (system_id, sort_order ASC),
+    INDEX idx_system_configs_deleted (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS models (
@@ -61,8 +63,10 @@ CREATE TABLE IF NOT EXISTS model_fields (
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
     UNIQUE KEY uk_model_fields_model_name (model_id, name),
     INDEX idx_model_fields_sort (model_id, sort_order ASC),
+    INDEX idx_model_fields_deleted (deleted_at),
     CONSTRAINT fk_model_fields_model FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -92,9 +96,11 @@ CREATE TABLE IF NOT EXISTS admins (
     status SMALLINT NOT NULL DEFAULT 1,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    deleted_at DATETIME(6) NULL,
     INDEX idx_admins_username (username),
     INDEX idx_admins_role (role),
-    INDEX idx_admins_status (status)
+    INDEX idx_admins_status (status),
+    INDEX idx_admins_deleted (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS audit_logs (

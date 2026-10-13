@@ -56,4 +56,7 @@ pub trait SystemStoreEngine: Send + Sync {
         description: Option<&str>,
         status: Option<i16>,
     ) -> AppResult<SystemEntity>;
+
+    /// Soft delete an existing sub-system (sets deleted_at, never executes physical DELETE)
+    async fn delete(&self, id: Uuid) -> AppResult<()>;
 }

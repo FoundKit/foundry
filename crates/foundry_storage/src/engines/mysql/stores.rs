@@ -130,9 +130,9 @@ impl ModelStoreEngine for MySqlModelEngine {
     async fn list_fields(&self, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
         let rows = sqlx::query_as::<_, ModelFieldEntity>(
             r#"
-            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at
+            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
             FROM model_fields
-            WHERE model_id = ?
+            WHERE model_id = ? AND deleted_at IS NULL
             ORDER BY sort_order ASC, id ASC
             "#,
         )
@@ -200,6 +200,30 @@ impl ModelStoreEngine for MySqlModelEngine {
             .map_err(|e| AppError::Database(format!("Failed to commit transaction: {}", e)))?;
 
         Ok(row)
+    }
+
+    async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE models
+            SET deleted_at = NOW(6)
+            WHERE system_id = ? AND slug = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(system_slug)
+        .bind(model_slug)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete model: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!(
+                "Model '{}' not found in system '{}'",
+                model_slug, system_slug
+            )));
+        }
+
+        Ok(())
     }
 }
 
@@ -621,6 +645,26 @@ impl SystemStoreEngine for MySqlSystemEngine {
 
         Ok(row)
     }
+
+    async fn delete(&self, id: Uuid) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE systems
+            SET deleted_at = NOW(6)
+            WHERE id = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete system: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!("System #{} not found", id)));
+        }
+
+        Ok(())
+    }
 }
 
 // ============================================================================
@@ -642,9 +686,9 @@ impl ConfigStoreEngine for MySqlConfigEngine {
     async fn list(&self, system_slug: &str) -> AppResult<Vec<SystemConfigEntity>> {
         let rows = sqlx::query_as::<_, SystemConfigEntity>(
             r#"
-            SELECT id, system_id, `key`, label, value_type, value, options, sort_order, created_at, updated_at
+            SELECT id, system_id, `key`, label, value_type, value, options, sort_order, created_at, updated_at, deleted_at
             FROM system_configs
-            WHERE system_id = ?
+            WHERE system_id = ? AND deleted_at IS NULL
             ORDER BY sort_order ASC, id ASC
             "#,
         )
@@ -782,8 +826,9 @@ impl AdminStoreEngine for MySqlAdminEngine {
     async fn list(&self) -> AppResult<Vec<AdminEntity>> {
         let rows = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
+            WHERE deleted_at IS NULL
             ORDER BY created_at ASC
             "#,
         )
@@ -797,9 +842,9 @@ impl AdminStoreEngine for MySqlAdminEngine {
     async fn get_by_id(&self, id: Uuid) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE id = ?
+            WHERE id = ? AND deleted_at IS NULL
             "#,
         )
         .bind(id)
@@ -814,9 +859,9 @@ impl AdminStoreEngine for MySqlAdminEngine {
     async fn get_by_username(&self, username: &str) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE username = ?
+            WHERE username = ? AND deleted_at IS NULL
             "#,
         )
         .bind(username)
@@ -831,9 +876,9 @@ impl AdminStoreEngine for MySqlAdminEngine {
     async fn get_by_email(&self, email: &str) -> AppResult<AdminEntity> {
         let row = sqlx::query_as::<_, AdminEntity>(
             r#"
-            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at, deleted_at
             FROM admins
-            WHERE email = ?
+            WHERE email = ? AND deleted_at IS NULL
             "#,
         )
         .bind(email)

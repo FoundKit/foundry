@@ -127,6 +127,39 @@ impl StorageDriverProvider for MySqlProvider {
             })?;
         }
 
+        // Ensure soft-deletion column exists on any pre-existing tables
+        let mysql_alters = [
+            (
+                "systems",
+                "ALTER TABLE `systems` ADD COLUMN `deleted_at` DATETIME(6) NULL",
+            ),
+            (
+                "system_configs",
+                "ALTER TABLE `system_configs` ADD COLUMN `deleted_at` DATETIME(6) NULL",
+            ),
+            (
+                "model_fields",
+                "ALTER TABLE `model_fields` ADD COLUMN `deleted_at` DATETIME(6) NULL",
+            ),
+            (
+                "admins",
+                "ALTER TABLE `admins` ADD COLUMN `deleted_at` DATETIME(6) NULL",
+            ),
+        ];
+        for (tbl, alter_stmt) in mysql_alters {
+            let col_exists: Option<(i64,)> = sqlx::query_as(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = 'deleted_at'"
+            )
+            .bind(tbl)
+            .fetch_optional(&pool)
+            .await
+            .ok()
+            .flatten();
+            if let Some((0,)) = col_exists {
+                let _ = sqlx::query(alter_stmt).execute(&pool).await;
+            }
+        }
+
         info!("MySQL/MariaDB database migration completed successfully.");
         Ok(())
     }

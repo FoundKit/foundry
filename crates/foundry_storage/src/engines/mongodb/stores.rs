@@ -187,6 +187,7 @@ impl ModelStoreEngine for MongoModelEngine {
             sort_order,
             created_at: now,
             updated_at: now,
+            deleted_at: None,
         };
 
         let doc = mongodb::bson::to_document(&entity)
@@ -200,6 +201,32 @@ impl ModelStoreEngine for MongoModelEngine {
             .map_err(|e| AppError::Database(format!("Failed to insert field: {}", e)))?;
 
         Ok(entity)
+    }
+
+    async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+        let filter = doc! {
+            "system_id": system_slug,
+            "slug": model_slug,
+            "deleted_at": null,
+        };
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::DateTime::from_millis(chrono::Utc::now().timestamp_millis()),
+            }
+        };
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Soft delete model failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!(
+                "Model '{}' not found in system '{}'",
+                model_slug, system_slug
+            )));
+        }
+        Ok(())
     }
 }
 
@@ -538,6 +565,25 @@ impl SystemStoreEngine for MongoSystemEngine {
         Ok(sys)
     }
 
+    async fn delete(&self, id: Uuid) -> AppResult<()> {
+        let coll = self.db.collection::<mongodb::bson::Document>("systems");
+        let filter = doc! { "id": id.to_string(), "deleted_at": null };
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::DateTime::from_millis(chrono::Utc::now().timestamp_millis()),
+            }
+        };
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Soft delete system failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!("Sub-system #{} not found", id)));
+        }
+        Ok(())
+    }
+
     async fn get_stats(&self, slug: &str) -> AppResult<SystemStats> {
         let sys = self.get_by_slug(slug).await?;
 
@@ -719,6 +765,7 @@ impl ConfigStoreEngine for MongoConfigEngine {
                 sort_order,
                 created_at: now,
                 updated_at: now,
+                deleted_at: None,
             };
 
             let doc = mongodb::bson::to_document(&entity)
@@ -867,6 +914,7 @@ impl AdminStoreEngine for MongoAdminEngine {
             status: 1,
             created_at: now,
             updated_at: now,
+            deleted_at: None,
         };
 
         let doc = mongodb::bson::to_document(&entity)

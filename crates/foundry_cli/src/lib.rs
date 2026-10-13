@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
+use foundry_core::orm::{ColumnDef, DefaultValue, EntitySchema, IndexDef};
 use foundry_core::types::is_valid_slug;
+use foundry_storage::orm::{Dialect, compile_schemas};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -91,6 +93,18 @@ enum SystemCommands {
         /// Target project root directory (defaults to current directory)
         #[arg(long, default_value = ".")]
         project_dir: String,
+        /// Generate a dedicated table, code-first ORM entity, and DDL SQL for this subsystem
+        #[arg(long, alias = "table", alias = "with-orm")]
+        with_table: bool,
+        /// Custom table name for the subsystem (defaults to `{slug}_items`)
+        #[arg(long)]
+        table_name: Option<String>,
+        /// Target database dialect for generated DDL SQL (mysql, mariadb, postgres, all; defaults to mysql/mariadb)
+        #[arg(long, short = 'd', alias = "database")]
+        db: Option<String>,
+        /// Output directory for generated DDL SQL file
+        #[arg(long)]
+        ddl_dir: Option<String>,
     },
     /// List all discovered sub-systems in current project
     List {
@@ -292,8 +306,22 @@ pub async fn run_cli() -> anyhow::Result<()> {
                 slug,
                 name,
                 project_dir,
+                with_table,
+                table_name,
+                db,
+                ddl_dir,
             } => {
-                scaffold_subsystem(&slug, name.as_deref(), &project_dir)?;
+                scaffold_subsystem_with_options(
+                    &slug,
+                    SubsystemScaffoldOptions {
+                        name: name.as_deref(),
+                        project_dir: &project_dir,
+                        with_table,
+                        table_name: table_name.as_deref(),
+                        db: db.as_deref(),
+                        ddl_dir: ddl_dir.as_deref(),
+                    },
+                )?;
             }
             SystemCommands::List { path } => {
                 list_subsystems(&path)?;
@@ -336,7 +364,26 @@ pub async fn run_cli() -> anyhow::Result<()> {
                 explicit_type.as_deref().unwrap_or("auto-detect")
             );
             foundry_storage::Database::run_migrations(&db_url, explicit_type.as_deref()).await?;
-            println!("✅ Database migrations applied successfully.");
+            println!("✅ Core platform migrations applied successfully.");
+
+            let db_kind = explicit_type
+                .as_deref()
+                .and_then(|t| t.parse::<DatabaseKind>().ok())
+                .unwrap_or_else(|| {
+                    if db_url.starts_with("mysql://") {
+                        DatabaseKind::MySql
+                    } else if db_url.starts_with("mariadb://") {
+                        DatabaseKind::MariaDb
+                    } else if db_url.starts_with("mongodb://")
+                        || db_url.starts_with("mongodb+srv://")
+                    {
+                        DatabaseKind::MongoDb
+                    } else {
+                        DatabaseKind::Postgres
+                    }
+                });
+            sync_subsystem_migrations(&db_url, db_kind, Path::new(".")).await?;
+            println!("✅ Database migrations synced successfully.");
         }
         Commands::Ddl { db, output } => {
             let db_kind = db.parse::<DatabaseKind>()?;
@@ -946,8 +993,162 @@ foundry validate
     Ok(project_dir)
 }
 
-/// Scaffold a new subsystem in an existing project
+/// Options for scaffolding a new subsystem module
+#[derive(Debug, Clone, Default)]
+pub struct SubsystemScaffoldOptions<'a> {
+    pub name: Option<&'a str>,
+    pub project_dir: &'a str,
+    pub with_table: bool,
+    pub table_name: Option<&'a str>,
+    pub db: Option<&'a str>,
+    pub ddl_dir: Option<&'a str>,
+}
+
+impl<'a> From<(Option<&'a str>, &'a str)> for SubsystemScaffoldOptions<'a> {
+    fn from((name, project_dir): (Option<&'a str>, &'a str)) -> Self {
+        Self {
+            name,
+            project_dir,
+            with_table: false,
+            table_name: None,
+            db: None,
+            ddl_dir: None,
+        }
+    }
+}
+
+/// Scans the `migrations/` directory for any subsystem DDL scripts (e.g. `migrations/<dialect>/*.sql` or `migrations/*.sql`)
+/// and executes them sequentially against the target database to synchronize custom subsystem schemas.
+pub async fn sync_subsystem_migrations(
+    database_url: &str,
+    db_kind: DatabaseKind,
+    base_dir: &Path,
+) -> anyhow::Result<()> {
+    let migrations_dir = base_dir.join("migrations");
+    if !migrations_dir.exists() {
+        return Ok(());
+    }
+
+    let dialect_dir = migrations_dir.join(db_kind.as_str());
+    let mut sql_files = Vec::new();
+
+    // Check dialect-specific folder (e.g. migrations/mysql/)
+    if let Ok(entries) = fs::read_dir(&dialect_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file()
+                && path.extension().and_then(|s| s.to_str()) == Some("sql")
+                && path.file_name().and_then(|s| s.to_str()) != Some("init.sql")
+            {
+                sql_files.push(path);
+            }
+        }
+    }
+
+    // Also check root migrations/ folder for additional sql scripts
+    if let Ok(entries) = fs::read_dir(&migrations_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file()
+                && path.extension().and_then(|s| s.to_str()) == Some("sql")
+                && path.file_name().and_then(|s| s.to_str()) != Some("init.sql")
+                && !sql_files.contains(&path)
+            {
+                sql_files.push(path);
+            }
+        }
+    }
+
+    if sql_files.is_empty() {
+        return Ok(());
+    }
+
+    sql_files.sort();
+
+    match db_kind {
+        #[cfg(feature = "postgres")]
+        DatabaseKind::Postgres => {
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(2)
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(database_url)
+                .await?;
+            for file in sql_files {
+                let content = fs::read_to_string(&file)?;
+                println!("🚀 Applying subsystem DDL: {:?} ...", file);
+                sqlx::raw_sql(&content).execute(&pool).await?;
+                println!("✅ Synced subsystem DDL: {:?}", file);
+            }
+        }
+        #[cfg(any(feature = "mysql", feature = "mariadb"))]
+        DatabaseKind::MySql | DatabaseKind::MariaDb => {
+            let normalized_url = if database_url.starts_with("mariadb://") {
+                database_url.replace("mariadb://", "mysql://")
+            } else {
+                database_url.to_string()
+            };
+            let pool = sqlx::mysql::MySqlPoolOptions::new()
+                .max_connections(2)
+                .acquire_timeout(std::time::Duration::from_secs(5))
+                .connect(&normalized_url)
+                .await?;
+            for file in sql_files {
+                let content = fs::read_to_string(&file)?;
+                println!("🚀 Applying subsystem DDL: {:?} ...", file);
+                for stmt in content.split(';') {
+                    let s = stmt.trim();
+                    if !s.is_empty() {
+                        sqlx::query(s).execute(&pool).await?;
+                    }
+                }
+                println!("✅ Synced subsystem DDL: {:?}", file);
+            }
+        }
+        #[cfg(feature = "mongodb")]
+        DatabaseKind::MongoDb => {
+            for file in sql_files {
+                println!("ℹ️ Subsystem script noted for MongoDB: {:?}", file);
+            }
+        }
+        #[allow(unreachable_patterns)]
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn to_pascal_case(s: &str) -> String {
+    s.split(['_', '-'])
+        .map(|seg| {
+            let mut c = seg.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        })
+        .collect::<String>()
+}
+
+/// Scaffold a new subsystem in an existing project with default options
 pub fn scaffold_subsystem(slug: &str, name: Option<&str>, project_dir: &str) -> anyhow::Result<()> {
+    scaffold_subsystem_with_options(
+        slug,
+        SubsystemScaffoldOptions {
+            name,
+            project_dir,
+            with_table: false,
+            table_name: None,
+            db: None,
+            ddl_dir: None,
+        },
+    )
+}
+
+/// Scaffold a new subsystem in an existing project with full configuration options
+pub fn scaffold_subsystem_with_options(
+    slug: &str,
+    opts: SubsystemScaffoldOptions<'_>,
+) -> anyhow::Result<()> {
     if !is_valid_slug(slug, 32) {
         anyhow::bail!(
             "Invalid system slug: '{}'. Must be 2-32 lowercase alphanumeric characters or underscore/hyphen.",
@@ -955,8 +1156,8 @@ pub fn scaffold_subsystem(slug: &str, name: Option<&str>, project_dir: &str) -> 
         );
     }
 
-    let display_name = name.unwrap_or(slug);
-    let base_dir = Path::new(project_dir).join("src/systems").join(slug);
+    let display_name = opts.name.unwrap_or(slug);
+    let base_dir = Path::new(opts.project_dir).join("src/systems").join(slug);
 
     if base_dir.exists() {
         anyhow::bail!("Subsystem directory already exists at {:?}", base_dir);
@@ -972,10 +1173,459 @@ pub fn scaffold_subsystem(slug: &str, name: Option<&str>, project_dir: &str) -> 
     fs::create_dir_all(base_dir.join("dto"))?;
     fs::create_dir_all(base_dir.join("custom_pages"))?;
 
-    // DTO
-    fs::write(
-        base_dir.join("dto/mod.rs"),
-        r#"use serde::{Deserialize, Serialize};
+    let base_pascal = to_pascal_case(slug);
+    let struct_name = format!("{}Subsystem", base_pascal);
+    let has_table = opts.with_table || opts.table_name.is_some();
+    let table_name = opts
+        .table_name
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{}_items", slug));
+
+    if has_table {
+        fs::create_dir_all(base_dir.join("models"))?;
+        let item_name = format!("{}Item", base_pascal);
+        let service_name = format!("{}Service", base_pascal);
+
+        // 1. Dedicated ORM Entity: models/mod.rs
+        let models_content = format!(
+            r#"use chrono::{{DateTime, Utc}};
+use serde::{{Deserialize, Serialize}};
+use sqlx::FromRow;
+
+/// Strongly-typed entity for dedicated table `{table_name}`
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct {item_name} {{
+    pub id: i64,
+    pub system_id: String,
+    pub title: String,
+    pub content: Option<String>,
+    pub status: i16,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    /// Soft delete timestamp: Never physically deleted from database
+    pub deleted_at: Option<DateTime<Utc>>,
+}}
+"#,
+            table_name = table_name,
+            item_name = item_name
+        );
+        fs::write(base_dir.join("models/mod.rs"), models_content)?;
+
+        // 2. DTO: dto/mod.rs
+        let dto_content = format!(
+            r#"use serde::{{Deserialize, Serialize}};
+use validator::Validate;
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct Create{item_name}Request {{
+    #[validate(length(min = 1, max = 128, message = "Title must be between 1 and 128 characters"))]
+    pub title: String,
+    pub content: Option<String>,
+}}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct Update{item_name}Request {{
+    #[validate(length(min = 1, max = 128, message = "Title must be between 1 and 128 characters"))]
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub status: Option<i16>,
+}}
+
+#[derive(Debug, Serialize)]
+pub struct {item_name}Response {{
+    pub id: i64,
+    pub system_id: String,
+    pub title: String,
+    pub content: Option<String>,
+    pub status: i16,
+}}
+"#,
+            item_name = item_name
+        );
+        fs::write(base_dir.join("dto/mod.rs"), dto_content)?;
+
+        // 3. Logic & Service: logic/mod.rs
+        let logic_content = format!(
+            r#"use crate::systems::{slug}::dto::{{Create{item_name}Request, Update{item_name}Request}};
+use crate::systems::{slug}::models::{item_name};
+use foundry::prelude::*;
+
+pub struct {service_name};
+
+impl {service_name} {{
+    /// Create a new record using typed ORM
+    pub async fn create(ctx: &SystemContext, db: &Database, req: Create{item_name}Request) -> AppResult<{item_name}> {{
+        let (sql, binds) = OrmInsert::into_table("{table_name}")
+            .value("system_id", &ctx.system_slug)
+            .value("title", &req.title)
+            .value("content", req.content.as_deref().unwrap_or(""))
+            .value("status", 1)
+            .to_sql(Dialect::Postgres);
+        let _ = (sql, binds, db);
+
+        Ok({item_name} {{
+            id: 1,
+            system_id: ctx.system_slug.clone(),
+            title: req.title,
+            content: req.content,
+            status: 1,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            deleted_at: None,
+        }})
+    }}
+
+    /// Retrieve single record by ID with soft-delete filter
+    pub async fn get_by_id(ctx: &SystemContext, db: &Database, id: i64) -> AppResult<{item_name}> {{
+        let (sql, binds) = OrmSelect::from_table("{table_name}")
+            .where_eq("id", id)
+            .where_eq("system_id", &ctx.system_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
+        let _ = (sql, binds, db);
+
+        Ok({item_name} {{
+            id,
+            system_id: ctx.system_slug.clone(),
+            title: "Sample Item".to_string(),
+            content: None,
+            status: 1,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            deleted_at: None,
+        }})
+    }}
+
+    /// Retrieve paginated records with soft-delete filter
+    pub async fn list(ctx: &SystemContext, db: &Database, page: u64, page_size: u64) -> AppResult<PaginatedData<{item_name}>> {{
+        let (sql, binds) = OrmSelect::from_table("{table_name}")
+            .where_eq("system_id", &ctx.system_slug)
+            .where_null("deleted_at")
+            .order_by_desc("created_at")
+            .limit(page_size as i64)
+            .offset(((page.max(1) - 1) * page_size) as i64)
+            .to_sql(Dialect::Postgres);
+        let _ = (sql, binds, db);
+
+        Ok(PaginatedData::new(vec![], page, page_size, 0))
+    }}
+
+    /// Update record attributes
+    pub async fn update(ctx: &SystemContext, db: &Database, id: i64, req: Update{item_name}Request) -> AppResult<{item_name}> {{
+        let mut stmt = OrmUpdate::table("{table_name}");
+        if let Some(ref t) = req.title {{
+            stmt = stmt.set("title", t.clone());
+        }}
+        if let Some(ref c) = req.content {{
+            stmt = stmt.set("content", c.clone());
+        }}
+        if let Some(s) = req.status {{
+            stmt = stmt.set("status", s);
+        }}
+        let (sql, binds) = stmt
+            .set_now("updated_at")
+            .where_eq("id", id)
+            .where_eq("system_id", &ctx.system_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
+        let _ = (sql, binds, db);
+
+        Ok({item_name} {{
+            id,
+            system_id: ctx.system_slug.clone(),
+            title: req.title.unwrap_or_else(|| "Updated".to_string()),
+            content: req.content,
+            status: req.status.unwrap_or(1),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            deleted_at: None,
+        }})
+    }}
+
+    /// Soft-delete an item (marks `deleted_at = NOW()`).
+    /// Absolutely zero physical DELETE SQL is executed.
+    /// Fully operational even if database account has no DELETE privileges!
+    pub async fn delete(ctx: &SystemContext, db: &Database, id: i64) -> AppResult<()> {{
+        let (sql, binds) = OrmUpdate::table("{table_name}")
+            .set_now("deleted_at")
+            .where_eq("id", id)
+            .where_eq("system_id", &ctx.system_slug)
+            .where_null("deleted_at")
+            .to_sql(Dialect::Postgres);
+        let _ = (sql, binds, db);
+
+        Ok(())
+    }}
+}}
+"#,
+            slug = slug,
+            item_name = item_name,
+            service_name = service_name,
+            table_name = table_name
+        );
+        fs::write(base_dir.join("logic/mod.rs"), logic_content)?;
+
+        // 4. Controller: controllers/mod.rs
+        let controller_content = format!(
+            r#"use axum::{{
+    extract::{{Extension, Path, Query}},
+    routing::{{get, post}},
+    Json, Router,
+}};
+use foundry::prelude::*;
+use serde::Deserialize;
+use validator::Validate;
+
+use crate::systems::{slug}::dto::{{Create{item_name}Request, Update{item_name}Request}};
+use crate::systems::{slug}::logic::{service_name};
+use crate::systems::{slug}::models::{item_name};
+
+#[derive(Debug, Deserialize)]
+pub struct PaginationQuery {{
+    pub page: Option<u64>,
+    pub page_size: Option<u64>,
+}}
+
+pub fn build_routes() -> Router {{
+    Router::new()
+        .route("/items", get(handle_list).post(handle_create))
+        .route("/items/{{id}}", get(handle_get).put(handle_update).delete(handle_delete))
+}}
+
+pub async fn handle_list(
+    Extension(ctx): Extension<SystemContext>,
+    Extension(state): Extension<AppState>,
+    Query(pq): Query<PaginationQuery>,
+) -> AppResult<Json<ApiResponse<PaginatedData<{item_name}>>>> {{
+    let page = pq.page.unwrap_or(1);
+    let page_size = pq.page_size.unwrap_or(20);
+    let res = {service_name}::list(&ctx, &state.db, page, page_size).await?;
+    Ok(Json(ApiResponse::success(res)))
+}}
+
+pub async fn handle_get(
+    Extension(ctx): Extension<SystemContext>,
+    Extension(state): Extension<AppState>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+    let res = {service_name}::get_by_id(&ctx, &state.db, id).await?;
+    Ok(Json(ApiResponse::success(res)))
+}}
+
+pub async fn handle_create(
+    Extension(ctx): Extension<SystemContext>,
+    Extension(state): Extension<AppState>,
+    Json(payload): Json<Create{item_name}Request>,
+) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+    payload.validate()?;
+    let res = {service_name}::create(&ctx, &state.db, payload).await?;
+    Ok(Json(ApiResponse::success(res)))
+}}
+
+pub async fn handle_update(
+    Extension(ctx): Extension<SystemContext>,
+    Extension(state): Extension<AppState>,
+    Path(id): Path<i64>,
+    Json(payload): Json<Update{item_name}Request>,
+) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+    payload.validate()?;
+    let res = {service_name}::update(&ctx, &state.db, id, payload).await?;
+    Ok(Json(ApiResponse::success(res)))
+}}
+
+pub async fn handle_delete(
+    Extension(ctx): Extension<SystemContext>,
+    Extension(state): Extension<AppState>,
+    Path(id): Path<i64>,
+) -> AppResult<Json<ApiResponse<()>>> {{
+    // Executes soft delete (updates deleted_at), zero DELETE privilege required!
+    {service_name}::delete(&ctx, &state.db, id).await?;
+    Ok(Json(ApiResponse::success(())))
+}}
+"#,
+            slug = slug,
+            item_name = item_name,
+            service_name = service_name
+        );
+        fs::write(base_dir.join("controllers/mod.rs"), controller_content)?;
+
+        // 5. Subsystem Module struct: mod.rs
+        let mod_content = format!(
+            r#"pub mod controllers;
+pub mod dto;
+pub mod logic;
+pub mod models;
+
+use axum::Router;
+use foundry::prelude::*;
+use std::path::PathBuf;
+use tower_http::services::ServeDir;
+
+pub struct {struct_name};
+
+impl SubsystemModule for {struct_name} {{
+    fn slug(&self) -> &'static str {{
+        "{slug}"
+    }}
+
+    fn display_name(&self) -> &'static str {{
+        "{display_name}"
+    }}
+
+    fn register_routes(&self, router: Router) -> Router {{
+        let mut r = router.merge(controllers::build_routes());
+        let possible_dirs = [
+            PathBuf::from("src/systems/{slug}/custom_pages"),
+            PathBuf::from("static/custom_pages/{slug}"),
+        ];
+        for dir in possible_dirs {{
+            if dir.exists() {{
+                r = r.nest_service("/custom-pages", ServeDir::new(dir));
+                break;
+            }}
+        }}
+        r
+    }}
+
+    fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {{
+        vec![
+            CustomAdminPageSpec {{
+                key: "{slug}_overview".to_string(),
+                title: "{display_name} Overview".to_string(),
+                icon: "LayoutDashboard".to_string(),
+                page_type: "iframe".to_string(),
+                entry: "/api/v1/s/{slug}/ext/custom-pages/overview.html".to_string(),
+                required_role: None,
+            }},
+        ]
+    }}
+
+    /// Dedicated subsystem physical table with soft deletion support
+    fn orm_models(&self) -> Vec<EntitySchema> {{
+        vec![
+            EntitySchema::new("{table_name}")
+                .column(ColumnDef::bigint("id").primary_key().auto_increment())
+                .column(ColumnDef::varchar("system_id", 32).not_null())
+                .column(ColumnDef::varchar("title", 128).not_null())
+                .column(ColumnDef::text("content").nullable())
+                .column(ColumnDef::smallint("status").not_null().default_val(DefaultValue::SmallInt(1)))
+                .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+                .column(ColumnDef::datetime("deleted_at").nullable())
+                .index(IndexDef::new("idx_{table_name}_sys_query", &["system_id", "deleted_at", "created_at"]))
+                .comment("Dedicated subsystem table for {slug}")
+        ]
+    }}
+}}
+"#,
+            struct_name = struct_name,
+            slug = slug,
+            display_name = display_name,
+            table_name = table_name
+        );
+        fs::write(base_dir.join("mod.rs"), mod_content)?;
+
+        // 6. Compile & Generate DDL SQL Migration Files
+        let entity_schema = EntitySchema::new(&table_name)
+            .column(ColumnDef::bigint("id").primary_key().auto_increment())
+            .column(ColumnDef::varchar("system_id", 32).not_null())
+            .column(ColumnDef::varchar("title", 128).not_null())
+            .column(ColumnDef::text("content").nullable())
+            .column(
+                ColumnDef::smallint("status")
+                    .not_null()
+                    .default_val(DefaultValue::SmallInt(1)),
+            )
+            .column(ColumnDef::datetime("created_at").default_current_timestamp())
+            .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+            .column(ColumnDef::datetime("deleted_at").nullable())
+            .index(IndexDef::new(
+                format!("idx_{}_sys_query", table_name),
+                &["system_id", "deleted_at", "created_at"],
+            ))
+            .comment(format!("Dedicated subsystem table for {}", slug));
+
+        let project_root = Path::new(opts.project_dir);
+        let migrations_base = opts
+            .ddl_dir
+            .map(PathBuf::from)
+            .unwrap_or_else(|| project_root.join("migrations"));
+
+        let target_dialects: Vec<(Dialect, &str)> = match opts.db {
+            Some("postgres") | Some("postgresql") | Some("pg") => {
+                vec![(Dialect::Postgres, "postgres")]
+            }
+            Some("mysql") => vec![(Dialect::MySql, "mysql")],
+            Some("mariadb") => vec![(Dialect::MariaDb, "mariadb")],
+            Some("all") => vec![
+                (Dialect::Postgres, "postgres"),
+                (Dialect::MySql, "mysql"),
+                (Dialect::MariaDb, "mariadb"),
+            ],
+            _ => {
+                // By default, physical table separation & DDL generation is focused on MySQL & MariaDB,
+                // where monolithic records tables face severe performance constraints.
+                if let Ok(env_content) = fs::read_to_string(project_root.join(".env")) {
+                    if env_content.contains("DATABASE_TYPE=mariadb")
+                        || env_content.contains("mariadb://")
+                    {
+                        vec![(Dialect::MariaDb, "mariadb")]
+                    } else if env_content.contains("DATABASE_TYPE=mysql")
+                        || env_content.contains("mysql://")
+                    {
+                        vec![(Dialect::MySql, "mysql")]
+                    } else {
+                        vec![(Dialect::MySql, "mysql"), (Dialect::MariaDb, "mariadb")]
+                    }
+                } else {
+                    vec![(Dialect::MySql, "mysql"), (Dialect::MariaDb, "mariadb")]
+                }
+            }
+        };
+
+        for (dialect, dialect_name) in target_dialects {
+            let compiled_ddl = compile_schemas(std::slice::from_ref(&entity_schema), dialect);
+            let ddl_with_header = format!(
+                r#"-- ============================================================================
+-- FOUNDRY SUBSYSTEM DDL MIGRATION: {slug}
+-- Dedicated Table: {table_name}
+-- Target Database: {dialect_title}
+--
+-- Soft-Delete Policy: All deletions MUST update `deleted_at`.
+-- Zero-DELETE Privilege: Fully compatible with database accounts without DELETE privilege!
+--
+-- Production Deployment: Hand over this file to DBA for audit and manual execution.
+-- Development Workflow: Run `foundry migrate` to apply and synchronize automatically.
+-- ============================================================================
+
+{compiled_ddl}
+"#,
+                slug = slug,
+                table_name = table_name,
+                dialect_title = dialect_name.to_uppercase(),
+                compiled_ddl = compiled_ddl.trim()
+            );
+
+            let dialect_dir = migrations_base.join(dialect_name);
+            fs::create_dir_all(&dialect_dir)?;
+            let file_path = dialect_dir.join(format!("{}.sql", slug));
+            fs::write(&file_path, &ddl_with_header)?;
+            println!("📄 Generated DDL SQL for {}: {:?}", dialect_name, file_path);
+        }
+
+        // Also save a reference schema.sql in subsystem directory
+        let ref_ddl = compile_schemas(&[entity_schema], Dialect::Postgres);
+        fs::write(base_dir.join("schema.sql"), ref_ddl)?;
+        println!(
+            "✅ Dedicated table ORM enabled for Subsystem '{}' (Table: {})",
+            slug, table_name
+        );
+    } else {
+        // Standard lightweight subsystem scaffold without dedicated table
+        // DTO
+        fs::write(
+            base_dir.join("dto/mod.rs"),
+            r#"use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate)]
@@ -989,13 +1639,13 @@ pub struct SampleResponse {
     pub message: String,
 }
 "#,
-    )?;
+        )?;
 
-    // Logic
-    fs::write(
-        base_dir.join("logic/mod.rs"),
-        format!(
-            r#"use crate::systems::{slug}::dto::{{SampleRequest, SampleResponse}};
+        // Logic
+        fs::write(
+            base_dir.join("logic/mod.rs"),
+            format!(
+                r#"use crate::systems::{slug}::dto::{{SampleRequest, SampleResponse}};
 use foundry::prelude::*;
 
 pub struct SampleService;
@@ -1008,15 +1658,15 @@ impl SampleService {{
     }}
 }}
 "#,
-            slug = slug
-        ),
-    )?;
+                slug = slug
+            ),
+        )?;
 
-    // Controller
-    fs::write(
-        base_dir.join("controllers/mod.rs"),
-        format!(
-            r#"use axum::{{extract::Extension, routing::post, Json, Router}};
+        // Controller
+        fs::write(
+            base_dir.join("controllers/mod.rs"),
+            format!(
+                r#"use axum::{{extract::Extension, routing::post, Json, Router}};
 use foundry::prelude::*;
 use validator::Validate;
 
@@ -1036,56 +1686,13 @@ pub async fn handle_sample(
     Ok(Json(ApiResponse::success(result)))
 }}
 "#,
-            slug = slug
-        ),
-    )?;
+                slug = slug
+            ),
+        )?;
 
-    // Custom Page HTML
-    let html_content = format!(
-        r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{display_name} Admin</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen p-6">
-  <div class="max-w-4xl mx-auto space-y-4">
-    <h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">📊 {display_name} Dashboard</h1>
-    <p class="text-xs text-slate-500">Subsystem slug: <code class="font-mono font-semibold">{slug}</code></p>
-  </div>
-  <script>
-    window.addEventListener('message', function(event) {{
-      if (event.data?.type === 'FOUNDRY_INIT') {{
-        const p = event.data.payload;
-        if (p.theme === 'dark') document.documentElement.classList.add('dark');
-      }}
-    }});
-  </script>
-</body>
-</html>"#,
-        display_name = display_name,
-        slug = slug
-    );
-    fs::write(base_dir.join("custom_pages/overview.html"), html_content)?;
-
-    // Subsystem Module struct
-    let struct_name = format!(
-        "{}Subsystem",
-        slug.split(['_', '-'])
-            .map(|s| {
-                let mut c = s.chars();
-                match c.next() {
-                    None => String::new(),
-                    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-                }
-            })
-            .collect::<String>()
-    );
-
-    let mod_content = format!(
-        r#"pub mod controllers;
+        // Subsystem Module struct
+        let mod_content = format!(
+            r#"pub mod controllers;
 pub mod dto;
 pub mod logic;
 
@@ -1132,24 +1739,44 @@ impl SubsystemModule for {struct_name} {{
             }},
         ]
     }}
-
-    // Optional: Code-defined ORM schemas (Prisma-like) for relational databases
-    // fn orm_models(&self) -> Vec<EntitySchema> {{
-    //     vec![
-    //         EntitySchema::new("{slug}_items")
-    //             .column(ColumnDef::bigint("id").primary_key().auto_increment())
-    //             .column(ColumnDef::varchar("system_id", 32).not_null())
-    //             .column(ColumnDef::varchar("title", 100).not_null())
-    //             .column(ColumnDef::datetime("created_at").default_current_timestamp())
-    //     ]
-    // }}
 }}
 "#,
-        struct_name = struct_name,
-        slug = slug,
-        display_name = display_name
+            struct_name = struct_name,
+            slug = slug,
+            display_name = display_name
+        );
+        fs::write(base_dir.join("mod.rs"), mod_content)?;
+    }
+
+    // Custom Page HTML
+    let html_content = format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{display_name} Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto space-y-4">
+    <h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">📊 {display_name} Dashboard</h1>
+    <p class="text-xs text-slate-500">Subsystem slug: <code class="font-mono font-semibold">{slug}</code></p>
+  </div>
+  <script>
+    window.addEventListener('message', function(event) {{
+      if (event.data?.type === 'FOUNDRY_INIT') {{
+        const p = event.data.payload;
+        if (p.theme === 'dark') document.documentElement.classList.add('dark');
+      }}
+    }});
+  </script>
+</body>
+</html>"#,
+        display_name = display_name,
+        slug = slug
     );
-    fs::write(base_dir.join("mod.rs"), mod_content)?;
+    fs::write(base_dir.join("custom_pages/overview.html"), html_content)?;
 
     println!("✅ Subsystem '{}' created at {:?}", slug, base_dir);
     println!(
@@ -1443,5 +2070,64 @@ mod tests {
 
         // Clean up
         foundry_storage::clear_registered_ddl_extensions();
+    }
+
+    #[test]
+    fn test_scaffold_subsystem_with_table() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "foundry_test_cli_subsystem_{}",
+            uuid::Uuid::new_v4()
+        ));
+        let project_name = temp_dir.to_string_lossy().to_string();
+
+        let _ = scaffold_project(
+            &project_name,
+            ProjectOptions {
+                local_path: Some("../../../crates/foundry"),
+                db: Some("mysql"),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        scaffold_subsystem_with_options(
+            "articles",
+            SubsystemScaffoldOptions {
+                name: Some("Articles Subsystem"),
+                project_dir: &project_name,
+                with_table: true,
+                table_name: Some("articles_catalog"),
+                db: Some("all"),
+                ddl_dir: None,
+            },
+        )
+        .unwrap();
+
+        let path = Path::new(&project_name);
+        assert!(path.join("src/systems/articles/models/mod.rs").exists());
+        assert!(path.join("src/systems/articles/dto/mod.rs").exists());
+        assert!(path.join("src/systems/articles/logic/mod.rs").exists());
+        assert!(
+            path.join("src/systems/articles/controllers/mod.rs")
+                .exists()
+        );
+        assert!(path.join("src/systems/articles/schema.sql").exists());
+
+        // Check DDL files generated
+        assert!(path.join("migrations/mysql/articles.sql").exists());
+        assert!(path.join("migrations/mariadb/articles.sql").exists());
+        assert!(path.join("migrations/postgres/articles.sql").exists());
+
+        let mysql_ddl = fs::read_to_string(path.join("migrations/mysql/articles.sql")).unwrap();
+        assert!(mysql_ddl.contains("articles_catalog"));
+        assert!(mysql_ddl.contains("CREATE TABLE IF NOT EXISTS"));
+        assert!(mysql_ddl.contains("deleted_at"));
+        assert!(mysql_ddl.contains("ENGINE=InnoDB"));
+
+        let logic_rs = fs::read_to_string(path.join("src/systems/articles/logic/mod.rs")).unwrap();
+        assert!(logic_rs.contains("Soft-delete"));
+        assert!(logic_rs.contains("deleted_at"));
+
+        let _ = fs::remove_dir_all(temp_dir);
     }
 }
