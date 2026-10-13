@@ -252,19 +252,69 @@ let pay_cfg: Option<PaymentConfig> = state
 
 ---
 
-## 7. 编写业务自定义原生 SQL 迁移
+## 7. 专题/子系统分表设计与 DDL 交付规范 (针对 MySQL / MariaDB)
 
-如果你的业务子系统需要独立的物理实体表，可直接在 `migrations/` 目录下追加 SQL 迁移脚本：
+### 7.1 为什么 MySQL / MariaDB 需要独立物理单表？
 
-```text
-my-app/
-└── migrations/
-    ├── postgres/
-    │   └── 001_create_orders.sql
-    ├── mysql/
-    │   └── 001_create_orders.sql
-    └── mariadb/
-        └── 001_create_orders.sql
+在面对多业务专题、海量数据吞吐时，不同数据库引擎的物理特性决定了不同的架构策略：
+
+```mermaid
+flowchart TD
+    DBSelection["数据库选型与存储架构决策"]
+    DBSelection --> Mongo["MongoDB"]
+    DBSelection --> PG["PostgreSQL"]
+    DBSelection --> MySQL["MySQL / MariaDB"]
+
+    Mongo --> MongoStrategy["【纯 0-DDL】<br/>原生 BSON 文档，集合自动按需创建<br/>Wildcard 索引，天然无表模式维护"]
+    PG --> PGStrategy["【0-DDL 优选】<br/>原生 JSONB + GIN 倒排索引 + 分区表<br/>单通用大表依然保持极高性能"]
+    MySQL --> MySQLStrategy["【专属分表 + 显式 DDL】<br/>无原生 GIN 索引，单表大 JSON 性能衰退<br/>推荐每个子系统独立单表 + 强类型业务 ORM"]
 ```
 
-系统在执行 `foundry migrate` 或 `AUTO_MIGRATE=true` 时，会自动感知当前激活的数据库引擎，并执行对应方言目录下的迁移脚本。
+* **MongoDB**：天然是文档型数据库（Schemaless），集合在首次插入记录时自动生成，完全不需要任何 DDL SQL。
+* **PostgreSQL**：在 Mode A（0-DDL 通用模型）下，依靠二进制 `JSONB`、`GIN` 倒排索引与部分索引，单表海量多专题依然能维持极佳性能。
+* **MySQL / MariaDB 的单表痛点**：
+  1. MySQL 的 JSON 本质上只作为长文本/BLOB 存储，缺乏真正的 GIN 倒排索引，动态字段过滤成本较高；
+  2. 当数百个专题、几千万行数据全塞入一张通用的 `records` 表时，InnoDB 的 B+Tree 索引深度增加、行锁竞争加剧、Buffer Pool 换入换出频繁，极易成为系统级吞吐瓶颈。
+  3. **最佳实践**：针对 MySQL / MariaDB，**推荐使用 `foundry system new <slug> --with-table` 为每个业务子系统拆分为独立的物理表**，并生成专用的 DDL SQL 脚本。
+
+### 7.2 开发期自动迁移 vs 生产期 DBA 手动执行
+
+Foundry 针对多环境建立了严格规范的 DDL 交付契约：
+
+1. **开发与测试环境 (完全自动化)**：
+   执行 `foundry migrate` 时，系统不仅会自动执行平台基准表，还会**自动递归扫描 `migrations/<dialect>/*.sql`** 中的所有子系统增量 DDL 脚本并按顺序自动执行，无需开发者手动开终端敲 SQL。
+2. **线上生产环境 (安全隔离与 DBA 离线执行)**：
+   线上生产数据库通常由专门的 DBA 团队管控，应用程序连接账号出于安全规范一般**严格禁止赋予 `DDL`（如 `CREATE TABLE`、`ALTER TABLE`、`DROP TABLE`）权限**。
+   脚手架生成的 `migrations/<dialect>/<slug>.sql` 头部带有完整的审计注释与生产部署指南，运维团队可在发版前直接离线审核并在生产库手动执行，完全符合企业级发布流程。
+
+---
+
+## 8. 全系统严格软删除规范 (零物理 DELETE 权限保障)
+
+### 8.1 架构设计原则
+
+数据是企业最宝贵的核心资产。Foundry 遵循**严格的软删除（Soft Delete / 标记删除）**最佳实践：
+
+> [!IMPORTANT]
+> **零物理 DELETE 保障**：系统所有功能模块（包括子系统注册、业务数据记录、动态数据模型与字段元数据、系统全局配置、后台管理员账号）的“删除”操作，**一律只更新 `deleted_at = NOW()` 标记**，底层存储引擎严格杜绝任何 `DELETE FROM ...` 物理删除语句！
+
+### 8.2 覆盖范围与字段约定
+
+所有核心物理表与自动生成的子系统业务表均统一包含以下软删除规范：
+
+| 实体模型 | 物理数据表 | 软删除字段与过滤规则 |
+|---|---|---|
+| **子系统/专题** | `systems` | `deleted_at: Option<DateTime<Utc>>`，查询必须满足 `WHERE deleted_at IS NULL` |
+| **系统配置项** | `system_configs` | `deleted_at: Option<DateTime<Utc>>`，配置检索自动过滤软删除记录 |
+| **模型与字段元数据** | `models`, `model_fields` | `deleted_at: Option<DateTime<Utc>>`，字段列表读取与类型校验自动排除失效字段 |
+| **后台管理员账号** | `admins` | `deleted_at: Option<DateTime<Utc>>`，登录鉴权自动阻断已删除管理员 |
+| **动态业务记录** | `model_records` / `record_values` | `deleted_at: Option<DateTime<Utc>>`，分页与多条件检索内置过滤 |
+| **子系统专属物理表** | `<slug>_items`（通过 `--with-table` 生成） | 预置 `deleted_at DATETIME(6) NULL`，配套 Service 使用 `set_now("deleted_at")` |
+
+### 8.3 数据库账号最低权限保障 (最小权限原则)
+
+得益于全系统的软删除架构，**即使用户/DBA 在生产环境中收回了数据库账号的物理 `DELETE` 权限（仅赋予 `SELECT, INSERT, UPDATE`），整个 Foundry 系统的所有功能（包括管理员管理、模型维护、配置修改、业务数据增删改查）依然 100% 顺畅正常运行！**
+
+这一特性带来了巨大的安全收益：
+1. **防止误删与恶意删库**：即使数据库连接串遭遇极端泄露或发生未预期的代码缺陷，攻击者与应用程序由于账号本身没有物理 `DELETE` 权限，永远无法直接抹除数据库物理行。
+2. **便于审计与数据恢复**：任何删除动作均可留痕，且可通过将 `deleted_at` 重置为 `NULL` 实现秒级数据撤销与灾难恢复。

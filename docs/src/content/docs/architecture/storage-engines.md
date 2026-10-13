@@ -54,6 +54,17 @@ description: Foundry pluggable multi-database architecture, SPI design, dialect-
   - Optional features: `features = ["mysql"]`, `features = ["mariadb"]`, `features = ["mongodb"]`
   - If a user configures an uncompiled database driver at startup, the system halts with clear, actionable configuration instructions.
 
+### 5. System-Wide Strict Soft-Delete Policy (Zero-DELETE Privilege Guarantee)
+- **Zero Physical DELETE Contract**: All platform domains (subsystems, records, model schemas, field definitions, configs, and admin accounts) are soft-deleted via standard timestamp markers (`deleted_at: Option<DateTime<Utc>>`).
+- **Data Preservation**: Underlying engines execute `UPDATE ... SET deleted_at = NOW(6)`; physical `DELETE FROM ...` SQL statements are completely eliminated from the runtime.
+- **Principle of Least Privilege**: Even if DBAs revoke physical `DELETE` permissions from the database account (granting only `SELECT, INSERT, UPDATE`), every platform feature operates smoothly with 100% reliability.
+
+### 6. Subsystem Physical Table Partitioning & DDL Delivery (Tailored for MySQL / MariaDB)
+- **MongoDB**: Native BSON document database; collections are created on demand upon first insertion, providing pure 0-DDL.
+- **PostgreSQL**: In Mode A (0-DDL), binary `JSONB` + `GIN` inverted indexing + partial indexing ensure high-performance querying across multi-tenant topics in a shared table.
+- **MySQL / MariaDB**: Lacking native GIN indexing, storing high-volume JSON in a single table encounters performance bottlenecks as B+Tree depth grows. For MySQL and MariaDB, **using `foundry system new <slug> --with-table` to partition each subsystem into its own dedicated physical table is recommended**.
+- **Delivery Decoupling**: Development auto-syncs via `foundry migrate` scanning `migrations/<dialect>/*.sql`; production uses exported SQL scripts for offline DBA audit and manual execution.
+
 ---
 
 ## 🏗️ 2. Target System Architecture

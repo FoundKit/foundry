@@ -381,7 +381,8 @@ impl SubsystemModule for ShopSubsystem {
                 .column(ColumnDef::json("items_payload").default_empty_json())
                 .column(ColumnDef::datetime("created_at").default_current_timestamp())
                 .column(ColumnDef::datetime("updated_at").default_current_timestamp())
-                .index(IndexDef::new("idx_orders_sys_status", &["system_id", "status"])),
+                .column(ColumnDef::datetime("deleted_at").nullable())
+                .index(IndexDef::new("idx_orders_sys_status", &["system_id", "deleted_at", "status"])),
 
             // Products Table
             EntitySchema::new("shop_products")
@@ -391,10 +392,13 @@ impl SubsystemModule for ShopSubsystem {
                 .column(ColumnDef::integer("stock").not_null())
                 .column(ColumnDef::boolean("is_active"))
                 .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("deleted_at").nullable())
         ]
     }
 }
 ```
+
+> 💡 **CLI Generation Tip**: Running `foundry system new <slug> --with-table` automatically generates the complete domain skeleton above, including `deleted_at` soft delete, typed ORM models, validation DTOs, and dialect DDL SQL scripts!
 
 ### 6.2 Paradigm 2: ThinkPHP-Style Chainable Query Builders (ORM Query Builder)
 
@@ -403,7 +407,7 @@ For developers familiar with ThinkPHP's `Db::table('...')->where(...)->select()`
 ```rust
 use foundry::prelude::*;
 
-// 1. Paginated Select (similar to Db::name('shop_orders')->where(...)->order(...)->limit(...)->select())
+// 1. Paginated Select (with soft delete filtering: similar to Db::name('shop_orders')->whereNull('deleted_at')->select())
 let (sql, binds) = OrmSelect::from_table("shop_orders")
     .column("id")
     .column("order_no")
@@ -412,6 +416,7 @@ let (sql, binds) = OrmSelect::from_table("shop_orders")
     .column("created_at")
     .where_eq("system_id", "shop")
     .where_eq("status", "pending")
+    .where_null("deleted_at")
     .order_by_desc("created_at")
     .limit(20)
     .offset(0)
@@ -430,10 +435,19 @@ let (insert_sql, insert_binds) = OrmInsert::into_table("shop_orders")
 // 3. Conditional Update (similar to Db::name('shop_orders')->where('order_no', '...')->update([...]))
 let (update_sql, update_binds) = OrmUpdate::into_table("shop_orders")
     .set("status", "paid")
+    .set_now("updated_at")
     .where_eq("order_no", "ORD-20261012-001")
+    .where_null("deleted_at")
     .to_sql(Dialect::Postgres);
 
-// 4. Delete Record (similar to Db::name('shop_orders')->where('id', 10)->delete())
+// 4. Safe Soft Delete (strictly marks deleted_at, zero physical DELETE FROM, fully operational under zero DELETE privileges)
+let (soft_del_sql, soft_del_binds) = OrmUpdate::into_table("shop_orders")
+    .set_now("deleted_at")
+    .where_eq("order_no", "ORD-20261012-001")
+    .where_null("deleted_at")
+    .to_sql(Dialect::Postgres);
+
+// 5. Physical Delete (for transient tables/test fixtures only; production business logic should always use soft delete above)
 let (delete_sql, delete_binds) = OrmDelete::from_table("shop_orders")
     .where_eq("id", 10)
     .to_sql(Dialect::Postgres);

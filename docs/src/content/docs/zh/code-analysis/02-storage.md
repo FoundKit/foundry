@@ -1188,17 +1188,19 @@ pub struct RecordStore;
 - 业务逻辑与数据库解耦
 - 易于测试（可 mock）
 
-### 9.2 Soft Delete（软删除）
+### 9.2 Soft Delete（全系统严格软删除与零物理 DELETE 权限保证）
 
 ```sql
-deleted_at TIMESTAMPTZ
+deleted_at TIMESTAMPTZ NULL (PostgreSQL) / deleted_at DATETIME(6) NULL (MySQL)
 ```
 
-**实现：**
-- 删除 → `UPDATE ... SET deleted_at = NOW()`
-- 查询 → `WHERE deleted_at IS NULL`
+**实现与覆盖范围：**
+- **全表覆盖**：除 `model_records` 外，`systems`、`models`、`model_fields`、`system_configs`、`admins` 全部配备 `deleted_at: Option<DateTime<Utc>>`
+- **执行原则**：全系统严格禁止物理 `DELETE FROM`，删除统一执行 `UPDATE ... SET deleted_at = NOW()`
+- **查询过滤**：全链路查询默认带上 `WHERE deleted_at IS NULL`（或利用局部索引加速）
+- **零物理 DELETE 权限运行**：生产环境中数据库账号即便被回收物理 `DELETE` 权限（仅赋予 `SELECT, INSERT, UPDATE`），系统所有业务依然 100% 顺畅运行
 
-**优势：** 数据可恢复、审计完整
+**优势：** 防误删、审计追溯完整、秒级数据恢复、金融级账号权限加固。
 
 ### 9.3 Multi-Tenancy（多租户隔离）
 

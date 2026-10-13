@@ -251,18 +251,69 @@ let pay_cfg: Option<PaymentConfig> = state
     .await?;
 ```
 
-### Writing Native SQL Migrations
-If your subsystem needs custom physical tables, place migration scripts in the dialect directory:
+## 7. Subsystem Physical Table Partitioning & DDL Delivery (MySQL & MariaDB)
 
-```text
-my-app/
-└── migrations/
-    ├── postgres/
-    │   └── 001_create_orders.sql
-    ├── mysql/
-    │   └── 001_create_orders.sql
-    └── mariadb/
-        └── 001_create_orders.sql
+### 7.1 Why MySQL / MariaDB Require Dedicated Physical Tables
+
+When managing numerous business subsystems and high data volumes, the physical characteristics of different database engines dictate contrasting architectural strategies:
+
+```mermaid
+flowchart TD
+    DBSelection["Database Selection & Storage Strategy"]
+    DBSelection --> Mongo["MongoDB"]
+    DBSelection --> PG["PostgreSQL"]
+    DBSelection --> MySQL["MySQL / MariaDB"]
+
+    Mongo --> MongoStrategy["[Pure 0-DDL]<br/>Native BSON documents, collections created on-demand<br/>Wildcard indexing, no schema maintenance needed"]
+    PG --> PGStrategy["[0-DDL Preferred]<br/>Native JSONB + GIN inverted index + partition tables<br/>Single universal table maintains stellar performance"]
+    MySQL --> MySQLStrategy["[Dedicated Tables + Explicit DDL]<br/>No native GIN index, JSON query performance degrades<br/>Dedicated table per subsystem + typed ORM recommended"]
 ```
 
-When `foundry migrate` runs or when `AUTO_MIGRATE=true`, Foundry detects the active database provider and runs the appropriate migrations automatically.
+* **MongoDB**: A native document database (schemaless). Collections are automatically created upon inserting the first document, requiring zero DDL files.
+* **PostgreSQL**: In Mode A (0-DDL universal model), binary `JSONB`, `GIN` inverted indexing, and partial indexes allow a single shared table to gracefully scale across hundreds of topics.
+* **MySQL / MariaDB Single-Table Bottlenecks**:
+  1. MySQL treats JSON columns essentially as BLOB storage without true GIN indexes, resulting in higher query overhead for dynamic properties.
+  2. Storing tens of millions of rows across diverse subsystems within a single shared `records` table increases InnoDB B+Tree depth, heightens row-lock contention, and exerts heavy pressure on the Buffer Pool.
+  3. **Best Practice**: For MySQL and MariaDB, **use `foundry system new <slug> --with-table` to partition each subsystem into its own dedicated physical table** with generated DDL SQL scripts.
+
+### 7.2 Development Auto-Sync vs. Production DBA Execution
+
+Foundry enforces a structured delivery contract for DDL across environments:
+
+1. **Development & Testing (Fully Automated)**:
+   Running `foundry migrate` executes the platform baseline schema and **automatically scans `migrations/<dialect>/*.sql`** to apply all subsystem incremental DDL scripts sequentially.
+2. **Production Environments (DBA Offline Execution)**:
+   In production, application database accounts typically lack `DDL` permissions (`CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`).
+   Generated `migrations/<dialect>/<slug>.sql` scripts include header audit comments and deployment guides, allowing DBAs to review and manually execute the DDL offline prior to application rollout.
+
+---
+
+## 8. System-Wide Strict Soft Delete (Zero-DELETE Privilege Guarantee)
+
+### 8.1 Core Architectural Principle
+
+Data is the most valuable asset in any enterprise. Foundry enforces a strict **Soft Delete** standard across all platform and business domains:
+
+> [!IMPORTANT]
+> **Zero Physical DELETE Guarantee**: All deletion operations across every platform feature (subsystems, business records, models, field definitions, configs, and admin accounts) **strictly update `deleted_at = NOW()`**. The storage engine never executes physical `DELETE FROM ...` SQL statements!
+
+### 8.2 Entity Coverage & Soft Delete Conventions
+
+Every core table and generated subsystem table follows these conventions:
+
+| Domain | Physical Table | Soft Delete Column & Query Rules |
+|---|---|---|
+| **Subsystems / Topics** | `systems` | `deleted_at: Option<DateTime<Utc>>`, queries filter `WHERE deleted_at IS NULL` |
+| **System Configs** | `system_configs` | `deleted_at: Option<DateTime<Utc>>`, config retrieval excludes soft-deleted items |
+| **Model & Field Schemas** | `models`, `model_fields` | `deleted_at: Option<DateTime<Utc>>`, validation automatically skips soft-deleted fields |
+| **Admin Accounts** | `admins` | `deleted_at: Option<DateTime<Utc>>`, authentication blocks soft-deleted admins |
+| **Dynamic Records** | `model_records` / `record_values` | `deleted_at: Option<DateTime<Utc>>`, built-in filtering on pagination and searches |
+| **Dedicated Subsystem Tables** | `<slug>_items` (via `--with-table`) | Preset `deleted_at DATETIME(6) NULL`, companion services use `set_now("deleted_at")` |
+
+### 8.3 Principle of Least Privilege for Database Accounts
+
+Because the entire platform operates purely on soft deletion, **even if DBAs revoke physical `DELETE` permissions from the application database account (granting only `SELECT, INSERT, UPDATE`), every feature of Foundry functions with 100% reliability!**
+
+Key benefits:
+1. **Accidental & Malicious Data Loss Prevention**: Even in worst-case credential leaks or logic anomalies, the database engine physically rejects destructive `DELETE FROM` statements.
+2. **Audit Trails & Instant Recovery**: Deletions remain completely auditable, and records can be restored in seconds simply by resetting `deleted_at` to `NULL`.

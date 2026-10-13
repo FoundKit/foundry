@@ -54,6 +54,17 @@ description: Foundry 多数据库引擎 SPI 插件化架构设计、方言特化
   - 可选特性：`features = ["mysql"]`, `features = ["mariadb"]`, `features = ["mongodb"]`
   - 如果用户配置了未启用的数据库驱动，启动阶段会给出清爽明确的配置指引与报错拦截。
 
+### 5. 全系统严格软删除与零物理 DELETE 权限运行保障 (Strict Soft-Delete Policy)
+- **零物理 DELETE 核心契约**：系统所有模块（子系统专题、业务数据记录、数据模型与字段元数据、系统全局配置、后台管理员账号）全部采用标准软删除标记（`deleted_at: Option<DateTime<Utc>>`）。
+- **杜绝数据灭失**：底层所有引擎方法（`delete()`, `delete_model()` 等）严格执行 `UPDATE ... SET deleted_at = NOW(6)`，底层禁止执行任何 `DELETE FROM`。
+- **数据库账号最小权限支持**：即便生产环境 DBA 回收了应用数据库账号的物理 `DELETE` 权限（仅开放 `SELECT, INSERT, UPDATE`），整个系统的所有功能模块均可 100% 顺畅正常运行。
+
+### 6. 差异化 DDL 与子系统独立分表体系 (针对 MySQL / MariaDB)
+- **MongoDB**：原生 BSON 文档型数据库，天然具备 Schemaless 特性，集合随第一条数据写入自动生成，实现纯粹的 0-DDL。
+- **PostgreSQL**：在 Mode A（0-DDL）模式下，依托 `JSONB` 二进制存储 + `GIN` 倒排索引 + 分区表，单表汇聚海量多专题仍具备卓越检索性能。
+- **MySQL / MariaDB**：鉴于缺乏原生 GIN 倒排索引，单表存储海量 JSON 数据在并发和 B+Tree 深度上存在明显瓶颈。因此对于 MySQL / MariaDB，**推荐使用 `foundry system new <slug> --with-table` 为每个业务子系统拆分为独立的物理表**，并输出专属 DDL 脚本。
+- **开发与生产交付解耦**：开发阶段执行 `foundry migrate` 自动扫描 `migrations/<dialect>/*.sql` 同步；生产阶段提供独立 SQL 文件供 DBA 离线审计与手动执行。
+
 ---
 
 ## 🏗️ 二、 目标系统架构全景

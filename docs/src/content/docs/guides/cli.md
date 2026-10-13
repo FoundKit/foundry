@@ -68,15 +68,40 @@ foundry new my-app --version 0.1.0
 Scaffolds a new self-contained business domain directory inside `src/systems/<slug>/`:
 
 ```bash
+# Basic scaffolding (using universal dynamic model)
 foundry system new billing --name "Billing & Payments"
+
+# Recommended (for MySQL / MariaDB): Generate dedicated physical table, typed ORM models, and DDL SQL
+foundry system new billing --with-table
+
+# Custom table name and target dialect
+foundry system new billing --with-table --table-name billing_records --db mysql
+
+# Generate DDL for all relational dialects with custom output directory
+foundry system new billing --with-table --db all --ddl-dir migrations/
 ```
 
-Generates:
-* `src/systems/billing/mod.rs` (implements `SubsystemModule`)
-* `src/systems/billing/controllers/mod.rs` (Axum routes)
-* `src/systems/billing/logic/mod.rs` (Domain business logic)
-* `src/systems/billing/dto/mod.rs` (Validation structs)
-* `src/systems/billing/custom_pages/` (Custom Admin UI views)
+#### CLI Options
+
+| Option | Shorthand/Alias | Description |
+|---|---|---|
+| `<slug>` | - | Unique subsystem slug (2-32 lowercase alphanumeric characters, underscores, or hyphens, e.g. `billing`, `mall_orders`) |
+| `--name <NAME>` | - | Subsystem display name (defaults to slug) |
+| `--with-table` | `--table`, `--with-orm` | **Enable Dedicated Table & ORM**: Generates an independent physical table, typed Rust entity models, CRUD DTOs, business service with **strict soft delete**, and DDL SQL migration scripts |
+| `--table-name <NAME>` | - | Custom physical table name (defaults to `<slug>_items`) |
+| `--db <DIALECT>` | `-d`, `--database` | Target database dialect (`mysql`, `mariadb`, `postgres`, `all`).<br>💡 **Default Behavior**: If omitted, auto-detects from `.env`; defaults to **`mysql` and `mariadb`** (since MongoDB is naturally schemaless 0-DDL, and PostgreSQL natively supports 0-DDL via JSONB+GIN; whereas MySQL/MariaDB single-table large JSON incurs performance penalties and benefits most from physical table separation) |
+| `--ddl-dir <PATH>` | - | Output directory for generated DDL migration files (defaults to `migrations/<dialect>/<slug>.sql`) |
+
+#### Generated Structure with `--with-table`:
+
+* `src/systems/billing/models/mod.rs` (Typed physical table ORM Entity with `id`, `system_id`, `deleted_at`, audit fields)
+* `src/systems/billing/dto/mod.rs` (Type-safe request/response DTOs with validation rules)
+* `src/systems/billing/logic/mod.rs` (Domain CRUD logic using `OrmInsert` and `OrmUpdate`, **strictly using soft delete** with zero physical `DELETE`)
+* `src/systems/billing/controllers/mod.rs` (Standard Axum RESTful route handlers)
+* `src/systems/billing/mod.rs` (Implements `SubsystemModule` and declares code-first schema in `orm_models()`)
+* `src/systems/billing/schema.sql` (Self-contained subsystem DDL SQL)
+* `migrations/mysql/billing.sql` / `migrations/mariadb/billing.sql` (Exported DDL migration scripts with production DBA instructions)
+* `src/systems/billing/custom_pages/` (Custom admin UI views)
 
 ### Listing Subsystems: `foundry system list`
 
@@ -92,20 +117,24 @@ foundry system list
 
 ### Running Database Migrations: `foundry migrate`
 
-Applies migrations against the target database:
+Applies baseline platform migrations and automatically synchronizes subsystem DDL scripts:
 
 ```bash
 # Migrate current project (auto-detects DATABASE_URL and DATABASE_TYPE from .env)
 foundry migrate
 
 # Explicit connection string and database type
-foundry migrate --database-url postgres://postgres:postgrespassword@localhost:5432/foundry --database postgres
+foundry migrate --database-url mysql://root:root@127.0.0.1:3306/foundry --database mysql
 
 # Generate dialect DDL into migrations/ without connecting to database
 foundry migrate --generate
 ```
 
-> 💡 **Architecture Note**: `foundry migrate` (and startup `AUTO_MIGRATE=true`) executes **compile-time embedded dialect DDL / native driver logic** inside the binary, which does not require a physical `migrations/` directory on disk.
+> 💡 **Lifecycle & Production Deployment**:
+> 1. **Core Platform Baseline**: `foundry migrate` runs the compile-time embedded platform baseline schema (or at startup when `AUTO_MIGRATE=true`).
+> 2. **Subsystem DDL Auto-Sync**: In development, `foundry migrate` automatically scans and applies all subsystem scripts in `migrations/<dialect>/*.sql` sequentially.
+> 3. **Production DBA Execution**: In production where app database accounts lack DDL privileges, DBAs can audit and manually execute the generated `migrations/<dialect>/<slug>.sql` scripts offline.
+> 4. **Graceful Schema Upgrade**: During migration, the engine idempotently ensures the `deleted_at` soft-delete column exists on all legacy tables.
 
 ### Generating Dialect DDL: `foundry ddl`
 

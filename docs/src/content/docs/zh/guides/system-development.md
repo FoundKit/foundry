@@ -381,7 +381,8 @@ impl SubsystemModule for ShopSubsystem {
                 .column(ColumnDef::json("items_payload").default_empty_json())
                 .column(ColumnDef::datetime("created_at").default_current_timestamp())
                 .column(ColumnDef::datetime("updated_at").default_current_timestamp())
-                .index(IndexDef::new("idx_orders_sys_status", &["system_id", "status"])),
+                .column(ColumnDef::datetime("deleted_at").nullable())
+                .index(IndexDef::new("idx_orders_sys_status", &["system_id", "deleted_at", "status"])),
 
             // 商品表
             EntitySchema::new("shop_products")
@@ -391,10 +392,13 @@ impl SubsystemModule for ShopSubsystem {
                 .column(ColumnDef::integer("stock").not_null())
                 .column(ColumnDef::boolean("is_active"))
                 .column(ColumnDef::datetime("created_at").default_current_timestamp())
+                .column(ColumnDef::datetime("deleted_at").nullable())
         ]
     }
 }
 ```
+
+> 💡 **CLI 自动生成提示**：执行 `foundry system new <slug> --with-table` 即可一键生成以上包含 `deleted_at` 软删除、ORM 实体模型、增删改查 DTO 以及方言 DDL SQL 文件的完整业务骨架！
 
 ### 6.2 范式二：ThinkPHP 风格的链式查询构造器 (ORM Query Builder)
 
@@ -403,7 +407,7 @@ impl SubsystemModule for ShopSubsystem {
 ```rust
 use foundry::prelude::*;
 
-// 1. 链式分页查询 (类似 Db::name('shop_orders')->where(...)->order(...)->limit(...)->select())
+// 1. 链式分页查询 (自动过滤软删除：类似 Db::name('shop_orders')->whereNull('deleted_at')->select())
 let (sql, binds) = OrmSelect::from_table("shop_orders")
     .column("id")
     .column("order_no")
@@ -412,6 +416,7 @@ let (sql, binds) = OrmSelect::from_table("shop_orders")
     .column("created_at")
     .where_eq("system_id", "shop")
     .where_eq("status", "pending")
+    .where_null("deleted_at")
     .order_by_desc("created_at")
     .limit(20)
     .offset(0)
@@ -430,10 +435,19 @@ let (insert_sql, insert_binds) = OrmInsert::into_table("shop_orders")
 // 3. 链式条件更新 (类似 Db::name('shop_orders')->where('order_no', '...')->update(['status' => 'paid']))
 let (update_sql, update_binds) = OrmUpdate::into_table("shop_orders")
     .set("status", "paid")
+    .set_now("updated_at")
     .where_eq("order_no", "ORD-20261012-001")
+    .where_null("deleted_at")
     .to_sql(Dialect::Postgres);
 
-// 4. 链式删除记录 (类似 Db::name('shop_orders')->where('id', 10)->delete())
+// 4. 链式安全软删除 (严格标记删除，绝无物理 DELETE FROM，零 DELETE 权限亦可平稳运行)
+let (soft_del_sql, soft_del_binds) = OrmUpdate::into_table("shop_orders")
+    .set_now("deleted_at")
+    .where_eq("order_no", "ORD-20261012-001")
+    .where_null("deleted_at")
+    .to_sql(Dialect::Postgres);
+
+// 5. 链式物理删除 (仅用于临时缓存/清理测试数据；生产业务统一推荐使用上述第 4 点软删除)
 let (delete_sql, delete_binds) = OrmDelete::from_table("shop_orders")
     .where_eq("id", 10)
     .to_sql(Dialect::Postgres);
