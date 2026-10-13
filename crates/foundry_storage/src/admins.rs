@@ -18,6 +18,10 @@ impl AdminStore {
         db.admins().get_by_username(username).await
     }
 
+    pub async fn get_by_email(db: &Database, email: &str) -> AppResult<AdminEntity> {
+        db.admins().get_by_email(email).await
+    }
+
     pub async fn create(
         db: &Database,
         username: &str,

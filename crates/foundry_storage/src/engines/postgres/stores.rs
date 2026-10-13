@@ -660,6 +660,23 @@ impl AdminStoreEngine for PostgresAdminEngine {
         Ok(row)
     }
 
+    async fn get_by_email(&self, email: &str) -> AppResult<AdminEntity> {
+        let row = sqlx::query_as::<_, AdminEntity>(
+            r#"
+            SELECT id, username, email, password_hash, role, allowed_systems, status, created_at, updated_at
+            FROM admins
+            WHERE email = $1
+            "#,
+        )
+        .bind(email)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to get admin by email: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Admin with email '{}' not found", email)))?;
+
+        Ok(row)
+    }
+
     async fn create(
         &self,
         username: &str,

@@ -12,6 +12,8 @@ pub trait AdminStoreEngine: Send + Sync {
 
     async fn get_by_username(&self, username: &str) -> AppResult<AdminEntity>;
 
+    async fn get_by_email(&self, email: &str) -> AppResult<AdminEntity>;
+
     async fn create(
         &self,
         username: &str,

@@ -1,3 +1,4 @@
+use crate::services::VerificationService;
 use foundry_auth::JwtService;
 use foundry_core::SubsystemModule;
 use foundry_extension::HookPipeline;
@@ -11,6 +12,7 @@ pub struct AppState {
     pub jwt: Arc<JwtService>,
     pub hooks: Arc<HookPipeline>,
     pub subsystems: Arc<Vec<Box<dyn SubsystemModule>>>,
+    pub verification: Arc<VerificationService>,
 }
 
 impl AppState {
@@ -21,12 +23,14 @@ impl AppState {
         hooks: HookPipeline,
         subsystems: Vec<Box<dyn SubsystemModule>>,
     ) -> Self {
+        let verification = Arc::new(VerificationService::new(redis.clone()));
         Self {
             db,
             redis,
             jwt: Arc::new(jwt),
             hooks: Arc::new(hooks),
             subsystems: Arc::new(subsystems),
+            verification,
         }
     }
 }

@@ -24,6 +24,7 @@
     "dashboard": "Platform Overview",
     "systems": "Sub-Systems Manager",
     "admins": "Admin & RBAC",
+    "platform_settings": "Platform & Login Settings",
     "audit_logs": "Mutation Audit Trail",
     "api_docs": "API Docs",
     "sub_overview": "Overview & Stats",

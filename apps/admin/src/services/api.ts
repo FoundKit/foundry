@@ -7,7 +7,9 @@ import {
   ModelItem,
   ModelRecordItem,
   PaginatedResult,
+  PlatformLoginSettings,
   PlatformSummary,
+  PublicAuthSettings,
   SystemConfigItem,
   SystemItem,
   SystemQuery,
@@ -46,12 +48,42 @@ async function request<T>(baseUrl: string, path: string, options: RequestInit = 
 
 export const api = {
   // Auth
+  getPublicAuthSettings: () => request<PublicAuthSettings>(ADMIN_API_BASE, '/auth/settings'),
   login: (data: any) =>
     request<{ token: string; admin: AdminProfile }>(ADMIN_API_BASE, '/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  sendLoginEmailCode: (email: string) =>
+    request<{ message: string }>(ADMIN_API_BASE, '/auth/email/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  loginWithEmail: (data: { email: string; code: string }) =>
+    request<{ token: string; admin: AdminProfile }>(ADMIN_API_BASE, '/auth/email/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  sendBindEmailCode: (email: string) =>
+    request<{ message: string }>(ADMIN_API_BASE, '/auth/bind-email/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  verifyBindEmail: (data: { email: string; code: string }) =>
+    request<AdminProfile>(ADMIN_API_BASE, '/auth/bind-email/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   me: () => request<AdminProfile>(ADMIN_API_BASE, '/auth/me'),
+
+  // Platform Login Settings (Super Admin Only)
+  getPlatformLoginSettings: () =>
+    request<PlatformLoginSettings>(ADMIN_API_BASE, '/platform/login-settings'),
+  updatePlatformLoginSettings: (data: PlatformLoginSettings) =>
+    request<PlatformLoginSettings>(ADMIN_API_BASE, '/platform/login-settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Platform Summary
   getPlatformSummary: () => request<PlatformSummary>(ADMIN_API_BASE, '/platform/summary'),

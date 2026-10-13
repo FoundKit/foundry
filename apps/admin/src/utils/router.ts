@@ -55,6 +55,8 @@ export function parseRoute(pathname: string, search: string): RouteState {
     cleanPath === '/audit-logs'
   ) {
     platformTab = 'audit_logs';
+  } else if (cleanPath === '/admin/settings' || cleanPath === '/settings') {
+    platformTab = 'settings';
   } else {
     platformTab = 'dashboard';
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, UserPlus, AlertCircle } from 'lucide-react';
+import { ShieldCheck, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { AdminProfile, SystemItem } from '../types';
@@ -144,7 +144,16 @@ export function AdminsPage({ systems }: AdminsPageProps) {
                   <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   <span>{adm.username}</span>
                 </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{adm.email || '-'}</td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                  {adm.email ? (
+                    <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>{adm.email}</span>
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 dark:text-slate-500">未绑定</span>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   <Badge variant={getRoleBadgeVariant(adm.role) as any}>
                     {getRoleLabel(adm.role)}

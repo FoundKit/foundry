@@ -67,9 +67,21 @@ export interface CustomAdminPageItem {
   required_role?: string;
 }
 
+export interface PublicAuthSettings {
+  enable_password_login: boolean;
+  enable_email_login: boolean;
+}
+
+export interface PlatformLoginSettings {
+  enable_password_login: boolean;
+  enable_email_login: boolean;
+  login_email_subject: string;
+  login_email_template: string;
+}
+
 export interface RouteState {
   mode: 'platform' | 'subsystem';
-  platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs';
+  platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs' | 'settings';
   subsystemSlug: string | null;
   subsystemTab:
     'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings' | 'custom';

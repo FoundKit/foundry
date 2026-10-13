@@ -24,6 +24,7 @@
     "dashboard": "平台概览",
     "systems": "专题/子系统管理",
     "admins": "管理员与权限",
+    "platform_settings": "平台与登录设置",
     "audit_logs": "全量写操作审计",
     "api_docs": "API 接口文档",
     "sub_overview": "子系统概览",

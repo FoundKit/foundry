@@ -833,6 +833,20 @@ impl AdminStoreEngine for MongoAdminEngine {
             .map_err(|e| AppError::Database(format!("Admin mapping error: {}", e)))
     }
 
+    async fn get_by_email(&self, email: &str) -> AppResult<AdminEntity> {
+        let coll = self.db.collection::<mongodb::bson::Document>("admins");
+        let filter = doc! { "email": email };
+
+        let doc = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Get admin by email failed: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Admin with email '{}' not found", email)))?;
+
+        mongodb::bson::from_document(doc)
+            .map_err(|e| AppError::Database(format!("Admin mapping error: {}", e)))
+    }
+
     async fn create(
         &self,
         username: &str,

@@ -13,10 +13,26 @@ use tower_http::trace::TraceLayer;
 
 pub fn build_router(state: AppState) -> Router {
     // 1. Admin Control Plane APIs (/api/v1/admin/*)
-    let admin_public_routes = Router::new().route("/auth/login", post(auth::login_handler));
+    let admin_public_routes = Router::new()
+        .route("/auth/settings", get(auth::public_auth_settings_handler))
+        .route("/auth/login", post(auth::login_handler))
+        .route("/auth/email/send-code", post(auth::send_login_code_handler))
+        .route("/auth/email/login", post(auth::email_login_handler));
 
     let admin_protected_routes = Router::new()
         .route("/auth/me", get(auth::me_handler))
+        .route(
+            "/auth/bind-email/send-code",
+            post(auth::send_bind_email_code_handler),
+        )
+        .route(
+            "/auth/bind-email/verify",
+            post(auth::verify_bind_email_handler),
+        )
+        .route(
+            "/platform/login-settings",
+            get(auth::get_login_settings_handler).put(auth::update_login_settings_handler),
+        )
         .route(
             "/platform/summary",
             get(systems::get_platform_summary_handler),

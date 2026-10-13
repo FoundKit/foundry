@@ -16,10 +16,12 @@ import {
   Code2,
   Settings,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 import { AdminProfile, CustomAdminPageItem, RouteState, SystemItem } from '../types';
 import { api } from '../services/api';
 import { ThemeToggle } from './ThemeToggle';
+import { ProfileBindEmailModal } from './ProfileBindEmailModal';
 
 interface LayoutProps {
   route: RouteState;
@@ -36,6 +38,7 @@ interface LayoutProps {
   currentSystem: SystemItem | null;
   onSelectSystem: (system: SystemItem) => void;
   onLogout: () => void;
+  onAdminUpdated?: (updated: AdminProfile) => void;
   children: React.ReactNode;
 }
 
@@ -48,10 +51,12 @@ export function Layout({
   currentSystem,
   onSelectSystem: _onSelectSystem,
   onLogout,
+  onAdminUpdated,
   children,
 }: LayoutProps) {
   const { t, i18n } = useTranslation();
   const [customPages, setCustomPages] = useState<CustomAdminPageItem[]>([]);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     if (currentSystem?.slug) {
@@ -82,6 +87,12 @@ export function Layout({
       hideForTopicAdmin: true,
     },
     { id: 'admins' as const, label: t('nav.admins'), icon: ShieldCheck, superOnly: true },
+    {
+      id: 'settings' as const,
+      label: t('nav.platform_settings') || '平台与登录设置',
+      icon: Settings,
+      superOnly: true,
+    },
   ];
 
   // Subsystem navigation items
@@ -186,17 +197,37 @@ export function Layout({
 
           {/* User Profile */}
           <div className="flex items-center gap-2 pl-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              {admin.username[0]?.toUpperCase()}
-            </div>
-            <div className="hidden text-left sm:block">
-              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {admin.username}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              title="点击查看个人中心与绑定邮箱 (Click to manage profile and bind email)"
+              className="group flex items-center gap-2 rounded-xl p-1 text-left transition hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <div className="relative flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                {admin.username[0]?.toUpperCase()}
+                {!admin.email && (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 dark:border-slate-900"
+                    title="待绑定邮箱"
+                  />
+                )}
               </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                {getRoleDisplayName(admin.role)}
+              <div className="hidden text-left sm:block">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 group-hover:text-emerald-600 dark:text-slate-200 dark:group-hover:text-emerald-400">
+                  <span>{admin.username}</span>
+                  {admin.email ? (
+                    <Mail className="h-3 w-3 text-emerald-500" />
+                  ) : (
+                    <span className="py-0.2 rounded bg-amber-100 px-1 text-[9px] font-normal text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      待绑定
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {getRoleDisplayName(admin.role)}
+                </div>
               </div>
-            </div>
+            </button>
             <button
               onClick={onLogout}
               title={t('app.logout')}
@@ -347,6 +378,18 @@ export function Layout({
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+
+      {/* Profile & Bind Email Modal */}
+      <ProfileBindEmailModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        admin={admin}
+        onAdminUpdated={(updated) => {
+          if (onAdminUpdated) {
+            onAdminUpdated(updated);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { ModelsPage } from './pages/ModelsPage';
 import { DataExplorerPage } from './pages/DataExplorerPage';
 import { AdminsPage } from './pages/AdminsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { PlatformSettingsPage } from './pages/PlatformSettingsPage';
 import { CustomAdminPageViewer } from './pages/CustomAdminPageViewer';
 import { api } from './services/api';
 import { AdminProfile, SystemItem } from './types';
@@ -93,8 +94,11 @@ export function App() {
   useEffect(() => {
     if (!admin) return;
     if (route.mode === 'platform') {
-      // Only Super Admin can access Admins & Permissions page
-      if (route.platformTab === 'admins' && admin.role !== 'super_admin') {
+      // Only Super Admin can access Admins & Permissions page and Platform Settings
+      if (
+        (route.platformTab === 'admins' || route.platformTab === 'settings') &&
+        admin.role !== 'super_admin'
+      ) {
         navigatePlatform('dashboard');
       }
       // Topic Admin cannot access global platform audit logs
@@ -147,6 +151,7 @@ export function App() {
       currentSystem={currentSystem}
       onSelectSystem={handleSelectSystem}
       onLogout={handleLogout}
+      onAdminUpdated={setAdmin}
     >
       {/* 1. Subsystem Mode */}
       {route.mode === 'subsystem' && currentSystem && (
@@ -231,6 +236,7 @@ export function App() {
             />
           )}
           {route.platformTab === 'admins' && <AdminsPage systems={systems} />}
+          {route.platformTab === 'settings' && <PlatformSettingsPage />}
           {route.platformTab === 'audit_logs' && (
             <AuditLogsPage queryParams={route.params} onUpdateParams={updateParams} />
           )}
