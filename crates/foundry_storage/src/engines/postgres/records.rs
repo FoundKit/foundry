@@ -37,7 +37,10 @@ impl RecordStoreEngine for PostgresRecordEngine {
             .where_null("deleted_at")
             .to_sql(Dialect::Postgres);
 
-        let count_query = bind_pg_query_as(sqlx::query_as::<_, (i64,)>(&count_sql), count_binds);
+        let count_query = bind_pg_query_as(
+            sqlx::query_as::<_, (i64,)>(sqlx::AssertSqlSafe(count_sql.as_str())),
+            count_binds,
+        );
         let total_row = count_query
             .fetch_one(&self.pool)
             .await
@@ -64,7 +67,7 @@ impl RecordStoreEngine for PostgresRecordEngine {
             .to_sql(Dialect::Postgres);
 
         let select_query = bind_pg_query_as(
-            sqlx::query_as::<_, ModelRecordEntity>(&select_sql),
+            sqlx::query_as::<_, ModelRecordEntity>(sqlx::AssertSqlSafe(select_sql.as_str())),
             select_binds,
         );
         let records = select_query
@@ -97,7 +100,10 @@ impl RecordStoreEngine for PostgresRecordEngine {
             .where_null("deleted_at")
             .to_sql(Dialect::Postgres);
 
-        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let query = bind_pg_query_as(
+            sqlx::query_as::<_, ModelRecordEntity>(sqlx::AssertSqlSafe(sql.as_str())),
+            binds,
+        );
         let record = query
             .fetch_optional(&self.pool)
             .await
@@ -128,7 +134,10 @@ impl RecordStoreEngine for PostgresRecordEngine {
             ])
             .to_sql(Dialect::Postgres);
 
-        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let query = bind_pg_query_as(
+            sqlx::query_as::<_, ModelRecordEntity>(sqlx::AssertSqlSafe(sql.as_str())),
+            binds,
+        );
         let record = query
             .fetch_one(&self.pool)
             .await
@@ -162,7 +171,10 @@ impl RecordStoreEngine for PostgresRecordEngine {
             ])
             .to_sql(Dialect::Postgres);
 
-        let query = bind_pg_query_as(sqlx::query_as::<_, ModelRecordEntity>(&sql), binds);
+        let query = bind_pg_query_as(
+            sqlx::query_as::<_, ModelRecordEntity>(sqlx::AssertSqlSafe(sql.as_str())),
+            binds,
+        );
         let record = query
             .fetch_optional(&self.pool)
             .await
@@ -181,7 +193,7 @@ impl RecordStoreEngine for PostgresRecordEngine {
             .where_null("deleted_at")
             .to_sql(Dialect::Postgres);
 
-        let query = bind_pg_query(sqlx::query(&sql), binds);
+        let query = bind_pg_query(sqlx::query(sqlx::AssertSqlSafe(sql.as_str())), binds);
         let result = query
             .execute(&self.pool)
             .await

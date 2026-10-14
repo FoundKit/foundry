@@ -525,7 +525,7 @@ tower = {{ version = "0.5", features = ["util"] }}
 tower-http = {{ version = "0.6", features = ["cors", "trace", "fs"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-validator = {{ version = "0.20", features = ["derive"] }}
+validator = {{ version = "0.21", features = ["derive"] }}
 anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
@@ -1076,7 +1076,9 @@ pub async fn sync_subsystem_migrations(
             for file in sql_files {
                 let content = fs::read_to_string(&file)?;
                 println!("🚀 Applying subsystem DDL: {:?} ...", file);
-                sqlx::raw_sql(&content).execute(&pool).await?;
+                sqlx::raw_sql(sqlx::AssertSqlSafe(content.as_str()))
+                    .execute(&pool)
+                    .await?;
                 println!("✅ Synced subsystem DDL: {:?}", file);
             }
         }
@@ -1098,7 +1100,7 @@ pub async fn sync_subsystem_migrations(
                 for stmt in content.split(';') {
                     let s = stmt.trim();
                     if !s.is_empty() {
-                        sqlx::query(s).execute(&pool).await?;
+                        sqlx::query(sqlx::AssertSqlSafe(s)).execute(&pool).await?;
                     }
                 }
                 println!("✅ Synced subsystem DDL: {:?}", file);

@@ -68,7 +68,7 @@ impl StorageDriverProvider for PostgresProvider {
             .map_err(|e| AppError::Database(format!("Failed to connect for migrations: {}", e)))?;
 
         let init_sql = self.get_baseline_ddl();
-        sqlx::raw_sql(&init_sql)
+        sqlx::raw_sql(sqlx::AssertSqlSafe(init_sql.as_str()))
             .execute(&pool)
             .await
             .map_err(|e| AppError::Database(format!("PostgreSQL migration failed: {}", e)))?;

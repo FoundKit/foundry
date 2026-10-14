@@ -95,7 +95,9 @@ impl StorageDriverProvider for MariaDbProvider {
                         {
                             let create_sql =
                                 format!("CREATE DATABASE IF NOT EXISTS `{}`;", db_name);
-                            let _ = sqlx::query(&create_sql).execute(&server_pool).await;
+                            let _ = sqlx::query(sqlx::AssertSqlSafe(create_sql.as_str()))
+                                .execute(&server_pool)
+                                .await;
                         }
                     }
                 }
@@ -125,12 +127,15 @@ impl StorageDriverProvider for MariaDbProvider {
                 continue;
             }
 
-            sqlx::query(stmt).execute(&pool).await.map_err(|e| {
-                AppError::Database(format!(
-                    "MariaDB migration statement failed [{}]: {}",
-                    stmt, e
-                ))
-            })?;
+            sqlx::query(sqlx::AssertSqlSafe(stmt))
+                .execute(&pool)
+                .await
+                .map_err(|e| {
+                    AppError::Database(format!(
+                        "MariaDB migration statement failed [{}]: {}",
+                        stmt, e
+                    ))
+                })?;
         }
 
         // Ensure soft-deletion column exists on any pre-existing tables

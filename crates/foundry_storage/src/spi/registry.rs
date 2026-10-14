@@ -178,7 +178,7 @@ pub async fn apply_code_extensions_migrations(
                     "Applying code-defined DDL extension '{}' for PostgreSQL...",
                     ext.identifier
                 );
-                sqlx::raw_sql(&ext.content)
+                sqlx::raw_sql(sqlx::AssertSqlSafe(ext.content.as_str()))
                     .execute(&pool)
                     .await
                     .map_err(|e| {
@@ -215,12 +215,15 @@ pub async fn apply_code_extensions_migrations(
                 for stmt in ext.content.split(';') {
                     let s = stmt.trim();
                     if !s.is_empty() {
-                        sqlx::query(s).execute(&pool).await.map_err(|e| {
-                            AppError::Database(format!(
-                                "Failed to execute extension statement in '{}' [{}]: {}",
-                                ext.identifier, s, e
-                            ))
-                        })?;
+                        sqlx::query(sqlx::AssertSqlSafe(s))
+                            .execute(&pool)
+                            .await
+                            .map_err(|e| {
+                                AppError::Database(format!(
+                                    "Failed to execute extension statement in '{}' [{}]: {}",
+                                    ext.identifier, s, e
+                                ))
+                            })?;
                     }
                 }
             }
