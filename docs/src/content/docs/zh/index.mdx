@@ -66,7 +66,13 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     所有动态模型即刻获得开箱即用的高并发 RESTful CRUD 接口（`GET`, `POST`, `PUT`, `DELETE`）。
   </Card>
   <Card title="分级权限与专题 RBAC" icon="open-book">
-    超级管理员 (`super_admin`)、普通管理员 (`admin`) 与专属专题管理员 (`topic_admin`)，支持细粒度权限控制。
+    超级管理员 (`super_admin`)、普通管理员 (`admin`) 与专属专题管理员 (`topic_admin`)，支持细粒度权限控制与 SMTP 邮箱双因素验证。
+  </Card>
+  <Card title="全链路可观测性与审计" icon="magnifier">
+    开箱即用 tracing 结构化日志、HTTP TraceLayer 链路耗时追踪与敏感参数脱敏的异步操作审计系统。
+  </Card>
+  <Card title="环境与动态双模配置" icon="setting">
+    强类型静态环境配置与管理后台可视化的动态专题配置中心无缝结合，业务参数实时热更新免重启。
   </Card>
   <Card title="统一交付与打包流水线" icon="laptop">
     自动化构建脚本 (`build-release.sh`) 一键将服务二进制、Admin 前端与扩展页面打包为单一部署制品。

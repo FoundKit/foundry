@@ -629,6 +629,27 @@ export default defineConfig({
               link: '/guides/system-development/',
             },
             {
+              label: 'Logging, Tracing & Audit',
+              translations: {
+                'zh-CN': '日志、追踪与审计日志',
+              },
+              link: '/guides/logging/',
+            },
+            {
+              label: 'Configuration & Environments',
+              translations: {
+                'zh-CN': '应用配置与环境变量',
+              },
+              link: '/guides/configuration/',
+            },
+            {
+              label: 'Authentication & Security',
+              translations: {
+                'zh-CN': '认证、RBAC 权限与安全',
+              },
+              link: '/guides/auth-security/',
+            },
+            {
               label: 'Subsystems & Custom Features',
               translations: {
                 'zh-CN': '子系统与自定义功能开发',

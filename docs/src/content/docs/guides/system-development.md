@@ -265,11 +265,33 @@ pub async fn get_order_by_id(
 
 ### 4.3 Structured Logging Facade
 
-Similar to ThinkPHP's `Log::info()` or Spring Boot's SLF4J, Foundry encapsulates structured logging out of the box:
+Similar to ThinkPHP's `Log::info()`, Laravel's `Log::debug()`, or Spring Boot's SLF4J, Foundry provides an out-of-the-box structured logging facade:
 
 * **Direct Prelude Export**: `use foundry::prelude::*;` exposes `info!`, `warn!`, `error!`, `debug!`, and `trace!` directly.
-* **Logging Module**: `foundry::log::*` provides access to logging utilities and levels.
-* **Automatic Initialization**: `FoundryApp::builder().build()` automatically configures formatters and environment filtering (`RUST_LOG`). User projects do not need manual subscriber setup.
+* **Logging Module**: `use foundry::log::{info, warn, error, debug, trace};` provides dedicated namespace access.
+* **Automatic Initialization**: `FoundryApp::builder().build()` automatically configures formatters and dynamic environment filtering (`RUST_LOG`). User projects do not need manual subscriber setup.
+* **Structured Key-Value Fields**: Supports structured key-value pairs without string interpolation, ready for ingestion into ELK, Loki, or CloudWatch:
+
+```rust
+use foundry::prelude::*;
+
+pub async fn handle_checkout(ctx: &SystemContext, order_id: &str, total: f64) {
+    // Structured KV logging
+    info!(
+        order_id = %order_id,
+        tenant = %ctx.system_slug,
+        amount = total,
+        "Order checkout processed, dispatching fulfillment event"
+    );
+
+    if total < 0.0 {
+        error!(%order_id, "Illegal negative checkout amount, aborting");
+    }
+}
+```
+
+> [!TIP]
+> **📖 Dedicated Deep Dive**: For full details on dynamic filtering rules (`RUST_LOG`), end-to-end HTTP request telemetry (`TraceLayer`), mutating action audit trails (`Audit Log`), and custom OpenTelemetry/Loki subscribers, see the dedicated [Logging, Distributed Tracing & Audit Guide](../logging/). For environment variables and builder options, see the [Application Configuration & Environment Variables Guide](../configuration/).
 
 ### 4.4 Error Handling (`AppError` & `AppResult`)
 

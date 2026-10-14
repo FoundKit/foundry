@@ -264,11 +264,33 @@ pub async fn get_order_by_id(
 
 ### 4.3 统一结构化日志门面
 
-类似于 ThinkPHP 的 `Log::info()` 或 Spring Boot 的 SLF4J，Foundry 在框架层已封装好开箱即用的结构化日志门面：
+类似于 ThinkPHP 的 `Log::info()`、Laravel 的 `Log::debug()` 或 Spring Boot 的 SLF4J，Foundry 在框架层内聚封装了开箱即用的结构化日志门面：
 
 * **单行导入，直接调用**：只需 `use foundry::prelude::*;`，即可在任何控制器、服务或钩子中直接调用 `info!`、`warn!`、`error!`、`debug!`、`trace!` 宏。
-* **门面模块**：通过 `foundry::log::*` 亦可使用完整的日志工具与等级定义。
-* **自动初始化**：`FoundryApp::builder().build()` 启动时会自动配置格式化日志输出与基于环境变量（`RUST_LOG`）的过滤规则，业务工程无需手动初始化 `tracing_subscriber`。
+* **门面命名空间**：亦可通过 `use foundry::log::{info, warn, error, debug, trace};` 显式导入。
+* **开箱即用自动初始化**：`FoundryApp::builder().build()` 启动时会自动配置格式化日志输出与基于环境变量（`RUST_LOG`）的动态过滤规则，业务工程无需手动初始化 `tracing_subscriber`。
+* **结构化键值对 (Structured Fields)**：支持直接携带业务上下文键值对，无需拼接字符串，便于投递到 ELK / Loki / CloudWatch 检索：
+
+```rust
+use foundry::prelude::*;
+
+pub async fn handle_checkout(ctx: &SystemContext, order_id: &str, total: f64) {
+    // 结构化 KV 字段打点
+    info!(
+        order_id = %order_id,
+        tenant = %ctx.system_slug,
+        amount = total,
+        "订单结算完成并通知下游发货"
+    );
+
+    if total < 0.0 {
+        error!(%order_id, "结算金额异常，已触发风控拦截");
+    }
+}
+```
+
+> [!TIP]
+> **📖 专项进阶阅读**：关于日志过滤配置规则（`RUST_LOG`）、HTTP 全生命周期耗时追踪（`TraceLayer`）、业务操作审计日志（`Audit Log`）以及自定义接入 OpenTelemetry / Loki / 滚动文件的完整实践，请参阅专属的 [日志、链路追踪与审计日志指南](../logging/)。关于运行时环境与配置系统，请参阅 [应用配置与环境变量完全指南](../configuration/)。
 
 ### 4.4 统一错误处理 (`AppError` 与 `AppResult`)
 

@@ -66,7 +66,13 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access control.
   </Card>
   <Card title="Hierarchical IAM & Topic RBAC" icon="open-book">
-    Super Admin (`super_admin`), Platform Admin (`admin`), and scoped Topic Admins restricted to specific subsystems (`allowed_systems`).
+    Super Admin (`super_admin`), Platform Admin (`admin`), and scoped Topic Admins with SMTP two-factor authentication and token security.
+  </Card>
+  <Card title="Layered Observability & Audit" icon="magnifier">
+    Out-of-the-box structured tracing, HTTP TraceLayer latency telemetry, and non-blocking asynchronous mutation audit logging.
+  </Card>
+  <Card title="Static & Dynamic Dual-Tier Configs" icon="setting">
+    Combines strongly typed environment configurations with real-time, schema-driven hot-reloaded subsystem dynamic settings.
   </Card>
   <Card title="Unified Release Packaging" icon="laptop">
     Automated build pipeline (`build-release.sh`) merging the server binary, Admin SPA, and custom pages into a single production bundle.
