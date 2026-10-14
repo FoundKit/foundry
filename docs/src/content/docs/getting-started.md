@@ -84,7 +84,9 @@ my-app/
 
 #### Inside `Cargo.toml`:
 
-Depending on the database chosen during scaffolding, `Cargo.toml` is automatically configured:
+Foundry embraces a **"Minimal Core, Progressive Enhancement"** framework philosophy (similar to ThinkPHP / Spring Boot / batteries-included frameworks): underlying web routing, HTTP middleware, JSON serialization, tracing, and standard error envelopes are encapsulated and re-exported by the official `foundry` facade crate (`foundry::prelude::*`).
+
+New projects start with **only 3 clean dependencies**:
 
 ```toml
 [package]
@@ -93,7 +95,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# --- Database Selection in Foundry ---
+# 1. Main Framework Facade (with your target database engine)
 # Option A: PostgreSQL (Default)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
@@ -109,19 +111,15 @@ foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 # Option E: Multi-Database Support (Enables all engines simultaneously)
 # foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
 
-# --- Runtime & Web Dependencies ---
-tokio = { version = "1.44", features = ["full"] }
-axum = { version = "0.8", features = ["macros"] }
-tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
+# 2. Async Runtime & Model Serialization (targeted minimal feature set)
+tokio = { version = "1.44", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-validator = { version = "0.20", features = ["derive"] }
-anyhow = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-async-trait = "0.1"
 ```
+
+> [!TIP]
+> **Progressive Disclosure & On-Demand Extensions**:
+> Foundry automatically re-exports `Router`, `Json`, `Extension`, `Path`, `Query`, `ServeDir`, `ApiResponse`, `AppResult`, `AppError`, and `tracing` through `foundry::prelude::*`. A single `use foundry::prelude::*;` imports everything needed for controllers and services.
+> If your application needs additional validation derives (like `validator`) or third-party crates, you can add them to `Cargo.toml` as needed.
 
 ---
 

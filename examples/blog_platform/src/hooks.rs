@@ -1,5 +1,4 @@
 use foundry::prelude::*;
-use serde_json::Value;
 
 /// Custom application lifecycle hook to intercept entity mutations
 pub struct BlogMutationHook;
@@ -19,7 +18,7 @@ impl MutationHook for BlogMutationHook {
                 data.get("author")
             );
             if let Some(obj) = data.as_object_mut() {
-                obj.insert("hook_processed".to_string(), serde_json::json!(true));
+                obj.insert("hook_processed".to_string(), json!(true));
             }
         }
         Ok(())

@@ -141,10 +141,8 @@ Foundry manages route namespaces to prevent collisions across independent subsys
 In `src/systems/shop/mod.rs`, implement `SubsystemModule::register_routes`:
 
 ```rust
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct ShopSubsystem;
 

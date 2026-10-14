@@ -2,10 +2,8 @@ pub mod controllers;
 pub mod dto;
 pub mod logic;
 
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct NewsletterSubsystem;
 

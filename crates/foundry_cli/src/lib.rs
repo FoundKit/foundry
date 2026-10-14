@@ -549,17 +549,8 @@ authors = ["Your Name <you@example.com>"]
 
 [dependencies]
 {foundry_dep}
-tokio = {{ version = "1.44", features = ["full"] }}
-axum = {{ version = "0.8", features = ["macros"] }}
-tower = {{ version = "0.5", features = ["util"] }}
-tower-http = {{ version = "0.6", features = ["cors", "trace", "fs"] }}
+tokio = {{ version = "1.44", features = ["macros", "rt-multi-thread"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
-serde_json = "1.0"
-validator = {{ version = "0.21", features = ["derive"] }}
-anyhow = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-async-trait = "0.1"
 "#,
         pkg_name = pkg_name,
         foundry_dep = foundry_dep
@@ -573,7 +564,7 @@ use foundry::prelude::*;
 use systems::SampleSubsystem;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Load configuration from environment variables (.env)
     let config = FoundryConfig::from_env();
 
@@ -597,11 +588,9 @@ async fn main() -> anyhow::Result<()> {
 
     // 4. Sample Subsystem: DTO
     let sample_dto = r#"use serde::{Deserialize, Serialize};
-use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct GreetRequest {
-    #[validate(length(min = 1, max = 50, message = "Name must be between 1 and 50 characters"))]
     pub name: String,
 }
 
@@ -623,8 +612,12 @@ pub struct SampleService;
 
 impl SampleService {
     pub async fn greet(_ctx: &SystemContext, req: GreetRequest) -> AppResult<GreetResponse> {
+        let name = req.name.trim();
+        if name.is_empty() {
+            return Err(AppError::bad_request("Name cannot be empty"));
+        }
         Ok(GreetResponse {
-            message: format!("Hello, {}! Welcome to Foundry Framework.", req.name),
+            message: format!("Hello, {}! Welcome to Foundry Framework.", name),
         })
     }
 }
@@ -635,9 +628,7 @@ impl SampleService {
     )?;
 
     // 6. Sample Subsystem: Controllers
-    let sample_controller = r#"use axum::{extract::Extension, routing::post, Json, Router};
-use foundry::prelude::*;
-use validator::Validate;
+    let sample_controller = r#"use foundry::prelude::*;
 
 use crate::systems::sample::dto::{GreetRequest, GreetResponse};
 use crate::systems::sample::logic::SampleService;
@@ -650,7 +641,6 @@ pub async fn handle_greet(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<GreetRequest>,
 ) -> AppResult<Json<ApiResponse<GreetResponse>>> {
-    payload.validate()?;
     let res = SampleService::greet(&ctx, payload).await?;
     Ok(Json(ApiResponse::success(res)))
 }
@@ -695,10 +685,8 @@ pub async fn handle_greet(
 pub mod dto;
 pub mod logic;
 
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct SampleSubsystem;
 
@@ -1283,9 +1271,8 @@ pub fn scaffold_subsystem_with_options(
 
         // 1. Dedicated ORM Entity: models/mod.rs
         let models_content = format!(
-            r#"use chrono::{{DateTime, Utc}};
+            r#"use foundry::prelude::*;
 use serde::{{Deserialize, Serialize}};
-use sqlx::FromRow;
 
 /// Strongly-typed entity for dedicated table `{table_name}`
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -1309,18 +1296,15 @@ pub struct {item_name} {{
         // 2. DTO: dto/mod.rs
         let dto_content = format!(
             r#"use serde::{{Deserialize, Serialize}};
-use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct Create{item_name}Request {{
-    #[validate(length(min = 1, max = 128, message = "Title must be between 1 and 128 characters"))]
     pub title: String,
     pub content: Option<String>,
 }}
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct Update{item_name}Request {{
-    #[validate(length(min = 1, max = 128, message = "Title must be between 1 and 128 characters"))]
     pub title: Option<String>,
     pub content: Option<String>,
     pub status: Option<i16>,
@@ -1462,14 +1446,8 @@ impl {service_name} {{
 
         // 4. Controller: controllers/mod.rs
         let controller_content = format!(
-            r#"use axum::{{
-    extract::{{Extension, Path, Query}},
-    routing::{{get, post}},
-    Json, Router,
-}};
-use foundry::prelude::*;
+            r#"use foundry::prelude::*;
 use serde::Deserialize;
-use validator::Validate;
 
 use crate::systems::{slug}::dto::{{Create{item_name}Request, Update{item_name}Request}};
 use crate::systems::{slug}::logic::{service_name};
@@ -1512,7 +1490,6 @@ pub async fn handle_create(
     Extension(state): Extension<AppState>,
     Json(payload): Json<Create{item_name}Request>,
 ) -> AppResult<Json<ApiResponse<{item_name}>>> {{
-    payload.validate()?;
     let res = {service_name}::create(&ctx, &state.db, payload).await?;
     Ok(Json(ApiResponse::success(res)))
 }}
@@ -1523,7 +1500,6 @@ pub async fn handle_update(
     Path(id): Path<i64>,
     Json(payload): Json<Update{item_name}Request>,
 ) -> AppResult<Json<ApiResponse<{item_name}>>> {{
-    payload.validate()?;
     let res = {service_name}::update(&ctx, &state.db, id, payload).await?;
     Ok(Json(ApiResponse::success(res)))
 }}
@@ -1551,10 +1527,8 @@ pub mod dto;
 pub mod logic;
 pub mod models;
 
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct {struct_name};
 
@@ -1721,11 +1695,9 @@ impl SubsystemModule for {struct_name} {{
         fs::write(
             base_dir.join("dto/mod.rs"),
             r#"use serde::{Deserialize, Serialize};
-use validator::Validate;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize)]
 pub struct SampleRequest {
-    #[validate(length(min = 1))]
     pub query: String,
 }
 
@@ -1747,8 +1719,12 @@ pub struct SampleService;
 
 impl SampleService {{
     pub async fn execute(_ctx: &SystemContext, req: SampleRequest) -> AppResult<SampleResponse> {{
+        let query = req.query.trim();
+        if query.is_empty() {{
+            return Err(AppError::bad_request("Query parameter cannot be empty"));
+        }}
         Ok(SampleResponse {{
-            message: format!("Processed request: {{}}", req.query),
+            message: format!("Processed request: {{}}", query),
         }})
     }}
 }}
@@ -1761,9 +1737,7 @@ impl SampleService {{
         fs::write(
             base_dir.join("controllers/mod.rs"),
             format!(
-                r#"use axum::{{extract::Extension, routing::post, Json, Router}};
-use foundry::prelude::*;
-use validator::Validate;
+                r#"use foundry::prelude::*;
 
 use crate::systems::{slug}::dto::{{SampleRequest, SampleResponse}};
 use crate::systems::{slug}::logic::SampleService;
@@ -1776,7 +1750,6 @@ pub async fn handle_sample(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<SampleRequest>,
 ) -> AppResult<Json<ApiResponse<SampleResponse>>> {{
-    payload.validate()?;
     let result = SampleService::execute(&ctx, payload).await?;
     Ok(Json(ApiResponse::success(result)))
 }}
@@ -1791,10 +1764,8 @@ pub async fn handle_sample(
 pub mod dto;
 pub mod logic;
 
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct {struct_name};
 

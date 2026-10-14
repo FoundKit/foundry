@@ -91,11 +91,8 @@ edition = "2024"
 
 [dependencies]
 foundry = "0.1.0"
-tokio = { version = "1.44", features = ["full"] }
-axum = { version = "0.8" }
+tokio = { version = "1.44", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-validator = { version = "0.20", features = ["derive"] }
 ```
 
 ```rust
@@ -106,7 +103,7 @@ use foundry::prelude::*;
 use systems::SampleSubsystem;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = FoundryConfig::from_env();
 
     let app = FoundryApp::builder()

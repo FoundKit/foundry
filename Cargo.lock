@@ -309,8 +309,6 @@ dependencies = [
 name = "blog_platform"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
  "axum",
  "chrono",
  "foundry",
@@ -320,9 +318,6 @@ dependencies = [
  "sqlx",
  "tokio",
  "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
  "uuid",
  "validator",
 ]
@@ -922,6 +917,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "chrono",
  "dotenvy",
  "foundry_auth",
  "foundry_core",
@@ -939,6 +935,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "validator",
 ]
 
 [[package]]

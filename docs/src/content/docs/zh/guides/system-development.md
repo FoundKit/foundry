@@ -141,10 +141,8 @@ Foundry 统一管理应用路由空间，为多系统提供天然的隔离：
 在 `src/systems/shop/mod.rs` 中，通过实现 `SubsystemModule::register_routes` 挂载路由：
 
 ```rust
-use axum::Router;
 use foundry::prelude::*;
 use std::path::PathBuf;
-use tower_http::services::ServeDir;
 
 pub struct ShopSubsystem;
 

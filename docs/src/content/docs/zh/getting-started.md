@@ -84,7 +84,9 @@ my-app/
 
 #### 查看生成的 `Cargo.toml`：
 
-脚手架会根据创建时选定的数据库，自动生成对应的特性依赖配置：
+Foundry 秉承 **“极简内核，渐进增强”**（类似 ThinkPHP / Spring Boot 开箱即用）的框架哲学：底层 Web 路由、HTTP 中间件、JSON 序列化、追踪日志及错误信封等基础设施全部由官方 `foundry` 门面 crate 内聚封装并重导出（`foundry::prelude::*`）。
+
+因此，新工程接手时**仅需 3 个核心依赖**，无任何臃肿冗余依赖干扰：
 
 ```toml
 [package]
@@ -93,7 +95,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# --- Foundry 框架依赖与数据库特性切换 ---
+# 1. 核心框架门面（根据需求开启对应的数据库特性）
 # 选项 A: PostgreSQL (默认已启用，无需额外配置)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
@@ -109,19 +111,15 @@ foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 # 选项 E: 全数据库支持 (同时编译所有引擎)
 # foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
 
-# --- 运行时与 Web 基础设施 ---
-tokio = { version = "1.44", features = ["full"] }
-axum = { version = "0.8", features = ["macros"] }
-tower = { version = "0.5", features = ["util"] }
-tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
+# 2. 异步运行时与模型序列化（按需最小化特性）
+tokio = { version = "1.44", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-validator = { version = "0.20", features = ["derive"] }
-anyhow = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-async-trait = "0.1"
 ```
+
+> [!TIP]
+> **按需扩展，无缝集成**：
+> 框架已在 `foundry::prelude::*` 与 `foundry::*` 中统一重导出了 `Router`、`Json`、`Extension`、`Path`、`Query`、`ServeDir`、`ApiResponse`、`AppResult`、`AppError`、`tracing` 等。编写业务控制器时只需一条 `use foundry::prelude::*;` 即可全套就绪。
+> 若后续业务需要更复杂的注解校验（如 `validator`）或第三方生态库，使用者在 `Cargo.toml` 中按需添加即可。
 
 ---
 

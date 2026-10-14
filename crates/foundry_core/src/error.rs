@@ -44,6 +44,38 @@ pub enum AppError {
 }
 
 impl AppError {
+    pub fn bad_request(msg: impl Into<String>) -> Self {
+        Self::BadRequest(msg.into())
+    }
+
+    pub fn validation(msg: impl Into<String>) -> Self {
+        Self::Validation(msg.into())
+    }
+
+    pub fn unauthorized(msg: impl Into<String>) -> Self {
+        Self::Unauthorized(msg.into())
+    }
+
+    pub fn forbidden(msg: impl Into<String>) -> Self {
+        Self::Forbidden(msg.into())
+    }
+
+    pub fn not_found(msg: impl Into<String>) -> Self {
+        Self::NotFound(msg.into())
+    }
+
+    pub fn conflict(msg: impl Into<String>) -> Self {
+        Self::Conflict(msg.into())
+    }
+
+    pub fn internal(msg: impl Into<String>) -> Self {
+        Self::Internal(msg.into())
+    }
+
+    pub fn database(msg: impl Into<String>) -> Self {
+        Self::Database(msg.into())
+    }
+
     pub fn status_code(&self) -> StatusCode {
         match self {
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
