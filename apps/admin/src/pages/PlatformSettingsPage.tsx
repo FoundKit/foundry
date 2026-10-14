@@ -67,7 +67,9 @@ export function PlatformSettingsPage() {
       return;
     }
     if (isSmtpMissing) {
-      setError('SMTP 邮件服务未配置，无法开启邮箱验证码登录！请先在 .env 中配置 SMTP 相关参数并重启服务。');
+      setError(
+        'SMTP 邮件服务未配置，无法开启邮箱验证码登录！请先在 .env 中配置 SMTP 相关参数并重启服务。',
+      );
       return;
     }
 
@@ -213,7 +215,10 @@ export function PlatformSettingsPage() {
                 <div>
                   <div className="font-semibold">⚠️ 未检测到 SMTP 邮件服务配置</div>
                   <div className="mt-0.5">
-                    服务端当前未配置 <code className="font-mono font-bold">SMTP_HOST</code>。若需开启邮箱验证码登录或邮箱绑定功能，请先在应用 <code className="font-mono font-bold">.env</code> 文件中完成 SMTP 配置并重启服务。
+                    服务端当前未配置 <code className="font-mono font-bold">SMTP_HOST</code>
+                    。若需开启邮箱验证码登录或邮箱绑定功能，请先在应用{' '}
+                    <code className="font-mono font-bold">.env</code> 文件中完成 SMTP
+                    配置并重启服务。
                   </div>
                 </div>
               </div>
@@ -408,7 +413,8 @@ export function PlatformSettingsPage() {
               ，系统将自动通过加密 SMTP 协议实时发送验证码。
             </p>
             <p>
-              • <strong>安全拦截机制：</strong>当未配置 SMTP_HOST 时，邮件服务处于未激活状态。系统将在管理员尝试开启邮箱登录、发送登录验证码或绑定邮箱时自动安全拦截，避免无效投递。
+              • <strong>安全拦截机制：</strong>当未配置 SMTP_HOST
+              时，邮件服务处于未激活状态。系统将在管理员尝试开启邮箱登录、发送登录验证码或绑定邮箱时自动安全拦截，避免无效投递。
             </p>
           </div>
         </Card>
