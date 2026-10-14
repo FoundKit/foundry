@@ -1,5 +1,5 @@
 use crate::services::{
-    PlatformLoginSettings, VerificationService, get_platform_login_settings,
+    PlatformLoginSettings, VerificationService, get_platform_login_settings, is_smtp_configured,
     save_platform_login_settings, send_email,
 };
 use crate::state::AppState;
@@ -75,9 +75,10 @@ pub async fn public_auth_settings_handler(
     State(state): State<AppState>,
 ) -> AppResult<Json<ApiResponse<PublicAuthSettingsResponse>>> {
     let settings = get_platform_login_settings(&state.db).await;
+    let enable_email_login = settings.enable_email_login && is_smtp_configured();
     Ok(Json(ApiResponse::success(PublicAuthSettingsResponse {
         enable_password_login: settings.enable_password_login,
-        enable_email_login: settings.enable_email_login,
+        enable_email_login,
     })))
 }
 
@@ -149,6 +150,13 @@ pub async fn send_login_code_handler(
         ));
     }
 
+    if !is_smtp_configured() {
+        return Err(AppError::BadRequest(
+            "SMTP 邮件服务未配置，无法发送登录验证码 (SMTP email service is not configured)"
+                .to_string(),
+        ));
+    }
+
     let email = payload.email.trim();
     let admin = state.db.admins().get_by_email(email).await.map_err(|_| {
         AppError::NotFound(
@@ -187,6 +195,13 @@ pub async fn email_login_handler(
     if !settings.enable_email_login {
         return Err(AppError::Forbidden(
             "邮箱验证码登录未开启 (Email verification code login is disabled)".to_string(),
+        ));
+    }
+
+    if !is_smtp_configured() {
+        return Err(AppError::BadRequest(
+            "SMTP 邮件服务未配置，无法使用邮箱验证码登录 (SMTP email service is not configured)"
+                .to_string(),
         ));
     }
 
@@ -237,6 +252,13 @@ pub async fn send_bind_email_code_handler(
     payload.validate()?;
     let email = payload.email.trim();
 
+    if !is_smtp_configured() {
+        return Err(AppError::BadRequest(
+            "SMTP 邮件服务未配置，无法发送邮箱绑定验证码 (SMTP email service is not configured)"
+                .to_string(),
+        ));
+    }
+
     // Check if email is already bound to another admin
     if matches!(state.db.admins().get_by_email(email).await, Ok(existing) if existing.id != claims.sub)
     {
@@ -274,6 +296,13 @@ pub async fn verify_bind_email_handler(
 ) -> AppResult<Json<ApiResponse<AdminProfile>>> {
     payload.validate()?;
     let email = payload.email.trim();
+
+    if !is_smtp_configured() {
+        return Err(AppError::BadRequest(
+            "SMTP 邮件服务未配置，无法验证邮箱绑定 (SMTP email service is not configured)"
+                .to_string(),
+        ));
+    }
 
     let identifier = format!("{}:{}", claims.sub, email);
     state
@@ -337,7 +366,9 @@ pub async fn update_login_settings_handler(
     }
 
     save_platform_login_settings(&state.db, &payload).await?;
-    Ok(Json(ApiResponse::success(payload)))
+    let mut resp = payload;
+    resp.smtp_configured = is_smtp_configured();
+    Ok(Json(ApiResponse::success(resp)))
 }
 
 /// GET /api/v1/admin/auth/me (Protected: get current admin profile)

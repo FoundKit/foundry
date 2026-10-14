@@ -77,6 +77,7 @@ export interface PlatformLoginSettings {
   enable_email_login: boolean;
   login_email_subject: string;
   login_email_template: string;
+  smtp_configured?: boolean;
 }
 
 export interface RouteState {

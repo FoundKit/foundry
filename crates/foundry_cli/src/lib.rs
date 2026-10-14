@@ -37,6 +37,21 @@ enum Commands {
         /// Optional crates.io version override (e.g. 0.1.0)
         #[arg(long)]
         version: Option<String>,
+        /// Optional SMTP relay host (e.g. smtp.example.com)
+        #[arg(long)]
+        smtp_host: Option<String>,
+        /// Optional SMTP relay port (defaults to 587)
+        #[arg(long)]
+        smtp_port: Option<u16>,
+        /// Optional SMTP authentication username
+        #[arg(long)]
+        smtp_user: Option<String>,
+        /// Optional SMTP authentication password
+        #[arg(long)]
+        smtp_pass: Option<String>,
+        /// Optional SMTP sender address (e.g. "Foundry <no-reply@foundry.local>")
+        #[arg(long)]
+        smtp_from: Option<String>,
     },
     /// Sub-system management and scaffolding within an existing application
     System {
@@ -289,6 +304,11 @@ pub async fn run_cli() -> anyhow::Result<()> {
             git,
             branch,
             version,
+            smtp_host,
+            smtp_port,
+            smtp_user,
+            smtp_pass,
+            smtp_from,
         } => {
             scaffold_project(
                 &name,
@@ -298,6 +318,11 @@ pub async fn run_cli() -> anyhow::Result<()> {
                     branch: branch.as_deref(),
                     version: version.as_deref(),
                     db: Some(&db),
+                    smtp_host: smtp_host.as_deref(),
+                    smtp_port,
+                    smtp_user: smtp_user.as_deref(),
+                    smtp_pass: smtp_pass.as_deref(),
+                    smtp_from: smtp_from.as_deref(),
                 },
             )?;
         }
@@ -451,6 +476,11 @@ pub struct ProjectOptions<'a> {
     pub branch: Option<&'a str>,
     pub version: Option<&'a str>,
     pub db: Option<&'a str>,
+    pub smtp_host: Option<&'a str>,
+    pub smtp_port: Option<u16>,
+    pub smtp_user: Option<&'a str>,
+    pub smtp_pass: Option<&'a str>,
+    pub smtp_from: Option<&'a str>,
 }
 
 /// Create a new standalone user application
@@ -718,6 +748,18 @@ impl SubsystemModule for SampleSubsystem {
     let active_url = db_kind.default_url("foundry");
     let active_type = db_kind.as_str();
 
+    let smtp_commented_block = r#"# ------------------------------------------------------------------------------
+# SMTP 邮件服务配置 (可选 / Optional)
+# 若不配置，系统将自动拦截并禁用邮件相关功能（如管理员邮箱验证码登录、邮箱绑定等）
+# If not configured, email functions (e.g. login code, email binding) will be safely disabled and intercepted.
+# ------------------------------------------------------------------------------
+# SMTP_HOST=smtp.example.com
+# SMTP_PORT=587
+# SMTP_USER=your_smtp_user@example.com
+# SMTP_PASS=your_smtp_password
+# SMTP_FROM=Foundry <no-reply@foundry.local>
+"#;
+
     let env_example = format!(
         r#"HOST=0.0.0.0
 PORT=8080
@@ -735,13 +777,62 @@ REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 # Auto-migrate database schema on server startup (true: automatic sync; false: strict manual DBA control)
 AUTO_MIGRATE=true
-"#,
+
+{smtp_commented_block}"#,
         db_display = db_kind.display_name(),
         active_url = active_url,
         active_type = active_type,
+        smtp_commented_block = smtp_commented_block,
     );
+
+    let smtp_env_block = if let Some(host) = opts.smtp_host {
+        let port = opts.smtp_port.unwrap_or(587);
+        let user = opts.smtp_user.unwrap_or_default();
+        let pass = opts.smtp_pass.unwrap_or_default();
+        let from = opts.smtp_from.unwrap_or("Foundry <no-reply@foundry.local>");
+        format!(
+            r#"# ------------------------------------------------------------------------------
+# SMTP 邮件服务配置 (已激活 / Active)
+# ------------------------------------------------------------------------------
+SMTP_HOST={}
+SMTP_PORT={}
+SMTP_USER={}
+SMTP_PASS={}
+SMTP_FROM={}
+"#,
+            host, port, user, pass, from
+        )
+    } else {
+        smtp_commented_block.to_string()
+    };
+
+    let env_content = format!(
+        r#"HOST=0.0.0.0
+PORT=8080
+# Database Configuration ({db_display})
+DATABASE_URL={active_url}
+DATABASE_TYPE={active_type}
+
+# Alternative Database Options:
+# DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
+# DATABASE_URL=mysql://root:root@localhost:3306/foundry
+# DATABASE_URL=mariadb://root:root@localhost:3307/foundry
+# DATABASE_URL=mongodb://127.0.0.1:27017/foundry
+
+REDIS_URL=redis://127.0.0.1:6379
+JWT_SECRET=super_secret_jwt_key_change_in_production
+# Auto-migrate database schema on server startup (true: automatic sync; false: strict manual DBA control)
+AUTO_MIGRATE=true
+
+{smtp_env_block}"#,
+        db_display = db_kind.display_name(),
+        active_url = active_url,
+        active_type = active_type,
+        smtp_env_block = smtp_env_block,
+    );
+
     fs::write(project_dir.join(".env.example"), &env_example)?;
-    fs::write(project_dir.join(".env"), &env_example)?;
+    fs::write(project_dir.join(".env"), &env_content)?;
 
     // 10. .gitignore
     let gitignore = r#"/target
@@ -776,6 +867,8 @@ DATABASE_URL={active_url}
 DATABASE_TYPE={active_type}
 REDIS_URL=redis://127.0.0.1:6379
 ```
+
+> **可选 SMTP 邮件服务**：若需使用管理员邮箱验证码登录、邮箱绑定等邮件服务，可在 `.env` 中配置 `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS` 及 `SMTP_FROM`。未配置时系统将安全拦截并禁用邮件相关功能。
 
 **本地数据库启动方式（二选一）：**
 

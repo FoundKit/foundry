@@ -1,7 +1,7 @@
 pub mod email;
 pub mod verification;
 
-pub use email::send_email;
+pub use email::{is_smtp_configured, send_email, set_smtp_configured_override_for_test};
 pub use verification::VerificationService;
 
 use foundry_core::error::{AppError, AppResult};
@@ -14,6 +14,8 @@ pub struct PlatformLoginSettings {
     pub enable_email_login: bool,
     pub login_email_subject: String,
     pub login_email_template: String,
+    #[serde(default)]
+    pub smtp_configured: bool,
 }
 
 impl Default for PlatformLoginSettings {
@@ -23,12 +25,16 @@ impl Default for PlatformLoginSettings {
             enable_email_login: false,
             login_email_subject: "【Foundry】登录验证码".to_string(),
             login_email_template: "您的登录验证码是：{code}，5分钟内有效。请勿将验证码泄露给他人。如非本人操作请忽略。".to_string(),
+            smtp_configured: false,
         }
     }
 }
 
 pub async fn get_platform_login_settings(db: &Database) -> PlatformLoginSettings {
-    let mut settings = PlatformLoginSettings::default();
+    let mut settings = PlatformLoginSettings {
+        smtp_configured: is_smtp_configured(),
+        ..Default::default()
+    };
     if let Ok(configs) = db.configs().list("_platform").await {
         for cfg in configs {
             match cfg.key.as_str() {
@@ -88,6 +94,13 @@ pub async fn save_platform_login_settings(
     if settings.login_email_subject.trim().is_empty() {
         return Err(AppError::Validation(
             "登录邮件主题不能为空 (Login email subject cannot be empty)".to_string(),
+        ));
+    }
+
+    if settings.enable_email_login && !is_smtp_configured() {
+        return Err(AppError::Validation(
+            "SMTP 邮件服务未配置，无法开启邮箱验证码登录 (SMTP is not configured, cannot enable email verification code login)"
+                .to_string(),
         ));
     }
 

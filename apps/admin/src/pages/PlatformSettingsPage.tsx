@@ -10,7 +10,7 @@ import {
   Server,
   RefreshCw,
 } from 'lucide-react';
-import { Card, Button, Input } from '../components/UiWidgets';
+import { Card, Button, Input, Badge } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { PlatformLoginSettings } from '../types';
 
@@ -49,7 +49,8 @@ export function PlatformSettingsPage() {
   const isBothDisabled = !settings.enable_password_login && !settings.enable_email_login;
   const hasCodePlaceholder = settings.login_email_template.includes('{code}');
   const isSubjectEmpty = settings.login_email_subject.trim().length === 0;
-  const canSave = !isBothDisabled && hasCodePlaceholder && !isSubjectEmpty;
+  const isSmtpMissing = settings.enable_email_login && settings.smtp_configured === false;
+  const canSave = !isBothDisabled && hasCodePlaceholder && !isSubjectEmpty && !isSmtpMissing;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +64,10 @@ export function PlatformSettingsPage() {
     }
     if (isSubjectEmpty) {
       setError('登录邮件主题不能为空！');
+      return;
+    }
+    if (isSmtpMissing) {
+      setError('SMTP 邮件服务未配置，无法开启邮箱验证码登录！请先在 .env 中配置 SMTP 相关参数并重启服务。');
       return;
     }
 
@@ -200,6 +205,19 @@ export function PlatformSettingsPage() {
                 <div className="peer h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-slate-700" />
               </label>
             </div>
+
+            {/* SMTP Not Configured Warning */}
+            {settings.smtp_configured === false && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-800 dark:border-amber-800/80 dark:bg-amber-950/60 dark:text-amber-200">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <div className="font-semibold">⚠️ 未检测到 SMTP 邮件服务配置</div>
+                  <div className="mt-0.5">
+                    服务端当前未配置 <code className="font-mono font-bold">SMTP_HOST</code>。若需开启邮箱验证码登录或邮箱绑定功能，请先在应用 <code className="font-mono font-bold">.env</code> 文件中完成 SMTP 配置并重启服务。
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Rule 1 Warning: Both Disabled */}
             {isBothDisabled && (
@@ -342,23 +360,36 @@ export function PlatformSettingsPage() {
 
         {/* Card 3: Email Service Dispatcher Info */}
         <Card className="p-6">
-          <div className="flex items-center gap-2.5 border-b border-slate-200 pb-4 dark:border-slate-800">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400">
-              <Server className="h-4 w-4" />
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-950 dark:text-teal-400">
+                <Server className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  邮件传输通道服务说明 (SMTP Gateway Integration)
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Foundry 原生支持 SMTP 邮件中继网关与安全拦截机制。
+                </p>
+              </div>
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                邮件传输通道服务说明 (SMTP Gateway Integration)
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Foundry 原生支持 SMTP 邮件中继网关与本地开发调试模拟模式。
-              </p>
+              {settings.smtp_configured ? (
+                <Badge variant="success" className="text-xs">
+                  🟢 SMTP 已配置就绪
+                </Badge>
+              ) : (
+                <Badge variant="warning" className="text-xs">
+                  🟡 SMTP 未配置 (邮件功能已拦截)
+                </Badge>
+              )}
             </div>
           </div>
 
           <div className="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-400">
             <p>
-              • <strong>生产环境邮件发送：</strong>在服务端环境变量中配置{' '}
+              • <strong>生产与邮件发送环境：</strong>在服务端环境变量中配置{' '}
               <code className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
                 SMTP_HOST
               </code>
@@ -374,11 +405,10 @@ export function PlatformSettingsPage() {
               <code className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
                 SMTP_PASS
               </code>
-              ，系统将自动通过加密 SMTP 协议实时发送邮件。
+              ，系统将自动通过加密 SMTP 协议实时发送验证码。
             </p>
             <p>
-              • <strong>开发/测试模式：</strong>当未配置 SMTP_HOST 时，系统将自动进入 Dev
-              模式，将验证码与邮件正文安全打印到服务端日志中，方便开发联调。
+              • <strong>安全拦截机制：</strong>当未配置 SMTP_HOST 时，邮件服务处于未激活状态。系统将在管理员尝试开启邮箱登录、发送登录验证码或绑定邮箱时自动安全拦截，避免无效投递。
             </p>
           </div>
         </Card>

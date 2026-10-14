@@ -57,7 +57,10 @@ foundry new my-app --git https://github.com/foundkit/foundry --branch feature/ne
 foundry new my-app --version 0.1.0
 ```
 
-> **Database Configuration & Clean Skeleton**: Projects generated with `foundry new --db <type>` create a clean project skeleton (without creating a `migrations/` directory by default), setting `DATABASE_URL` and `DATABASE_TYPE` in `.env`. When `AUTO_MIGRATE=true`, running `cargo run` automatically uses compile-time embedded DDL to initialize schemas, indexes, and the default superadmin without needing physical SQL files. When DBA auditing or external tools are used, run `foundry ddl` to export dialect migration scripts.
+> **Database Configuration & Clean Skeleton**: Projects generated with `foundry new --db <type>` create a clean project skeleton (without creating a `migrations/` directory by default), setting `DATABASE_URL` and `DATABASE_TYPE` in `.env` and `.env.example`. When `AUTO_MIGRATE=true`, running `cargo run` automatically uses compile-time embedded DDL to initialize schemas, indexes, and the default superadmin without needing physical SQL files. When DBA auditing or external tools are used, run `foundry ddl` to export dialect migration scripts.
+>
+> **Optional SMTP Email Service**: The generated `.env` and `.env.example` pre-populate optional `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` variables. If SMTP is unconfigured, email-related functions (such as verification code login and email binding) are safely intercepted and prevented from failing silently.
+
 
 ---
 

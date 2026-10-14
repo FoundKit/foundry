@@ -130,6 +130,7 @@ async fn test_platform_settings_validation_rules() {
         enable_email_login: false,
         login_email_subject: "主题".to_string(),
         login_email_template: "验证码: {code}".to_string(),
+        smtp_configured: false,
     };
     let res = save_platform_login_settings(&db, &invalid_both_false).await;
     assert!(res.is_err());
@@ -145,8 +146,111 @@ async fn test_platform_settings_validation_rules() {
         enable_email_login: true,
         login_email_subject: "主题".to_string(),
         login_email_template: "验证码内容没有占位符".to_string(),
+        smtp_configured: false,
     };
     let res = save_platform_login_settings(&db, &invalid_template).await;
     assert!(res.is_err());
     assert!(res.unwrap_err().to_string().contains("{code}"));
+
+    // Rule 3: Cannot enable email login when SMTP is not configured
+    foundry_engine::services::set_smtp_configured_override_for_test(Some(false));
+    let invalid_smtp = PlatformLoginSettings {
+        enable_password_login: true,
+        enable_email_login: true,
+        login_email_subject: "主题".to_string(),
+        login_email_template: "验证码: {code}".to_string(),
+        smtp_configured: false,
+    };
+    let res = save_platform_login_settings(&db, &invalid_smtp).await;
+    foundry_engine::services::set_smtp_configured_override_for_test(None);
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("SMTP 邮件服务未配置"));
+}
+
+#[tokio::test]
+async fn test_send_email_intercepted_when_smtp_not_configured() {
+    foundry_engine::services::set_smtp_configured_override_for_test(Some(false));
+    let res =
+        foundry_engine::services::send_email("user@example.com", "Test Subject", "Test Content")
+            .await;
+    foundry_engine::services::set_smtp_configured_override_for_test(None);
+
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("SMTP 邮件服务未配置"));
+}
+
+#[tokio::test]
+async fn test_bind_email_send_code_intercepted_when_smtp_not_configured() {
+    foundry_engine::services::set_smtp_configured_override_for_test(Some(false));
+    let state = dummy_app_state();
+    let app = build_router(state);
+
+    let token = dummy_app_state()
+        .jwt
+        .generate_token(
+            uuid::Uuid::new_v4(),
+            "admin",
+            "super_admin",
+            vec!["*".to_string()],
+        )
+        .unwrap();
+
+    let payload = serde_json::json!({
+        "email": "admin_bind@example.com"
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/admin/auth/bind-email/send-code")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", token))
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    foundry_engine::services::set_smtp_configured_override_for_test(None);
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert!(
+        json["message"]
+            .as_str()
+            .unwrap()
+            .contains("SMTP 邮件服务未配置")
+    );
+}
+
+#[tokio::test]
+async fn test_smtp_configuration_lifecycle() {
+    let db = foundry_storage::Database::dummy();
+
+    foundry_engine::services::set_smtp_configured_override_for_test(Some(true));
+    assert!(foundry_engine::services::is_smtp_configured());
+
+    let valid_settings = PlatformLoginSettings {
+        enable_password_login: true,
+        enable_email_login: true,
+        login_email_subject: "【测试】登录验证码".to_string(),
+        login_email_template: "验证码: {code}".to_string(),
+        smtp_configured: true,
+    };
+    let res = save_platform_login_settings(&db, &valid_settings).await;
+    // Validation passes when SMTP is configured (any error here is from dummy DB pool, not validation)
+    if let Err(foundry_core::error::AppError::Validation(ref msg)) = res {
+        panic!("Validation unexpectedly failed with: {}", msg);
+    }
+
+    foundry_engine::services::set_smtp_configured_override_for_test(Some(false));
+    assert!(!foundry_engine::services::is_smtp_configured());
+    let res_no_smtp = save_platform_login_settings(&db, &valid_settings).await;
+    assert!(matches!(
+        res_no_smtp,
+        Err(foundry_core::error::AppError::Validation(ref msg)) if msg.contains("SMTP 邮件服务未配置")
+    ));
+    foundry_engine::services::set_smtp_configured_override_for_test(None);
 }

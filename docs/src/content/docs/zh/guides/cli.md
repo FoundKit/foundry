@@ -57,7 +57,10 @@ foundry new my-app --git https://github.com/foundkit/foundry --branch feature/ne
 foundry new my-app --version 0.1.0
 ```
 
-> **数据库配置与纯净骨架**：通过 `foundry new --db <type>` 创建工程时，框架会生成纯净代码骨架（默认不生成 `migrations/` 目录），并在 `.env` 中预置匹配的 `DATABASE_URL` 与 `DATABASE_TYPE`。当 `AUTO_MIGRATE=true` 时，执行 `cargo run` 框架将直接通过内嵌预设 DDL 自动初始化库表、索引及超级管理员账号，无需物理 SQL 文件。若需要交由 DBA 审计或外部工具部署，可执行 `foundry ddl` 按需导出方言脚本。
+> **数据库配置与纯净骨架**：通过 `foundry new --db <type>` 创建工程时，框架会生成纯净代码骨架（默认不生成 `migrations/` 目录），并在 `.env` 及 `.env.example` 中预置匹配的 `DATABASE_URL` 与 `DATABASE_TYPE`。当 `AUTO_MIGRATE=true` 时，执行 `cargo run` 框架将直接通过内嵌预设 DDL 自动初始化库表、索引及超级管理员账号，无需物理 SQL 文件。若需要交由 DBA 审计或外部工具部署，可执行 `foundry ddl` 按需导出方言脚本。
+>
+> **可选 SMTP 邮件服务支持**：生成的 `.env` 与 `.env.example` 预置了可选的 `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS` 与 `SMTP_FROM` 环境变量名。若未配置 SMTP，系统将在管理员尝试开启邮箱登录、发送登录验证码或绑定邮箱时自动拦截并友好提示，确保服务运行安全可靠。
+
 
 ---
 

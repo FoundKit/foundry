@@ -23,6 +23,11 @@ pub struct FoundryConfig {
     pub db_pool_size: u32,
     pub external_systems_dirs: Vec<PathBuf>,
     pub admin_static_dirs: Vec<PathBuf>,
+    pub smtp_host: Option<String>,
+    pub smtp_port: Option<u16>,
+    pub smtp_user: Option<String>,
+    pub smtp_pass: Option<String>,
+    pub smtp_from: Option<String>,
 }
 
 impl Default for FoundryConfig {
@@ -47,6 +52,13 @@ impl Default for FoundryConfig {
             db_pool_size: 20,
             external_systems_dirs: Vec::new(),
             admin_static_dirs: Vec::new(),
+            smtp_host: std::env::var("SMTP_HOST")
+                .ok()
+                .filter(|s| !s.trim().is_empty()),
+            smtp_port: std::env::var("SMTP_PORT").ok().and_then(|p| p.parse().ok()),
+            smtp_user: std::env::var("SMTP_USER").ok(),
+            smtp_pass: std::env::var("SMTP_PASS").ok(),
+            smtp_from: std::env::var("SMTP_FROM").ok(),
         }
     }
 }
@@ -186,6 +198,31 @@ impl FoundryBuilder {
         self
     }
 
+    pub fn smtp_host(mut self, host: impl Into<String>) -> Self {
+        self.config.smtp_host = Some(host.into());
+        self
+    }
+
+    pub fn smtp_port(mut self, port: u16) -> Self {
+        self.config.smtp_port = Some(port);
+        self
+    }
+
+    pub fn smtp_user(mut self, user: impl Into<String>) -> Self {
+        self.config.smtp_user = Some(user.into());
+        self
+    }
+
+    pub fn smtp_pass(mut self, pass: impl Into<String>) -> Self {
+        self.config.smtp_pass = Some(pass.into());
+        self
+    }
+
+    pub fn smtp_from(mut self, from: impl Into<String>) -> Self {
+        self.config.smtp_from = Some(from.into());
+        self
+    }
+
     /// Build the application runtime and router
     pub async fn build(self) -> AppResult<FoundryApp> {
         if self.init_tracing {
@@ -196,6 +233,11 @@ impl FoundryBuilder {
                 )
                 .with(tracing_subscriber::fmt::layer())
                 .try_init();
+        }
+
+        // Log SMTP host configuration if configured
+        if let Some(ref host) = self.config.smtp_host {
+            info!("SMTP relay configured: {}", host);
         }
 
         info!("Initializing Foundry Platform Application...");

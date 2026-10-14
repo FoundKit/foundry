@@ -38,6 +38,23 @@ fn test_cli_new_project_compilation_smoke_test() {
     assert!(readme.contains("数据库初始化与管控说明"));
     assert!(readme.contains("GET http://localhost:8080/api/v1/health"));
     assert!(temp_dir.join("src/systems/sample/mod.rs").exists());
+
+    // Verify .env and .env.example contain SMTP configuration variables
+    assert!(temp_dir.join(".env.example").exists());
+    assert!(temp_dir.join(".env").exists());
+    let env_example = fs::read_to_string(temp_dir.join(".env.example")).unwrap();
+    let env_content = fs::read_to_string(temp_dir.join(".env")).unwrap();
+    assert!(env_example.contains("SMTP_HOST"));
+    assert!(env_example.contains("SMTP_PORT"));
+    assert!(env_example.contains("SMTP_USER"));
+    assert!(env_example.contains("SMTP_PASS"));
+    assert!(env_example.contains("SMTP_FROM"));
+    assert!(env_content.contains("SMTP_HOST"));
+    assert!(env_content.contains("SMTP_PORT"));
+    assert!(env_content.contains("SMTP_USER"));
+    assert!(env_content.contains("SMTP_PASS"));
+    assert!(env_content.contains("SMTP_FROM"));
+
     // Verify migrations directory is absent by default
     assert!(!temp_dir.join("migrations").exists());
 
@@ -126,6 +143,41 @@ fn test_cli_new_mysql_project_compilation_smoke_test() {
         status.success(),
         "Generated mysql project cargo check failed"
     );
+
+    let _ = fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn test_cli_new_project_with_smtp_flags() {
+    let temp_dir =
+        std::env::temp_dir().join(format!("foundry_smoke_smtp_{}", uuid::Uuid::new_v4()));
+    let project_name = temp_dir.to_string_lossy().to_string();
+
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let foundry_crate_path = manifest_dir.join("../foundry");
+
+    foundry_cli::scaffold_project(
+        &project_name,
+        foundry_cli::ProjectOptions {
+            local_path: Some(foundry_crate_path.canonicalize().unwrap().to_str().unwrap()),
+            db: Some("postgres"),
+            smtp_host: Some("smtp.custom.io"),
+            smtp_port: Some(465),
+            smtp_user: Some("mailer@custom.io"),
+            smtp_pass: Some("secret123"),
+            smtp_from: Some("Custom <mailer@custom.io>"),
+            ..Default::default()
+        },
+    )
+    .expect("Failed to scaffold new project with smtp options");
+
+    assert!(temp_dir.join(".env").exists());
+    let env_content = fs::read_to_string(temp_dir.join(".env")).unwrap();
+    assert!(env_content.contains("SMTP_HOST=smtp.custom.io"));
+    assert!(env_content.contains("SMTP_PORT=465"));
+    assert!(env_content.contains("SMTP_USER=mailer@custom.io"));
+    assert!(env_content.contains("SMTP_PASS=secret123"));
+    assert!(env_content.contains("SMTP_FROM=Custom <mailer@custom.io>"));
 
     let _ = fs::remove_dir_all(temp_dir);
 }
