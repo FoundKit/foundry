@@ -160,16 +160,9 @@ impl SubsystemModule for ShopSubsystem {
     }
 
     // Mounts custom extension routes under /api/v1/s/shop/ext/*
+    // Custom admin studio pages (src/systems/shop/custom_pages) are auto-mounted by the engine
     fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(crate::systems::shop::controllers::build_routes());
-
-        // Serve custom admin studio pages
-        let custom_dir = PathBuf::from("src/systems/shop/custom_pages");
-        if custom_dir.exists() {
-            r = r.nest_service("/custom-pages", ServeDir::new(custom_dir));
-        }
-
-        r
+        router.merge(crate::systems::shop::controllers::build_routes())
     }
 }
 ```
@@ -187,42 +180,37 @@ Foundry provides `ApiResponse<T>` to ensure uniform JSON responses across all en
 ```rust
 use foundry::prelude::*;
 
-// 1. Success with payload
+// 1. Success with payload (ok is an alias for success)
+ApiResponse::ok(data)
 ApiResponse::success(data)
 
-// 2. Resource Created (HTTP 201)
-ApiResponse::created(new_resource)
+// 2. Success with custom message
+ApiResponse::ok_msg(data, "Order created")
 
 // 3. Paginated list
-ApiResponse::paginated(items, PageMeta { page: 1, limit: 20, total: 100 })
-
-// 4. Business error
-ApiResponse::error("ORDER_ALREADY_PAID", "Order has already been completed")
+ApiResponse::paginated(items, 1, 20, 100)
 ```
 
 JSON representation:
 ```json
 {
-  "success": true,
-  "code": "OK",
-  "message": "Success",
+  "code": 0,
+  "message": "success",
   "data": { ... },
   "meta": null
 }
 ```
+
+> [!TIP]
+> **Automatic IntoResponse Implementation**:
+> `ApiResponse<T>` implements Axum's `IntoResponse` for any `T: Serialize`. In controller handlers, you can directly return `AppResult<ApiResponse<T>>` and `Ok(ApiResponse::ok(data))` without wrapping in `Json(...)`.
 
 ### 4.2 Standard Controller Handlers
 
 In `src/systems/shop/controllers/mod.rs`:
 
 ```rust
-use axum::{
-    Json, Router,
-    extract::{Extension, Path, Query},
-    routing::{get, post},
-};
 use foundry::prelude::*;
-use validator::Validate;
 
 use crate::systems::shop::dto::{CreateOrderRequest, OrderListQuery, OrderResponse};
 use crate::systems::shop::logic::OrderService;
@@ -238,15 +226,18 @@ pub async fn create_order(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Json(payload): Json<CreateOrderRequest>,
-) -> AppResult<Json<ApiResponse<OrderResponse>>> {
-    // 1. Validate payload (similar to ThinkPHP $validate->check($data))
+) -> AppResult<ApiResponse<OrderResponse>> {
+    // 1. Validate payload (prelude exports Validate trait, no extra use required)
     payload.validate()?;
 
     // 2. Invoke domain logic service
     let order = OrderService::create_order(&ctx, &state, payload).await?;
 
-    // 3. Return standardized response
-    Ok(Json(ApiResponse::created(order)))
+    // 3. Log event (prelude directly exports info!, warn!, error!, etc.)
+    info!("New order placed: id={}, total={}", order.id, order.total_amount);
+
+    // 4. Return standardized response (ApiResponse implements IntoResponse)
+    Ok(ApiResponse::ok(order))
 }
 
 /// List Orders with Pagination Handler
@@ -254,9 +245,11 @@ pub async fn list_orders(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Query(query): Query<OrderListQuery>,
-) -> AppResult<Json<ApiResponse<Vec<OrderResponse>>>> {
-    let (orders, meta) = OrderService::list_orders(&ctx, &state, query).await?;
-    Ok(Json(ApiResponse::paginated(orders, meta)))
+) -> AppResult<ApiResponse<PaginatedData<OrderResponse>>> {
+    let page = query.page.unwrap_or(1);
+    let page_size = query.page_size.unwrap_or(20);
+    let (orders, total) = OrderService::list_orders(&ctx, &state, page, page_size).await?;
+    Ok(ApiResponse::paginated(orders, page, page_size, total))
 }
 
 /// Get Order by ID Handler
@@ -264,13 +257,21 @@ pub async fn get_order_by_id(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Path(id): Path<i64>,
-) -> AppResult<Json<ApiResponse<OrderResponse>>> {
+) -> AppResult<ApiResponse<OrderResponse>> {
     let order = OrderService::get_order(&ctx, &state, id).await?;
-    Ok(Json(ApiResponse::success(order)))
+    Ok(ApiResponse::ok(order))
 }
 ```
 
-### 4.3 Error Handling (`AppError` & `AppResult`)
+### 4.3 Structured Logging Facade
+
+Similar to ThinkPHP's `Log::info()` or Spring Boot's SLF4J, Foundry encapsulates structured logging out of the box:
+
+* **Direct Prelude Export**: `use foundry::prelude::*;` exposes `info!`, `warn!`, `error!`, `debug!`, and `trace!` directly.
+* **Logging Module**: `foundry::log::*` provides access to logging utilities and levels.
+* **Automatic Initialization**: `FoundryApp::builder().build()` automatically configures formatters and environment filtering (`RUST_LOG`). User projects do not need manual subscriber setup.
+
+### 4.4 Error Handling (`AppError` & `AppResult`)
 
 Errors are propagated cleanly using `AppError` and the Rust `?` operator without manual `try/catch` boilerplate:
 
@@ -822,19 +823,19 @@ pub mod systems;
 use foundry::prelude::*;
 use systems::shop::ShopSubsystem;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt::init();
-
+#[foundry::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Load configuration from environment variables (.env)
     let config = FoundryConfig::from_env();
 
+    // 2. Build application (automatically configures logging, DB pool, and migrations)
     let app = FoundryApp::builder()
         .config(config)
         .register_subsystem(ShopSubsystem)
         .build()
         .await?;
 
-    tracing::info!("Foundry application successfully built. Starting server...");
+    info!("Foundry application successfully built. Starting server...");
     app.run().await?;
     Ok(())
 }

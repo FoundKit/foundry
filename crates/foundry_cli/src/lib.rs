@@ -563,7 +563,7 @@ serde = {{ version = "1.0", features = ["derive"] }}
 use foundry::prelude::*;
 use systems::SampleSubsystem;
 
-#[tokio::main]
+#[foundry::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Load configuration from environment variables (.env)
     let config = FoundryConfig::from_env();
@@ -640,9 +640,9 @@ pub fn build_routes() -> Router {
 pub async fn handle_greet(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<GreetRequest>,
-) -> AppResult<Json<ApiResponse<GreetResponse>>> {
+) -> AppResult<ApiResponse<GreetResponse>> {
     let res = SampleService::greet(&ctx, payload).await?;
-    Ok(Json(ApiResponse::success(res)))
+    Ok(ApiResponse::ok(res))
 }
 "#;
     fs::write(
@@ -686,7 +686,6 @@ pub mod dto;
 pub mod logic;
 
 use foundry::prelude::*;
-use std::path::PathBuf;
 
 pub struct SampleSubsystem;
 
@@ -704,18 +703,7 @@ impl SubsystemModule for SampleSubsystem {
     }
 
     fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(controllers::build_routes());
-        let possible_dirs = [
-            PathBuf::from("src/systems/sample/custom_pages"),
-            PathBuf::from("static/custom_pages/sample"),
-        ];
-        for dir in possible_dirs {
-            if dir.exists() {
-                r = r.nest_service("/custom-pages", ServeDir::new(dir));
-                break;
-            }
-        }
-        r
+        router.merge(controllers::build_routes())
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
@@ -1469,29 +1457,29 @@ pub async fn handle_list(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Query(pq): Query<PaginationQuery>,
-) -> AppResult<Json<ApiResponse<PaginatedData<{item_name}>>>> {{
+) -> AppResult<ApiResponse<PaginatedData<{item_name}>>> {{
     let page = pq.page.unwrap_or(1);
     let page_size = pq.page_size.unwrap_or(20);
     let res = {service_name}::list(&ctx, &state.db, page, page_size).await?;
-    Ok(Json(ApiResponse::success(res)))
+    Ok(ApiResponse::ok(res))
 }}
 
 pub async fn handle_get(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Path(id): Path<i64>,
-) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+) -> AppResult<ApiResponse<{item_name}>> {{
     let res = {service_name}::get_by_id(&ctx, &state.db, id).await?;
-    Ok(Json(ApiResponse::success(res)))
+    Ok(ApiResponse::ok(res))
 }}
 
 pub async fn handle_create(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Json(payload): Json<Create{item_name}Request>,
-) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+) -> AppResult<ApiResponse<{item_name}>> {{
     let res = {service_name}::create(&ctx, &state.db, payload).await?;
-    Ok(Json(ApiResponse::success(res)))
+    Ok(ApiResponse::ok(res))
 }}
 
 pub async fn handle_update(
@@ -1499,19 +1487,19 @@ pub async fn handle_update(
     Extension(state): Extension<AppState>,
     Path(id): Path<i64>,
     Json(payload): Json<Update{item_name}Request>,
-) -> AppResult<Json<ApiResponse<{item_name}>>> {{
+) -> AppResult<ApiResponse<{item_name}>> {{
     let res = {service_name}::update(&ctx, &state.db, id, payload).await?;
-    Ok(Json(ApiResponse::success(res)))
+    Ok(ApiResponse::ok(res))
 }}
 
 pub async fn handle_delete(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Path(id): Path<i64>,
-) -> AppResult<Json<ApiResponse<()>>> {{
+) -> AppResult<ApiResponse<()>> {{
     // Executes soft delete (updates deleted_at), zero DELETE privilege required!
     {service_name}::delete(&ctx, &state.db, id).await?;
-    Ok(Json(ApiResponse::success(())))
+    Ok(ApiResponse::ok(()))
 }}
 "#,
             slug = slug,
@@ -1528,7 +1516,6 @@ pub mod logic;
 pub mod models;
 
 use foundry::prelude::*;
-use std::path::PathBuf;
 
 pub struct {struct_name};
 
@@ -1542,18 +1529,7 @@ impl SubsystemModule for {struct_name} {{
     }}
 
     fn register_routes(&self, router: Router) -> Router {{
-        let mut r = router.merge(controllers::build_routes());
-        let possible_dirs = [
-            PathBuf::from("src/systems/{slug}/custom_pages"),
-            PathBuf::from("static/custom_pages/{slug}"),
-        ];
-        for dir in possible_dirs {{
-            if dir.exists() {{
-                r = r.nest_service("/custom-pages", ServeDir::new(dir));
-                break;
-            }}
-        }}
-        r
+        router.merge(controllers::build_routes())
     }}
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {{
@@ -1749,9 +1725,9 @@ pub fn build_routes() -> Router {{
 pub async fn handle_sample(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<SampleRequest>,
-) -> AppResult<Json<ApiResponse<SampleResponse>>> {{
+) -> AppResult<ApiResponse<SampleResponse>> {{
     let result = SampleService::execute(&ctx, payload).await?;
-    Ok(Json(ApiResponse::success(result)))
+    Ok(ApiResponse::ok(result))
 }}
 "#,
                 slug = slug
@@ -1765,7 +1741,6 @@ pub mod dto;
 pub mod logic;
 
 use foundry::prelude::*;
-use std::path::PathBuf;
 
 pub struct {struct_name};
 
@@ -1779,18 +1754,7 @@ impl SubsystemModule for {struct_name} {{
     }}
 
     fn register_routes(&self, router: Router) -> Router {{
-        let mut r = router.merge(controllers::build_routes());
-        let possible_dirs = [
-            PathBuf::from("src/systems/{slug}/custom_pages"),
-            PathBuf::from("static/custom_pages/{slug}"),
-        ];
-        for dir in possible_dirs {{
-            if dir.exists() {{
-                r = r.nest_service("/custom-pages", ServeDir::new(dir));
-                break;
-            }}
-        }}
-        r
+        router.merge(controllers::build_routes())
     }}
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {{

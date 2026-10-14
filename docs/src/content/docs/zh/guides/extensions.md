@@ -175,8 +175,8 @@ impl SubsystemModule for BlogSubsystem {
 use foundry::prelude::*;
 use systems::BlogSubsystem;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[foundry::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = FoundryApp::builder()
         .register_subsystem(BlogSubsystem)
         .build()

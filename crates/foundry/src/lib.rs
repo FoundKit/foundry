@@ -7,8 +7,8 @@
 //! ```no_run
 //! use foundry::prelude::*;
 //!
-//! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
+//! #[foundry::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let app = FoundryApp::builder()
 //!         .build()
 //!         .await?;
@@ -20,6 +20,11 @@
 
 pub mod app;
 pub mod prelude;
+
+/// Structured logging facade
+pub mod log {
+    pub use tracing::{Level, debug, error, info, trace, warn};
+}
 
 pub use app::{FoundryApp, FoundryBuilder, FoundryConfig};
 pub use foundry_core as core;

@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tower_http::services::ServeDir;
 use tracing::{info, warn};
 
 /// Manifest file (`subsystem.json`) specification for dynamic standalone subsystems
@@ -40,14 +39,13 @@ impl SubsystemModule for ExternalSubsystemModule {
         Box::leak(self.manifest.description.clone().into_boxed_str())
     }
 
+    fn custom_pages_dir(&self) -> Option<std::path::PathBuf> {
+        let dir = self.root_dir.join("custom_pages");
+        if dir.exists() { Some(dir) } else { None }
+    }
+
     fn register_routes(&self, router: Router) -> Router {
-        let custom_pages_dir = self.root_dir.join("custom_pages");
-        if custom_pages_dir.exists() {
-            let serve_dir = ServeDir::new(custom_pages_dir);
-            router.nest_service("/custom-pages", serve_dir)
-        } else {
-            router
-        }
+        router
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {

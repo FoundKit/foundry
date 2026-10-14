@@ -21,12 +21,29 @@ pub trait SubsystemModule: Send + Sync + 'static {
     /// Human-readable display name of the sub-system
     fn display_name(&self) -> &'static str;
 
-    /// Mounts custom HTTP routes under `/custom-api/v1/s/{slug}/...`
-    fn register_routes(&self, router: Router) -> Router;
+    /// Mounts custom HTTP routes under `/api/v1/s/{slug}/ext/...`
+    fn register_routes(&self, router: Router) -> Router {
+        router
+    }
 
     /// Optional description of the sub-system
     fn description(&self) -> &'static str {
         ""
+    }
+
+    /// Returns the local directory path for custom admin UI pages, if any.
+    /// By default, automatically discovers `src/systems/{slug}/custom_pages` or `static/custom_pages/{slug}`.
+    fn custom_pages_dir(&self) -> Option<std::path::PathBuf> {
+        let slug = self.slug();
+        let possible_dirs = [
+            std::path::PathBuf::from(format!("src/systems/{}/custom_pages", slug)),
+            std::path::PathBuf::from(format!(
+                "examples/blog_platform/src/systems/{}/custom_pages",
+                slug
+            )),
+            std::path::PathBuf::from(format!("static/custom_pages/{}", slug)),
+        ];
+        possible_dirs.into_iter().find(|dir| dir.exists())
     }
 
     /// Custom admin UI pages registered by this sub-system module

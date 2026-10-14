@@ -119,7 +119,18 @@ pub fn build_router(state: AppState) -> Router {
             sub.slug(),
             sub.slug()
         );
-        let sub_router = sub.register_routes(Router::new());
+        let mut sub_router = sub.register_routes(Router::new());
+        if let Some(pages_dir) = sub.custom_pages_dir() {
+            tracing::info!(
+                "Mounting custom subsystem admin pages for slug '{}' from {:?}",
+                sub.slug(),
+                pages_dir
+            );
+            sub_router = sub_router.nest_service(
+                "/custom-pages",
+                tower_http::services::ServeDir::new(pages_dir),
+            );
+        }
         custom_ext_api = custom_ext_api.nest_service(&format!("/s/{}/ext", sub.slug()), sub_router);
     }
 

@@ -53,21 +53,21 @@ examples/blog_platform/
 ## 2. 应用启动流程 (main.rs)
 
 ```rust
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // 1. 从环境变量构建配置
+#[foundry::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Load configuration from environment variables
     let config = FoundryConfig::from_env();
 
-    // 2. 使用 Builder 模式初始化应用
+    // 2. Initialize application using Builder pattern
     let app = FoundryApp::builder()
         .config(config)
-        .register_subsystem(BlogSubsystem)       // 注册博客子系统
-        .register_subsystem(NewsletterSubsystem) // 注册通讯录子系统
-        .register_hook(BlogMutationHook)         // 注册全局数据变更钩子
+        .register_subsystem(BlogSubsystem)       // Register blog subsystem
+        .register_subsystem(NewsletterSubsystem) // Register newsletter subsystem
+        .register_hook(BlogMutationHook)         // Register global mutation hook
         .build()
         .await?;
 
-    // 3. 启动 HTTP 服务器
+    // 3. Start HTTP server
     app.run().await?;
     Ok(())
 }

@@ -3,7 +3,6 @@ pub mod dto;
 pub mod logic;
 
 use foundry::prelude::*;
-use std::path::PathBuf;
 
 pub struct NewsletterSubsystem;
 
@@ -21,22 +20,7 @@ impl SubsystemModule for NewsletterSubsystem {
     }
 
     fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(controllers::build_routes());
-
-        let possible_dirs = [
-            PathBuf::from("examples/blog_platform/src/systems/newsletter/custom_pages"),
-            PathBuf::from("src/systems/newsletter/custom_pages"),
-            PathBuf::from("static/custom_pages/newsletter"),
-        ];
-
-        for dir in possible_dirs {
-            if dir.exists() {
-                r = r.nest_service("/custom-pages", ServeDir::new(dir));
-                break;
-            }
-        }
-
-        r
+        router.merge(controllers::build_routes())
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {

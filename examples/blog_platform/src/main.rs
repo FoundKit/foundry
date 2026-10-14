@@ -5,7 +5,7 @@ use foundry::prelude::*;
 use hooks::BlogMutationHook;
 use systems::{BlogSubsystem, NewsletterSubsystem};
 
-#[tokio::main]
+#[foundry::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Build configuration from environment variables
     let config = FoundryConfig::from_env();

@@ -142,7 +142,6 @@ Foundry 统一管理应用路由空间，为多系统提供天然的隔离：
 
 ```rust
 use foundry::prelude::*;
-use std::path::PathBuf;
 
 pub struct ShopSubsystem;
 
@@ -160,16 +159,9 @@ impl SubsystemModule for ShopSubsystem {
     }
 
     // 挂载当前子系统的扩展路由：最终访问路径为 /api/v1/s/shop/ext/*
+    // 静态自定义后台大屏（src/systems/shop/custom_pages）由框架自动发现并挂载，无需手动编写 ServeDir
     fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(crate::systems::shop::controllers::build_routes());
-
-        // 挂载静态自定义大屏页面
-        let custom_dir = PathBuf::from("src/systems/shop/custom_pages");
-        if custom_dir.exists() {
-            r = r.nest_service("/custom-pages", ServeDir::new(custom_dir));
-        }
-
-        r
+        router.merge(crate::systems::shop::controllers::build_routes())
     }
 }
 ```
@@ -187,42 +179,37 @@ Foundry 内置了标准统一响应结构体 `ApiResponse<T>`，所有 HTTP 接�
 ```rust
 use foundry::prelude::*;
 
-// 1. 成功返回数据
+// 1. 成功返回数据 (ok 与 success 完全等价)
+ApiResponse::ok(data)
 ApiResponse::success(data)
 
-// 2. 成功创建资源 (HTTP 201)
-ApiResponse::created(new_resource)
+// 2. 携带自定义提示信息
+ApiResponse::ok_msg(data, "订单已创建")
 
-// 3. 分页列表数据
-ApiResponse::paginated(items, PageMeta { page: 1, limit: 20, total: 100 })
-
-// 4. 业务失败返回
-ApiResponse::error("ORDER_ALREADY_PAID", "该订单已支付，无法重复支付")
+// 3. 分页列表数据 (直接传入列表与分页参数)
+ApiResponse::paginated(items, 1, 20, 100)
 ```
 
 输出的 JSON 格式标准化：
 ```json
 {
-  "success": true,
-  "code": "OK",
-  "message": "Success",
+  "code": 0,
+  "message": "success",
   "data": { ... },
   "meta": null
 }
 ```
+
+> [!TIP]
+> **自动实现 IntoResponse**：
+> `ApiResponse<T>` 已为任意满足 `T: Serialize` 的数据实现了 Axum 的 `IntoResponse`。在控制器中可以直接返回 `AppResult<ApiResponse<T>>` 与 `Ok(ApiResponse::ok(data))`，无需显式包裹 `Json(...)`，既清爽又高效。
 
 ### 4.2 编写标准控制器 Handler
 
 在 `src/systems/shop/controllers/mod.rs` 中：
 
 ```rust
-use axum::{
-    Json, Router,
-    extract::{Extension, Path, Query},
-    routing::{get, post},
-};
 use foundry::prelude::*;
-use validator::Validate;
 
 use crate::systems::shop::dto::{CreateOrderRequest, OrderListQuery, OrderResponse};
 use crate::systems::shop::logic::OrderService;
@@ -238,15 +225,18 @@ pub async fn create_order(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Json(payload): Json<CreateOrderRequest>,
-) -> AppResult<Json<ApiResponse<OrderResponse>>> {
-    // 1. 参数强校验 (类似 ThinkPHP $validate->check($data))
+) -> AppResult<ApiResponse<OrderResponse>> {
+    // 1. 参数强校验 (prelude 已内置 Validate trait，无需额外引入)
     payload.validate()?;
 
     // 2. 业务逻辑调度
     let order = OrderService::create_order(&ctx, &state, payload).await?;
 
-    // 3. 返回统一响应
-    Ok(Json(ApiResponse::created(order)))
+    // 3. 记录日志 (prelude 已直接导出 info!, warn!, error! 等宏)
+    info!("新订单创建成功: id={}, total_amount={}", order.id, order.total_amount);
+
+    // 4. 返回统一响应 (直接返回 ApiResponse::ok，无需包裹 Json)
+    Ok(ApiResponse::ok(order))
 }
 
 /// 分页查询订单控制器
@@ -254,9 +244,11 @@ pub async fn list_orders(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Query(query): Query<OrderListQuery>,
-) -> AppResult<Json<ApiResponse<Vec<OrderResponse>>>> {
-    let (orders, meta) = OrderService::list_orders(&ctx, &state, query).await?;
-    Ok(Json(ApiResponse::paginated(orders, meta)))
+) -> AppResult<ApiResponse<PaginatedData<OrderResponse>>> {
+    let page = query.page.unwrap_or(1);
+    let page_size = query.page_size.unwrap_or(20);
+    let (orders, total) = OrderService::list_orders(&ctx, &state, page, page_size).await?;
+    Ok(ApiResponse::paginated(orders, page, page_size, total))
 }
 
 /// 根据 ID 获取订单详情
@@ -264,13 +256,21 @@ pub async fn get_order_by_id(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
     Path(id): Path<i64>,
-) -> AppResult<Json<ApiResponse<OrderResponse>>> {
+) -> AppResult<ApiResponse<OrderResponse>> {
     let order = OrderService::get_order(&ctx, &state, id).await?;
-    Ok(Json(ApiResponse::success(order)))
+    Ok(ApiResponse::ok(order))
 }
 ```
 
-### 4.3 统一错误处理 (`AppError` 与 `AppResult`)
+### 4.3 统一结构化日志门面
+
+类似于 ThinkPHP 的 `Log::info()` 或 Spring Boot 的 SLF4J，Foundry 在框架层已封装好开箱即用的结构化日志门面：
+
+* **单行导入，直接调用**：只需 `use foundry::prelude::*;`，即可在任何控制器、服务或钩子中直接调用 `info!`、`warn!`、`error!`、`debug!`、`trace!` 宏。
+* **门面模块**：通过 `foundry::log::*` 亦可使用完整的日志工具与等级定义。
+* **自动初始化**：`FoundryApp::builder().build()` 启动时会自动配置格式化日志输出与基于环境变量（`RUST_LOG`）的过滤规则，业务工程无需手动初始化 `tracing_subscriber`。
+
+### 4.4 统一错误处理 (`AppError` 与 `AppResult`)
 
 在 Foundry 中，无需编写繁琐的 `try/catch` 逻辑。所有错误通过统一枚举 `AppError` 表达，并通过 `?` 运算符向上传播：
 
@@ -822,22 +822,19 @@ pub mod systems;
 use foundry::prelude::*;
 use systems::shop::ShopSubsystem;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // 初始化追踪日志
-    tracing_subscriber::fmt::init();
-
-    // 从 .env 加载配置
+#[foundry::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. 从 .env 加载配置
     let config = FoundryConfig::from_env();
 
-    // 构建并运行 Foundry 应用
+    // 2. 构建 Foundry 应用 (自动完成日志初始化、数据库连接与自迁移)
     let app = FoundryApp::builder()
         .config(config)
         .register_subsystem(ShopSubsystem)
         .build()
         .await?;
 
-    tracing::info!("Foundry 应用已成功构建，正在启动服务...");
+    info!("Foundry 应用已成功构建，正在启动服务...");
     app.run().await?;
     Ok(())
 }

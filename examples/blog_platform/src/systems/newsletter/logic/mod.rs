@@ -1,5 +1,4 @@
 use crate::systems::newsletter::dto::{SubscribeRequest, SubscriberResponse};
-use chrono::Utc;
 use foundry::prelude::*;
 
 pub struct NewsletterService;

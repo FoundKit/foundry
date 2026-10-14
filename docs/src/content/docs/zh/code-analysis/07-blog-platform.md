@@ -53,8 +53,8 @@ examples/blog_platform/
 ## 2. 应用启动流程 (main.rs)
 
 ```rust
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+#[foundry::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. 从环境变量构建配置
     let config = FoundryConfig::from_env();
 

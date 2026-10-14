@@ -102,7 +102,7 @@ pub mod systems;
 use foundry::prelude::*;
 use systems::SampleSubsystem;
 
-#[tokio::main]
+#[foundry::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = FoundryConfig::from_env();
 
