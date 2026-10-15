@@ -15,36 +15,36 @@ Foundry 秉持 **“平台与业务完全解耦”、“约定优于配置”** 
 
 ---
 
-## 🧭 教程章节结构 (模块化目录)
+## 教程章节结构
 
-教程按照系统开发的标准流程划分为 11 个递进模块，你可以根据学习阶段或实际工作需求针对性阅读：
+教程按照系统开发的标准流程划分为 11 个递进模块：
 
 ```mermaid
 flowchart TD
-    subgraph S1["一、基础与架构"]
-        C1["01. 基础架构与请求生命周期"]
-        C2["02. 路由系统与子系统路由"]
+    subgraph S1["基础与架构"]
+        C1["架构与请求生命周期"]
+        C2["路由系统与子系统路由"]
     end
 
-    subgraph S2["二、请求处理层"]
-        C3["03. 控制器、参数与响应规范"]
-        C4["04. 请求验证器与 DTO 设计"]
+    subgraph S2["请求处理层"]
+        C3["控制器与响应规范"]
+        C4["请求验证器与 DTO 设计"]
     end
 
-    subgraph S3["三、数据持久化"]
-        C5["05. 数据库配置与 Code-First ORM"]
-        C6["06. Zero-DDL 动态模型与 Auto-CRUD"]
+    subgraph S3["数据持久化"]
+        C5["数据库配置与 Code-First ORM"]
+        C6["Zero-DDL 动态模型与 Auto-CRUD"]
     end
 
-    subgraph S4["四、安全与扩展"]
-        C7["07. 认证安全与分级 RBAC"]
-        C8["08. 生命周期突变钩子 (Mutation Hook)"]
-        C9["09. 管理控制台与 postMessage 桥接"]
+    subgraph S4["安全与扩展"]
+        C7["认证安全与分级 RBAC"]
+        C8["生命周期突变钩子"]
+        C9["管理控制台与 postMessage 桥接"]
     end
 
-    subgraph S5["五、实战与工程化"]
-        C10["10. 综合实战：从零构建电商系统"]
-        C11["11. 架构最佳实践与生产部署"]
+    subgraph S5["实战与工程化"]
+        C10["综合实战：构建电商系统"]
+        C11["架构最佳实践与生产部署"]
     end
 
     S1 --> S2 --> S3 --> S4 --> S5
@@ -52,23 +52,23 @@ flowchart TD
 
 ### 章节快速索引
 
-| 序号 | 章节名称 | 核心内容 | 核心职责与关键组件 |
+| 章节 | 名称 | 核心内容 | 关键组件 |
 |:---:|---|---|---|
-| **01** | [基础架构与请求生命周期](./01-architecture-lifecycle/) | 平台解耦理念、HTTP 全流程时序图、门面体系 | 架构总览、请求生命周期、`foundry::prelude` |
-| **02** | [路由系统与子系统路由](./02-routing/) | 统一路由空间规划、子系统路由挂载、参数提取 | 路由定义、子系统命名空间、方法绑定 |
-| **03** | [控制器、参数与响应规范](./03-controllers/) | Axum 控制器、请求提取器、`ApiResponse`、`AppError` | 控制器 Handler、请求提取、统一输出 |
-| **04** | [请求验证器与 DTO 设计](./04-validation/) | `#[derive(Validate)]` 注解、常用规则速查、HTTP 422 映射 | 验证 DTO、强类型规则、参数截断 |
-| **05** | [数据库配置与 Code-First ORM](./05-database-orm/) | 多数据库 SPI、Code-First 实体声明、链式查询构造器、软删除 | 数据库连接、EntitySchema、查询构造器 |
-| **06** | [Zero-DDL 动态模型与 Auto-CRUD](./06-dynamic-models/) | 免 DDL 动态模型、`RecordStore` API、RESTful Auto-CRUD | 动态表单、RecordStore、自动 CRUD 路由 |
-| **07** | [认证安全与分级 RBAC](./07-auth-security/) | 管理员 IAM、Argon2id、JWT、三级 RBAC 租户隔离 | 身份认证、JWT 令牌、权限守卫 |
-| **08** | [生命周期突变钩子](./08-mutation-hooks/) | `MutationHook` 管道、6 大生命周期事件、业务审计 | 生命周期事件、字段拦截注入、异步通知 |
-| **09** | [管理控制台与 postMessage 桥接](./09-admin-integration/) | React Admin 外壳、自定义沙箱大屏、`postMessage` 协议 | 控制台大屏、沙箱 iframe、免密鉴权 |
-| **10** | [综合实战：从零构建电商系统](./10-walkthrough-shop/) | 从 DTO、Service、Controller、Subsystem 到 main.rs 全流程 | 完整电商商城实战、单元与集成测试 |
-| **11** | [架构最佳实践与生产部署](./11-best-practices/) | Thin Controller/Fat Service、连接池调优、生产 Docker 部署 | 架构分层、性能调优、安全规范与部署 |
+|  | [架构与请求生命周期](./01-architecture-lifecycle/) | 平台解耦理念、HTTP 全流程、门面体系 | 架构、生命周期、Prelude |
+|  | [路由系统与子系统路由](./02-routing/) | 统一路由规划、子系统路由、参数提取 | 路由定义、命名空间、方法绑定 |
+|  | [控制器与响应规范](./03-controllers/) | Axum 控制器、请求提取器、ApiResponse | Handler、提取器、统一输出 |
+|  | [请求验证器与 DTO 设计](./04-validation/) | Validate 注解、常用规则、HTTP 422 | 验证 DTO、强类型规则、参数截断 |
+|  | [数据库配置与 Code-First ORM](./05-database-orm/) | 多数据库 SPI、EntitySchema、查询构造器 | 数据库连接、Schema、查询构造 |
+|  | [Zero-DDL 动态模型与 Auto-CRUD](./06-dynamic-models/) | 免 DDL 动态模型、RecordStore API | 动态表单、RecordStore、自动 CRUD |
+|  | [认证安全与分级 RBAC](./07-auth-security/) | IAM、Argon2id、JWT、RBAC 租户隔离 | 身份认证、JWT 令牌、权限守卫 |
+|  | [生命周期突变钩子](./08-mutation-hooks/) | MutationHook 管道、6 大事件、审计 | 生命周期、字段注入、异步通知 |
+|  | [管理控制台与 postMessage 桥接](./09-admin-integration/) | React Admin 外壳、沙箱大屏、postMessage | 控制台、沙箱、免密鉴权 |
+|  | [综合实战：构建电商系统](./10-walkthrough-shop/) | 从 DTO 到 main.rs 全流程 | 完整电商、单元测试、集成测试 |
+|  | [架构最佳实践与生产部署](./11-best-practices/) | Thin Controller、连接池调优、Docker | 架构分层、性能、安全与部署 |
 
 ---
 
-## 🎯 通用 Web 架构到 Foundry 的概念映射
+## Web 架构到 Foundry 的概念映射
 
 如果你熟悉现代分层 Web 架构，下表能帮助你快速建立与 Foundry 核心原语的概念对应：
 
@@ -86,7 +86,7 @@ flowchart TD
 
 ---
 
-## 🚀 推荐学习路径
+## 推荐学习路径
 
 ```mermaid
 timeline

@@ -1,15 +1,15 @@
 ---
-title: 08. Lifecycle Mutation Hooks
+title: Lifecycle Mutation Hooks
 description: Master Foundry's entity lifecycle mutation hook pipeline for pre-mutation validation, field injection, and post-mutation async side-effects.
 ---
 
-# 08. Lifecycle Mutation Hooks
+# Lifecycle Mutation Hooks
 
-> **Chapter Objectives**:
-> 1. Understand the design and purpose of `MutationHook`;
-> 2. Implement the 6 lifecycle event methods;
-> 3. Inject dynamic fields and intercept invalid mutations;
-> 4. Trigger asynchronous side-effects and cache invalidation.
+This chapter covers:
+1. Understand the design and purpose of `MutationHook`;
+2. Implement the 6 lifecycle event methods;
+3. Inject dynamic fields and intercept invalid mutations;
+4. Trigger asynchronous side-effects and cache invalidation.
 
 ---
 
@@ -74,4 +74,4 @@ let app = FoundryApp::builder()
     .await?;
 ```
 
-Next chapter: [09. Admin Console & postMessage SDK](./09-admin-integration/)
+Next chapter: [Admin Console & postMessage SDK](./09-admin-integration/)

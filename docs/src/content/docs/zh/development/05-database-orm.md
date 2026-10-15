@@ -1,15 +1,15 @@
 ---
-title: 05. 数据库配置与 Code-First ORM
+title: 数据库配置与 Code-First ORM
 description: 掌握 Foundry 多数据库 SPI 架构、Code-First 实体模型定义、链式查询构造器与数据库平滑迁移工作流。
 ---
 
-# 05. 数据库配置与 Code-First ORM
+# 数据库配置与 Code-First ORM
 
-> **本章目标**：
-> 1. 理解 Foundry 多数据库 SPI 插件化架构与连接配置；
-> 2. 学会在子系统中通过代码优先（Code-First）定义实体表结构与索引；
-> 3. 熟练运用链式 ORM 查询构造器进行增删改查；
-> 4. 掌握软删除（Soft Delete）与全自动数据库迁移（Migrations）。
+本章内容：
+1. 理解 Foundry 多数据库 SPI 插件化架构与连接配置；
+2. 学会在子系统中通过代码优先（Code-First）定义实体表结构与索引；
+3. 熟练运用链式 ORM 查询构造器进行增删改查；
+4. 掌握软删除（Soft Delete）与全自动数据库迁移（Migrations）。
 
 ---
 

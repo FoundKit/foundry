@@ -1,15 +1,15 @@
 ---
-title: 07. Authentication & Hierarchical RBAC
+title: Authentication & Hierarchical RBAC
 description: Master Foundry's IAM security, Argon2id password hashing, JWT service, and 3-tier hierarchical RBAC subsystem tenant isolation.
 ---
 
-# 07. Authentication & Hierarchical RBAC
+# Authentication & Hierarchical RBAC
 
-> **Chapter Objectives**:
-> 1. Understand Foundry's IAM architecture;
-> 2. Master Argon2id password hashing and JWT token verification;
-> 3. Understand 3-tier role hierarchy (`super_admin`, `admin`, `topic_admin`);
-> 4. Guard custom routes and enforce subsystem tenant isolation.
+This chapter covers:
+1. Understand Foundry's IAM architecture;
+2. Master Argon2id password hashing and JWT token verification;
+3. Understand 3-tier role hierarchy (`super_admin`, `admin`, `topic_admin`);
+4. Guard custom routes and enforce subsystem tenant isolation.
 
 ---
 
@@ -42,4 +42,4 @@ pub async fn admin_manage_order(
 }
 ```
 
-Next chapter: [08. Lifecycle Mutation Hooks](./08-mutation-hooks/)
+Next chapter: [Lifecycle Mutation Hooks](./08-mutation-hooks/)

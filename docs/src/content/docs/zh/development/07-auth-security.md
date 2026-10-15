@@ -1,15 +1,15 @@
 ---
-title: 07. 认证安全与分级 RBAC 权限控制
+title: 认证安全与分级 RBAC 权限控制
 description: 掌握 Foundry 企业级安全鉴权体系、Argon2id 密码哈希、JWT 令牌服务与三级分层 RBAC 租户权限隔离。
 ---
 
-# 07. 认证安全与分级 RBAC 权限控制
+# 认证安全与分级 RBAC 权限控制
 
-> **本章目标**：
-> 1. 理解 Foundry 平台分层安全认证（IAM）架构；
-> 2. 掌握基于 Argon2id 的现代密码哈希与 JWT 令牌验签机制；
-> 3. 熟悉三级角色层级（`super_admin`、`admin`、`topic_admin`）；
-> 4. 学会在自定义控制器中保护受限路由并执行租户权限隔离。
+本章内容：
+1. 理解 Foundry 平台分层安全认证（IAM）架构；
+2. 掌握基于 Argon2id 的现代密码哈希与 JWT 令牌验签机制；
+3. 熟悉三级角色层级（`super_admin`、`admin`、`topic_admin`）；
+4. 学会在自定义控制器中保护受限路由并执行租户权限隔离。
 
 ---
 

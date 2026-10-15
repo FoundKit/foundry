@@ -1,15 +1,15 @@
 ---
-title: 06. Zero-DDL Dynamic Models & Auto-CRUD
+title: Zero-DDL Dynamic Models & Auto-CRUD
 description: Master Foundry's Zero-DDL schema-free dynamic data models, RecordStore storage API, and instantly generated RESTful Auto-CRUD engine.
 ---
 
-# 06. Zero-DDL Dynamic Models & Auto-CRUD
+# Zero-DDL Dynamic Models & Auto-CRUD
 
-> **Chapter Objectives**:
-> 1. Understand Zero-DDL schema-free storage philosophy;
-> 2. Use `RecordStore` APIs for creating, reading, updating, and querying records;
-> 3. Understand auto-generated RESTful Auto-CRUD endpoints;
-> 4. Choose between Code-First ORM and Zero-DDL Dynamic Models.
+This chapter covers:
+1. Understand Zero-DDL schema-free storage philosophy;
+2. Use `RecordStore` APIs for creating, reading, updating, and querying records;
+3. Understand auto-generated RESTful Auto-CRUD endpoints;
+4. Choose between Code-First ORM and Zero-DDL Dynamic Models.
 
 ---
 
@@ -44,4 +44,4 @@ let record = state.db.records().create(
 | `PUT` | `/api/v1/s/{subsystem}/{model}/{id}` | Update record |
 | `DELETE` | `/api/v1/s/{subsystem}/{model}/{id}` | Delete record |
 
-Next chapter: [07. Authentication & Hierarchical RBAC](./07-auth-security/)
+Next chapter: [Authentication & Hierarchical RBAC](./07-auth-security/)

@@ -1,15 +1,15 @@
 ---
-title: 04. Request Validation & DTOs
+title: Request Validation & DTOs
 description: Master compile-time request validation DTOs in Foundry, validator macro annotations, common rule reference, and HTTP 422 short-circuiting.
 ---
 
-# 04. Request Validation & DTOs
+# Request Validation & DTOs
 
-> **Chapter Objectives**:
-> 1. Understand defensive validation principles;
-> 2. Implement DTOs with `#[derive(Validate)]`;
-> 3. Use common validation rules: length, email, range, regex, and nested;
-> 4. Short-circuit invalid requests into clean HTTP 422 responses.
+This chapter covers:
+1. Defensive validation principles
+2. Implementing DTOs with `#[derive(Validate)]`
+3. Using common validation rules: length, email, range, regex, and nested
+4. Short-circuiting invalid requests into clean HTTP 422 responses
 
 ---
 
@@ -64,4 +64,4 @@ pub async fn create_order(
 }
 ```
 
-Next chapter: [05. Database Setup & Code-First ORM](./05-database-orm/)
+Next chapter: [Database Setup & Code-First ORM](./05-database-orm/)

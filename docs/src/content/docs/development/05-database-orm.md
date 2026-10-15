@@ -1,15 +1,15 @@
 ---
-title: 05. Database Setup & Code-First ORM
+title: Database Setup & Code-First ORM
 description: Master Foundry's multi-database SPI storage, Code-First ORM schema definitions, fluent query builders, and database migrations.
 ---
 
-# 05. Database Setup & Code-First ORM
+# Database Setup & Code-First ORM
 
-> **Chapter Objectives**:
-> 1. Understand Foundry's multi-database SPI plugin storage architecture;
-> 2. Define relational schemas and indexes using Code-First `EntitySchema`;
-> 3. Use the fluent `OrmSelect`, `OrmInsert`, `OrmUpdate`, and soft delete builders;
-> 4. Manage migration workflows with `foundry ddl` and `foundry migrate`.
+This chapter covers:
+1. Foundry's multi-database SPI plugin storage architecture
+2. Defining relational schemas and indexes using Code-First `EntitySchema`
+3. Using the fluent `OrmSelect`, `OrmInsert`, `OrmUpdate`, and soft delete builders
+4. Managing migration workflows with `foundry ddl` and `foundry migrate`
 
 ---
 
@@ -89,4 +89,4 @@ let (soft_del_sql, binds) = OrmUpdate::into_table("shop_orders")
     .to_sql(Dialect::Postgres);
 ```
 
-Next chapter: [06. Zero-DDL Dynamic Models & Auto-CRUD](./06-dynamic-models/)
+Next chapter: [Zero-DDL Dynamic Models & Auto-CRUD](./06-dynamic-models/)

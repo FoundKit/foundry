@@ -529,86 +529,86 @@ export default defineConfig({
           },
           items: [
             {
-              label: 'Overview & Learning Roadmap',
+              label: 'Overview',
               translations: {
-                'zh-CN': '教程总览与学习路线',
+                'zh-CN': '教程总览',
               },
               link: '/development/',
             },
             {
-              label: '01. Architecture & Lifecycle',
+              label: 'Architecture & Lifecycle',
               translations: {
-                'zh-CN': '01. 基础架构与请求生命周期',
+                'zh-CN': '基础架构与请求生命周期',
               },
               link: '/development/01-architecture-lifecycle/',
             },
             {
-              label: '02. Routing System & Namespaces',
+              label: 'Routing & Namespaces',
               translations: {
-                'zh-CN': '02. 路由系统与子系统路由',
+                'zh-CN': '路由系统与子系统路由',
               },
               link: '/development/02-routing/',
             },
             {
-              label: '03. Controllers & Response',
+              label: 'Controllers & Response',
               translations: {
-                'zh-CN': '03. 控制器、参数与响应规范',
+                'zh-CN': '控制器与响应规范',
               },
               link: '/development/03-controllers/',
             },
             {
-              label: '04. Validation & DTOs',
+              label: 'Validation & DTOs',
               translations: {
-                'zh-CN': '04. 请求验证器与 DTO 设计',
+                'zh-CN': '请求验证器与 DTO 设计',
               },
               link: '/development/04-validation/',
             },
             {
-              label: '05. Database & Code-First ORM',
+              label: 'Database & ORM',
               translations: {
-                'zh-CN': '05. 数据库配置与 Code-First ORM',
+                'zh-CN': '数据库配置与 Code-First ORM',
               },
               link: '/development/05-database-orm/',
             },
             {
-              label: '06. Zero-DDL Dynamic Models',
+              label: 'Zero-DDL Dynamic Models',
               translations: {
-                'zh-CN': '06. Zero-DDL 动态模型与 Auto-CRUD',
+                'zh-CN': 'Zero-DDL 动态模型与 Auto-CRUD',
               },
               link: '/development/06-dynamic-models/',
             },
             {
-              label: '07. Authentication & Hierarchical RBAC',
+              label: 'Authentication & RBAC',
               translations: {
-                'zh-CN': '07. 认证安全与分级 RBAC',
+                'zh-CN': '认证安全与分级 RBAC',
               },
               link: '/development/07-auth-security/',
             },
             {
-              label: '08. Mutation Hooks Pipeline',
+              label: 'Mutation Hooks',
               translations: {
-                'zh-CN': '08. 生命周期突变钩子 (Mutation Hook)',
+                'zh-CN': '生命周期突变钩子',
               },
               link: '/development/08-mutation-hooks/',
             },
             {
-              label: '09. Admin Console Integration',
+              label: 'Admin Console',
               translations: {
-                'zh-CN': '09. 管理控制台与 postMessage 桥接',
+                'zh-CN': '管理控制台与 postMessage 桥接',
               },
               link: '/development/09-admin-integration/',
             },
             {
-              label: '10. Walkthrough: E-Commerce System',
+              label: 'Walkthrough: E-Commerce',
               translations: {
-                'zh-CN': '10. 综合实战：从零构建电商系统',
+                'zh-CN': '综合实战：构建电商系统',
               },
               link: '/development/10-walkthrough-shop/',
             },
             {
-              label: '11. Architecture Best Practices',
+              label: 'Best Practices',
               translations: {
-                'zh-CN': '11. 架构最佳实践与生产部署',
+                'zh-CN': '架构最佳实践与生产部署',
               },
               link: '/development/11-best-practices/',
             },

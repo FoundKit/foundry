@@ -1,15 +1,15 @@
 ---
-title: 09. Admin Console & postMessage SDK
+title: Admin Console & postMessage SDK
 description: Master Foundry's decoupled React Admin shell, subsystem custom page specifications, and postMessage token injection protocol.
 ---
 
-# 09. Admin Console & postMessage SDK
+# Admin Console & postMessage SDK
 
-> **Chapter Objectives**:
-> 1. Understand the decoupled Admin Console architecture (`apps/admin`);
-> 2. Declare custom admin navigation items via `custom_admin_pages`;
-> 3. Leverage automatic static file serving for sandboxed views;
-> 4. Use the `postMessage` protocol for JWT authentication and theme synchronization.
+This chapter covers:
+1. Understand the decoupled Admin Console architecture (`apps/admin`);
+2. Declare custom admin navigation items via `custom_admin_pages`;
+3. Leverage automatic static file serving for sandboxed views;
+4. Use the `postMessage` protocol for JWT authentication and theme synchronization.
 
 ---
 
@@ -61,4 +61,4 @@ window.addEventListener('message', (event) => {
 </script>
 ```
 
-Next chapter: [10. Hands-on Walkthrough: E-Commerce](./10-walkthrough-shop/)
+Next chapter: [Hands-on Walkthrough: E-Commerce](./10-walkthrough-shop/)

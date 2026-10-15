@@ -1,15 +1,15 @@
 ---
-title: 03. Controllers & Response Envelope
+title: Controllers & Response Envelope
 description: Write clean Axum controllers, extract request payloads, record structured logs, and return standardized ApiResponse and AppError envelopes.
 ---
 
-# 03. Controllers & Response Envelope
+# Controllers & Response Envelope
 
-> **Chapter Objectives**:
-> 1. Design and write thin async Axum controller handlers;
-> 2. Extract inputs with `Json`, `Query`, `Path`, and `Extension`;
-> 3. Master the unified `ApiResponse<T>` envelope;
-> 4. Understand automatic HTTP status code mapping with `AppError`.
+This chapter covers:
+1. Designing thin async Axum controller handlers
+2. Extracting inputs with `Json`, `Query`, `Path`, and `Extension`
+3. Mastering the unified `ApiResponse<T>` envelope
+4. Understanding automatic HTTP status code mapping with `AppError`
 
 ---
 
@@ -81,4 +81,4 @@ pub type AppResult<T> = Result<T, AppError>;
 | `AppError::Conflict(msg)` | Unique key constraint violation | `409 Conflict` |
 | `AppError::Database(msg)` | Storage driver error | `500 Internal Server Error` |
 
-Next chapter: [04. Request Validation & DTOs](./04-validation/)
+Next chapter: [Request Validation & DTOs](./04-validation/)

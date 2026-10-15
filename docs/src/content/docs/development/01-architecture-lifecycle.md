@@ -1,15 +1,15 @@
 ---
-title: 01. Architecture & Request Lifecycle
+title: Architecture & Request Lifecycle
 description: Deep dive into Foundry's decoupled platform architecture, bootstrapping process, FoundryApp Builder, and the full HTTP request lifecycle.
 ---
 
-# 01. Architecture & Request Lifecycle
+# Architecture & Request Lifecycle
 
-> **Chapter Objectives**:
-> 1. Understand Foundry's "framework-application complete decoupling" philosophy;
-> 2. Master application bootstrapping with `FoundryApp::builder()`;
-> 3. Trace an HTTP request through middleware, routing, controllers, validation, ORM, and hooks;
-> 4. Master component layering and separation of concerns.
+This chapter covers:
+1. Foundry's "framework-application complete decoupling" philosophy
+2. Application bootstrapping with `FoundryApp::builder()`
+3. Full HTTP request lifecycle tracing
+4. Component layering and separation of concerns
 
 ---
 
@@ -134,4 +134,4 @@ Your code gets access to:
 * **Structured Logging**: `info!`, `warn!`, `error!`, `debug!`, `trace!`
 * **Subsystems & Schemas**: `SubsystemModule`, `SystemContext`, `AppState`, `EntitySchema`, `ColumnDef`, `IndexDef`
 
-Next chapter: [02. Routing System & Namespaces](./02-routing/)
+Next chapter: [Routing System & Namespaces](./02-routing/)

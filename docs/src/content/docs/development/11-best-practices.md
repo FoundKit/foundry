@@ -3,13 +3,13 @@ title: 11. Architectural Best Practices & Production
 description: Production-grade architecture rules, connection pool tuning, cursor pagination, Redis caching, and Docker containerization deployment.
 ---
 
-# 11. Architectural Best Practices & Production
+# Architectural Best Practices & Production
 
-> **Chapter Objectives**:
-> 1. Adhere to Thin Controller / Fat Service conventions;
-> 2. Tune database connection pool sizes, index prefixes, and cursor pagination;
-> 3. Enforce production security policies and secrets hygiene;
-> 4. Deploy Foundry applications with multi-stage Dockerfiles and Docker Compose.
+This chapter covers:
+1. Adhere to Thin Controller / Fat Service conventions;
+2. Tune database connection pool sizes, index prefixes, and cursor pagination;
+3. Enforce production security policies and secrets hygiene;
+4. Deploy Foundry applications with multi-stage Dockerfiles and Docker Compose.
 
 ---
 

@@ -1,15 +1,15 @@
 ---
-title: 02. Routing System & Namespaces
+title: Routing System & Namespaces
 description: Master Foundry's unified namespace routing, subsystem extension routing, HTTP verb binding, and path parameter extraction.
 ---
 
-# 02. Routing System & Namespaces
+# Routing System & Namespaces
 
-> **Chapter Objectives**:
-> 1. Understand Foundry's global routing layout;
-> 2. Register custom business routes in `SubsystemModule`;
-> 3. Understand the distinction between `/ext/*` custom routes and Auto-CRUD routes;
-> 4. Bind HTTP methods and extract path parameters.
+This chapter covers:
+1. Foundry's global routing layout and unified namespace
+2. Registering custom business routes in `SubsystemModule`
+3. Understanding `/ext/*` custom routes vs Auto-CRUD routes
+4. Binding HTTP methods and extracting path parameters
 
 ---
 
@@ -111,4 +111,4 @@ pub async fn get_order_by_id(
 }
 ```
 
-Next chapter: [03. Controllers & Response Envelope](./03-controllers/)
+Next chapter: [Controllers & Response Envelope](./03-controllers/)

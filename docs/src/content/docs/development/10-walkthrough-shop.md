@@ -3,13 +3,13 @@ title: "10. Hands-on Walkthrough: E-Commerce System"
 description: Build a complete, production-grade e-commerce shop subsystem with validation, domain services, Code-First ORM, unified responses, and tests.
 ---
 
-# 10. Hands-on Walkthrough: E-Commerce System
+# Hands-on Walkthrough: E-Commerce System
 
-> **Chapter Objectives**:
-> 1. Connect all foundational concepts in a real-world e-commerce shop implementation;
-> 2. Implement input validation, business pricing calculations, and ORM persistence;
-> 3. Verify endpoints using `curl`;
-> 4. Write an automated end-to-end integration test with `axum-test`.
+This chapter covers:
+1. Connect all foundational concepts in a real-world e-commerce shop implementation;
+2. Implement input validation, business pricing calculations, and ORM persistence;
+3. Verify endpoints using `curl`;
+4. Write an automated end-to-end integration test with `axum-test`.
 
 ---
 
@@ -176,4 +176,4 @@ curl -X POST http://127.0.0.1:8080/api/v1/s/shop/ext/orders \
 # {"code":0,"message":"success","data":{"id":1729000000000,"order_no":"ORD-...","customer_name":"Alice","total_amount":198.0,"status":"pending"},"meta":null}
 ```
 
-Next chapter: [11. Architectural Best Practices & Production](./11-best-practices/)
+Next chapter: [Architectural Best Practices & Production](./11-best-practices/)
