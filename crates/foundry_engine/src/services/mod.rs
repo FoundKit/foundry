@@ -16,6 +16,8 @@ pub struct PlatformLoginSettings {
     pub login_email_template: String,
     #[serde(default)]
     pub smtp_configured: bool,
+    #[serde(default)]
+    pub super_admin_has_logged_in: bool,
 }
 
 impl Default for PlatformLoginSettings {
@@ -26,6 +28,7 @@ impl Default for PlatformLoginSettings {
             login_email_subject: "【Foundry】登录验证码".to_string(),
             login_email_template: "您的登录验证码是：{code}，5分钟内有效。请勿将验证码泄露给他人。如非本人操作请忽略。".to_string(),
             smtp_configured: false,
+            super_admin_has_logged_in: false,
         }
     }
 }
@@ -64,6 +67,11 @@ pub async fn get_platform_login_settings(db: &Database) -> PlatformLoginSettings
                         .filter(|s| !s.trim().is_empty())
                     {
                         settings.login_email_template = v;
+                    }
+                }
+                "super_admin_has_logged_in" => {
+                    if let Some(v) = cfg.value.and_then(|v| v.as_bool()) {
+                        settings.super_admin_has_logged_in = v;
                     }
                 }
                 _ => {}
@@ -156,5 +164,25 @@ pub async fn save_platform_login_settings(
         )
         .await?;
 
+    if settings.super_admin_has_logged_in {
+        let _ = mark_super_admin_logged_in(db).await;
+    }
+
+    Ok(())
+}
+
+/// Mark that a super admin has logged in, so initial credentials hint is permanently disabled
+pub async fn mark_super_admin_logged_in(db: &Database) -> AppResult<()> {
+    db.configs()
+        .upsert(
+            "_platform",
+            "super_admin_has_logged_in",
+            "超级管理员已登录过",
+            "boolean",
+            Some(serde_json::Value::Bool(true)),
+            serde_json::json!({}),
+            10,
+        )
+        .await?;
     Ok(())
 }

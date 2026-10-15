@@ -1,13 +1,13 @@
 use crate::services::{
     PlatformLoginSettings, VerificationService, get_platform_login_settings, is_smtp_configured,
-    save_platform_login_settings, send_email,
+    mark_super_admin_logged_in, save_platform_login_settings, send_email,
 };
 use crate::state::AppState;
 use axum::{
     Json,
     extract::{Extension, State},
 };
-use foundry_auth::{AdminClaims, verify_password};
+use foundry_auth::{AdminClaims, hash_password, verify_password};
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,7 @@ use validator::Validate;
 pub struct PublicAuthSettingsResponse {
     pub enable_password_login: bool,
     pub enable_email_login: bool,
+    pub show_default_admin_hint: bool,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -55,6 +56,21 @@ pub struct VerifyBindEmailRequest {
     pub code: String,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct ChangePasswordRequest {
+    #[validate(length(
+        min = 1,
+        message = "当前密码不能为空 (Current password cannot be empty)"
+    ))]
+    pub old_password: String,
+    #[validate(length(
+        min = 6,
+        max = 72,
+        message = "新密码长度必须在 6-72 个字符之间 (New password length must be between 6 and 72 characters)"
+    ))]
+    pub new_password: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
     pub token: String,
@@ -68,17 +84,44 @@ pub struct AdminProfile {
     pub email: Option<String>,
     pub role: String,
     pub allowed_systems: serde_json::Value,
+    pub is_initial_password: bool,
 }
 
-/// GET /api/v1/admin/auth/settings (Public auth configuration: which login methods are enabled)
+fn to_admin_profile(admin: &foundry_storage::AdminEntity) -> AdminProfile {
+    let is_initial = verify_password("admin123456", &admin.password_hash).unwrap_or(false);
+    AdminProfile {
+        id: admin.id,
+        username: admin.username.clone(),
+        email: admin.email.clone(),
+        role: admin.role.clone(),
+        allowed_systems: admin.allowed_systems.clone(),
+        is_initial_password: is_initial,
+    }
+}
+
+/// GET /api/v1/admin/auth/settings (Public auth configuration: which login methods are enabled and whether initial admin hint should be shown)
 pub async fn public_auth_settings_handler(
     State(state): State<AppState>,
 ) -> AppResult<Json<ApiResponse<PublicAuthSettingsResponse>>> {
     let settings = get_platform_login_settings(&state.db).await;
     let enable_email_login = settings.enable_email_login && is_smtp_configured();
+
+    let show_default_admin_hint = if settings.super_admin_has_logged_in {
+        false
+    } else {
+        match state.db.admins().get_by_username("admin").await {
+            Ok(admin) => {
+                admin.role == "super_admin"
+                    && verify_password("admin123456", &admin.password_hash).unwrap_or(false)
+            }
+            Err(_) => false,
+        }
+    };
+
     Ok(Json(ApiResponse::success(PublicAuthSettingsResponse {
         enable_password_login: settings.enable_password_login,
         enable_email_login,
+        show_default_admin_hint,
     })))
 }
 
@@ -115,6 +158,10 @@ pub async fn login_handler(
         ));
     }
 
+    if admin.role == "super_admin" {
+        let _ = mark_super_admin_logged_in(&state.db).await;
+    }
+
     let allowed: Vec<String> =
         serde_json::from_value(admin.allowed_systems.clone()).unwrap_or_default();
 
@@ -122,13 +169,7 @@ pub async fn login_handler(
         .jwt
         .generate_token(admin.id, &admin.username, &admin.role, allowed)?;
 
-    let profile = AdminProfile {
-        id: admin.id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-        allowed_systems: admin.allowed_systems,
-    };
+    let profile = to_admin_profile(&admin);
 
     Ok(Json(ApiResponse::success(LoginResponse {
         token,
@@ -222,6 +263,10 @@ pub async fn email_login_handler(
         return Err(AppError::Forbidden("Account has been disabled".to_string()));
     }
 
+    if admin.role == "super_admin" {
+        let _ = mark_super_admin_logged_in(&state.db).await;
+    }
+
     let allowed: Vec<String> =
         serde_json::from_value(admin.allowed_systems.clone()).unwrap_or_default();
 
@@ -229,13 +274,7 @@ pub async fn email_login_handler(
         .jwt
         .generate_token(admin.id, &admin.username, &admin.role, allowed)?;
 
-    let profile = AdminProfile {
-        id: admin.id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-        allowed_systems: admin.allowed_systems,
-    };
+    let profile = to_admin_profile(&admin);
 
     Ok(Json(ApiResponse::success(LoginResponse {
         token,
@@ -325,15 +364,7 @@ pub async fn verify_bind_email_handler(
         .update(claims.sub, Some(email), None, None, None, None)
         .await?;
 
-    let profile = AdminProfile {
-        id: admin.id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-        allowed_systems: admin.allowed_systems,
-    };
-
-    Ok(Json(ApiResponse::success(profile)))
+    Ok(Json(ApiResponse::success(to_admin_profile(&admin))))
 }
 
 /// GET /api/v1/admin/platform/login-settings (Protected: Super Admin view platform login settings)
@@ -377,14 +408,44 @@ pub async fn me_handler(
     Extension(claims): Extension<AdminClaims>,
 ) -> AppResult<Json<ApiResponse<AdminProfile>>> {
     let admin = state.db.admins().get_by_id(claims.sub).await?;
+    Ok(Json(ApiResponse::success(to_admin_profile(&admin))))
+}
 
-    let profile = AdminProfile {
-        id: admin.id,
-        username: admin.username,
-        email: admin.email,
-        role: admin.role,
-        allowed_systems: admin.allowed_systems,
-    };
+/// PUT /api/v1/admin/auth/password (Protected: current administrator changes own password)
+pub async fn change_password_handler(
+    State(state): State<AppState>,
+    Extension(claims): Extension<AdminClaims>,
+    Json(payload): Json<ChangePasswordRequest>,
+) -> AppResult<Json<ApiResponse<AdminProfile>>> {
+    payload.validate()?;
 
-    Ok(Json(ApiResponse::success(profile)))
+    if payload.old_password == payload.new_password {
+        return Err(AppError::Validation(
+            "新密码不能与原密码相同 (New password cannot be the same as the current password)"
+                .to_string(),
+        ));
+    }
+
+    let admin = state.db.admins().get_by_id(claims.sub).await?;
+
+    let is_valid = verify_password(&payload.old_password, &admin.password_hash)?;
+    if !is_valid {
+        return Err(AppError::Unauthorized(
+            "原密码错误，请重新输入 (Incorrect current password)".to_string(),
+        ));
+    }
+
+    let new_hash = hash_password(&payload.new_password)?;
+
+    let updated = state
+        .db
+        .admins()
+        .update(claims.sub, None, Some(&new_hash), None, None, None)
+        .await?;
+
+    if updated.role == "super_admin" {
+        let _ = mark_super_admin_logged_in(&state.db).await;
+    }
+
+    Ok(Json(ApiResponse::success(to_admin_profile(&updated))))
 }

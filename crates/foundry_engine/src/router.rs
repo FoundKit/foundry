@@ -21,6 +21,7 @@ pub fn build_router(state: AppState) -> Router {
 
     let admin_protected_routes = Router::new()
         .route("/auth/me", get(auth::me_handler))
+        .route("/auth/password", put(auth::change_password_handler))
         .route(
             "/auth/bind-email/send-code",
             post(auth::send_bind_email_code_handler),

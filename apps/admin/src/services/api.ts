@@ -74,6 +74,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  changePassword: (data: { old_password: string; new_password: string }) =>
+    request<AdminProfile>(ADMIN_API_BASE, '/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   me: () => request<AdminProfile>(ADMIN_API_BASE, '/auth/me'),
 
   // Platform Login Settings (Super Admin Only)
@@ -187,6 +192,11 @@ export const api = {
   createAdmin: (data: any) =>
     request<AdminProfile>(ADMIN_API_BASE, '/admins', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateAdmin: (id: string, data: any) =>
+    request<AdminProfile>(ADMIN_API_BASE, `/admins/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 

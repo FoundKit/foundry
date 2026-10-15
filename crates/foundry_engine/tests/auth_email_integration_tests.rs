@@ -131,6 +131,7 @@ async fn test_platform_settings_validation_rules() {
         login_email_subject: "主题".to_string(),
         login_email_template: "验证码: {code}".to_string(),
         smtp_configured: false,
+        super_admin_has_logged_in: false,
     };
     let res = save_platform_login_settings(&db, &invalid_both_false).await;
     assert!(res.is_err());
@@ -147,6 +148,7 @@ async fn test_platform_settings_validation_rules() {
         login_email_subject: "主题".to_string(),
         login_email_template: "验证码内容没有占位符".to_string(),
         smtp_configured: false,
+        super_admin_has_logged_in: false,
     };
     let res = save_platform_login_settings(&db, &invalid_template).await;
     assert!(res.is_err());
@@ -160,6 +162,7 @@ async fn test_platform_settings_validation_rules() {
         login_email_subject: "主题".to_string(),
         login_email_template: "验证码: {code}".to_string(),
         smtp_configured: false,
+        super_admin_has_logged_in: false,
     };
     let res = save_platform_login_settings(&db, &invalid_smtp).await;
     foundry_engine::services::set_smtp_configured_override_for_test(None);
@@ -238,6 +241,7 @@ async fn test_smtp_configuration_lifecycle() {
         login_email_subject: "【测试】登录验证码".to_string(),
         login_email_template: "验证码: {code}".to_string(),
         smtp_configured: true,
+        super_admin_has_logged_in: false,
     };
     let res = save_platform_login_settings(&db, &valid_settings).await;
     // Validation passes when SMTP is configured (any error here is from dummy DB pool, not validation)
@@ -253,4 +257,86 @@ async fn test_smtp_configuration_lifecycle() {
         Err(foundry_core::error::AppError::Validation(ref msg)) if msg.contains("SMTP 邮件服务未配置")
     ));
     foundry_engine::services::set_smtp_configured_override_for_test(None);
+}
+
+#[tokio::test]
+async fn test_change_password_endpoint_auth_required() {
+    let state = dummy_app_state();
+    let app = build_router(state);
+
+    let payload = serde_json::json!({
+        "old_password": "admin123456",
+        "new_password": "new_secret_password"
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/v1/admin/auth/password")
+                .header("Content-Type", "application/json")
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_change_password_endpoint_validation_rules() {
+    let state = dummy_app_state();
+    let app = build_router(state.clone());
+
+    let token = state
+        .jwt
+        .generate_token(
+            uuid::Uuid::new_v4(),
+            "admin",
+            "super_admin",
+            vec!["*".to_string()],
+        )
+        .unwrap();
+
+    // 1. Password too short (< 6 chars)
+    let payload_short = serde_json::json!({
+        "old_password": "admin123456",
+        "new_password": "123"
+    });
+
+    let res_short = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/v1/admin/auth/password")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", token))
+                .body(Body::from(serde_json::to_vec(&payload_short).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res_short.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+    // 2. Same password as old
+    let payload_same = serde_json::json!({
+        "old_password": "admin123456",
+        "new_password": "admin123456"
+    });
+
+    let res_same = app
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/v1/admin/auth/password")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", token))
+                .body(Body::from(serde_json::to_vec(&payload_same).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res_same.status(), StatusCode::UNPROCESSABLE_ENTITY);
 }

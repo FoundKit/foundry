@@ -41,7 +41,21 @@
     "username": "Username",
     "password": "Password",
     "sign_in": "Sign In",
-    "login_failed": "Login failed. Please check your credentials."
+    "login_failed": "Login failed. Please check your credentials.",
+    "change_password": "Change Password",
+    "old_password": "Current Password",
+    "new_password": "New Password",
+    "confirm_new_password": "Confirm New Password",
+    "password_changed_success": "Password changed successfully",
+    "initial_password_warning": "You are currently using the default initial password, which poses a security risk. Please change your password as soon as possible!",
+    "initial_password_prompt_title": "Security Notice: Change Initial Password",
+    "initial_password_prompt_desc": "The system detected that your account is still using the default initial password (admin123456). For system and data security, please set a new password now.",
+    "passwords_do_not_match": "New passwords do not match",
+    "password_too_short": "New password must be at least 6 characters",
+    "password_cannot_be_same": "New password cannot be the same as current password",
+    "reset_password": "Reset Password",
+    "reset_password_for": "Reset Password for Admin",
+    "reset_password_success": "Admin password reset successfully"
   },
   "systems": {
     "title": "Sub-Systems Management",

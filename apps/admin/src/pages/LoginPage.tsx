@@ -28,8 +28,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [activeTab, setActiveTab] = useState<'password' | 'email'>('password');
 
   // Password login form state
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123456');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   // Email login form state
   const [email, setEmail] = useState('');
@@ -51,6 +51,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           setActiveTab('email');
         } else {
           setActiveTab('password');
+        }
+        if (settings.show_default_admin_hint) {
+          setUsername((prev) => prev || 'admin');
+          setPassword((prev) => prev || 'admin123456');
         }
       })
       .catch((err) => {
@@ -305,22 +309,38 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           {/* Footer note */}
           <div className="mt-6 border-t border-slate-100 pt-4 text-center dark:border-slate-800/80">
-            {authSettings.enable_password_login ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Default Super Admin:{' '}
-                <code className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                  admin
-                </code>{' '}
-                /{' '}
-                <code className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                  admin123456
-                </code>
-              </p>
-            ) : (
+            {!authSettings.enable_password_login ? (
               <p className="text-xs text-amber-600 dark:text-amber-400">
                 ⚠️ 当前系统已关闭账号密码登录，请使用已绑定的有效管理员邮箱接收验证码登录。
               </p>
-            )}
+            ) : authSettings.show_default_admin_hint ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Default Super Admin:{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsername('admin');
+                    setPassword('admin123456');
+                  }}
+                  className="font-mono font-medium text-emerald-600 underline-offset-2 hover:underline dark:text-emerald-400"
+                  title="点击填入"
+                >
+                  admin
+                </button>{' '}
+                /{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsername('admin');
+                    setPassword('admin123456');
+                  }}
+                  className="font-mono font-medium text-emerald-600 underline-offset-2 hover:underline dark:text-emerald-400"
+                  title="点击填入"
+                >
+                  admin123456
+                </button>
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

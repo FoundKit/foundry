@@ -19,6 +19,7 @@ pub fn resolve_action_name(method: &Method, path: &str) -> &'static str {
     match (method.as_str(), path) {
         ("POST", p) if p.ends_with("/auth/login") => "管理员登录",
         ("POST", p) if p.ends_with("/auth/logout") => "管理员登出",
+        ("PUT", p) if p.ends_with("/auth/password") => "修改管理员密码",
         ("POST", "/api/v1/admin/admins") => "新增管理员",
         ("PUT", p) if p.starts_with("/api/v1/admin/admins/") => "修改管理员信息",
         ("POST", "/api/v1/admin/systems") => "创建子系统",
@@ -137,6 +138,10 @@ mod tests {
         assert_eq!(
             resolve_action_name(&Method::POST, "/api/v1/admin/auth/login"),
             "管理员登录"
+        );
+        assert_eq!(
+            resolve_action_name(&Method::PUT, "/api/v1/admin/auth/password"),
+            "修改管理员密码"
         );
         assert_eq!(
             resolve_action_name(&Method::POST, "/api/v1/admin/admins"),

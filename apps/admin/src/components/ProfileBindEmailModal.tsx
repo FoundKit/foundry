@@ -10,6 +10,7 @@ interface ProfileBindEmailModalProps {
   onClose: () => void;
   admin: AdminProfile;
   onAdminUpdated: (updated: AdminProfile) => void;
+  onOpenChangePassword?: () => void;
 }
 
 export function ProfileBindEmailModal({
@@ -17,6 +18,7 @@ export function ProfileBindEmailModal({
   onClose,
   admin,
   onAdminUpdated,
+  onOpenChangePassword,
 }: ProfileBindEmailModalProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -150,6 +152,33 @@ export function ProfileBindEmailModal({
                 <span>暂未绑定邮箱（无法使用邮箱登录）</span>
               </span>
             )}
+          </div>
+
+          <div className="mt-2.5 flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-xs dark:border-slate-800/80">
+            <span className="text-slate-500 dark:text-slate-400">账号登录密码：</span>
+            <div className="flex items-center gap-2">
+              {admin.is_initial_password ? (
+                <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                  初始默认密码
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  已设置自定义密码
+                </span>
+              )}
+              {onOpenChangePassword && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenChangePassword();
+                  }}
+                  className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
+                >
+                  {t('auth.change_password')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

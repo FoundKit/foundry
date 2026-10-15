@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, UserPlus, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { AdminProfile, SystemItem } from '../types';
@@ -22,6 +22,14 @@ export function AdminsPage({ systems }: AdminsPageProps) {
   const [role, setRole] = useState<'super_admin' | 'admin' | 'topic_admin'>('topic_admin');
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset Password Modal
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [resetTarget, setResetTarget] = useState<AdminProfile | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
   const loadAdmins = async () => {
     setLoading(true);
@@ -72,6 +80,33 @@ export function AdminsPage({ systems }: AdminsPageProps) {
       loadAdmins();
     } catch (err: any) {
       setError(err.message || 'Failed to create admin');
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    if (resetPassword.length < 6) {
+      setResetError(t('auth.password_too_short'));
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      await api.updateAdmin(resetTarget.id, { password: resetPassword });
+      setResetSuccess(t('auth.reset_password_success'));
+      setTimeout(() => {
+        setIsResetOpen(false);
+        setResetTarget(null);
+        setResetPassword('');
+        setResetSuccess(null);
+      }, 1200);
+      loadAdmins();
+    } catch (err: any) {
+      setResetError(err.message || '重置密码失败');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -135,6 +170,7 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               <th className="px-6 py-4">Email</th>
               <th className="px-6 py-4">{t('admins.role')}</th>
               <th className="px-6 py-4">{t('admins.allowed_systems')}</th>
+              <th className="px-6 py-4 text-right">{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs dark:divide-slate-800/60">
@@ -179,11 +215,27 @@ export function AdminsPage({ systems }: AdminsPageProps) {
                     </div>
                   )}
                 </td>
+                <td className="px-6 py-4 text-right">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setResetTarget(adm);
+                      setResetPassword('');
+                      setResetError(null);
+                      setResetSuccess(null);
+                      setIsResetOpen(true);
+                    }}
+                  >
+                    <KeyRound className="mr-1 h-3.5 w-3.5" />
+                    <span>{t('auth.reset_password')}</span>
+                  </Button>
+                </td>
               </tr>
             ))}
             {admins.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-500 dark:text-slate-400">
+                <td colSpan={5} className="py-8 text-center text-slate-500 dark:text-slate-400">
                   {loading ? t('common.loading') : 'No administrators registered.'}
                 </td>
               </tr>
@@ -294,6 +346,53 @@ export function AdminsPage({ systems }: AdminsPageProps) {
               {t('common.cancel')}
             </Button>
             <Button type="submit">{t('common.confirm')}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Reset Admin Password */}
+      <Modal
+        isOpen={isResetOpen}
+        onClose={() => setIsResetOpen(false)}
+        title={`${t('auth.reset_password_for')}: ${resetTarget?.username || ''}`}
+      >
+        {resetError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-800/60 dark:bg-rose-950/60 dark:text-rose-300">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{resetError}</span>
+          </div>
+        )}
+        {resetSuccess && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/60 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{resetSuccess}</span>
+          </div>
+        )}
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+              {t('auth.new_password')}
+            </label>
+            <Input
+              type="password"
+              required
+              placeholder="至少 6 位新密码"
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              className="font-mono"
+            />
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              * 超级管理员重置后，该管理员需使用新密码登录。
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setIsResetOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={resetLoading || !resetPassword}>
+              {resetLoading ? t('common.loading') : t('common.confirm')}
+            </Button>
           </div>
         </form>
       </Modal>

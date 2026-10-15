@@ -11,6 +11,7 @@ export interface AdminProfile {
   email?: string;
   role: 'super_admin' | 'admin' | 'topic_admin';
   allowed_systems: string[];
+  is_initial_password?: boolean;
 }
 
 export interface SystemItem {
@@ -70,6 +71,7 @@ export interface CustomAdminPageItem {
 export interface PublicAuthSettings {
   enable_password_login: boolean;
   enable_email_login: boolean;
+  show_default_admin_hint?: boolean;
 }
 
 export interface PlatformLoginSettings {
@@ -78,6 +80,7 @@ export interface PlatformLoginSettings {
   login_email_subject: string;
   login_email_template: string;
   smtp_configured?: boolean;
+  super_admin_has_logged_in?: boolean;
 }
 
 export interface RouteState {

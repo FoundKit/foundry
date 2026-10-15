@@ -41,7 +41,21 @@
     "username": "管理员账号",
     "password": "密码",
     "sign_in": "立即登录",
-    "login_failed": "登录失败，请检查账号密码"
+    "login_failed": "登录失败，请检查账号密码",
+    "change_password": "修改密码",
+    "old_password": "原密码",
+    "new_password": "新密码",
+    "confirm_new_password": "确认新密码",
+    "password_changed_success": "密码修改成功",
+    "initial_password_warning": "您当前正在使用初始默认密码，存在较高安全隐患，请尽快修改密码！",
+    "initial_password_prompt_title": "安全提醒：请修改初始密码",
+    "initial_password_prompt_desc": "系统检测到您当前账号仍在使用初始默认密码（admin123456）。为了确保系统与业务数据安全，请立即设置新密码。",
+    "passwords_do_not_match": "两次输入的新密码不一致",
+    "password_too_short": "新密码长度至少需要 6 个字符",
+    "password_cannot_be_same": "新密码不能与原密码相同",
+    "reset_password": "重置密码",
+    "reset_password_for": "重置管理员密码",
+    "reset_password_success": "管理员密码重置成功"
   },
   "systems": {
     "title": "专题/子系统管理",

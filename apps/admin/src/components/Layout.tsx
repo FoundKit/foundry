@@ -17,11 +17,14 @@ import {
   Settings,
   Sparkles,
   Mail,
+  KeyRound,
+  AlertTriangle,
 } from 'lucide-react';
 import { AdminProfile, CustomAdminPageItem, RouteState, SystemItem } from '../types';
 import { api } from '../services/api';
 import { ThemeToggle } from './ThemeToggle';
 import { ProfileBindEmailModal } from './ProfileBindEmailModal';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface LayoutProps {
   route: RouteState;
@@ -57,6 +60,16 @@ export function Layout({
   const { t, i18n } = useTranslation();
   const [customPages, setCustomPages] = useState<CustomAdminPageItem[]>([]);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isInitialPasswordPrompt, setIsInitialPasswordPrompt] = useState(false);
+
+  // Automatically trigger change password modal when admin is using initial password
+  useEffect(() => {
+    if (admin.is_initial_password) {
+      setIsInitialPasswordPrompt(true);
+      setIsChangePasswordOpen(true);
+    }
+  }, [admin.id, admin.is_initial_password]);
 
   useEffect(() => {
     if (currentSystem?.slug) {
@@ -229,6 +242,17 @@ export function Layout({
               </div>
             </button>
             <button
+              type="button"
+              onClick={() => {
+                setIsInitialPasswordPrompt(false);
+                setIsChangePasswordOpen(true);
+              }}
+              title={t('auth.change_password')}
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <KeyRound className="h-4 w-4" />
+            </button>
+            <button
               onClick={onLogout}
               title={t('app.logout')}
               className="ml-1 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800 dark:hover:text-rose-400"
@@ -375,7 +399,31 @@ export function Layout({
 
         {/* Content View */}
         <main className="flex-1 overflow-y-auto bg-slate-50 p-8 dark:bg-slate-950">
-          <div className="mx-auto max-w-7xl">{children}</div>
+          <div className="mx-auto max-w-7xl">
+            {/* Warning banner when admin is still using default initial password */}
+            {admin.is_initial_password && (
+              <div className="shadow-xs mb-6 flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/60 dark:text-amber-200">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>
+                    <strong>{t('auth.initial_password_prompt_title')}：</strong>
+                    {t('auth.initial_password_warning')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInitialPasswordPrompt(true);
+                    setIsChangePasswordOpen(true);
+                  }}
+                  className="shrink-0 font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+                >
+                  {t('auth.change_password')} &rarr;
+                </button>
+              </div>
+            )}
+            {children}
+          </div>
         </main>
       </div>
 
@@ -389,6 +437,26 @@ export function Layout({
             onAdminUpdated(updated);
           }
         }}
+        onOpenChangePassword={() => {
+          setIsInitialPasswordPrompt(false);
+          setIsChangePasswordOpen(true);
+        }}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => {
+          setIsChangePasswordOpen(false);
+          setIsInitialPasswordPrompt(false);
+        }}
+        admin={admin}
+        onAdminUpdated={(updated) => {
+          if (onAdminUpdated) {
+            onAdminUpdated(updated);
+          }
+        }}
+        isInitialPrompt={isInitialPasswordPrompt}
       />
     </div>
   );
