@@ -1,6 +1,6 @@
 ---
 title: 05. 数据库配置与 Code-First ORM
-description: 掌握 Foundry 多数据库 SPI 架构、Code-First 实体模型定义、ThinkPHP 风格链式查询构造器与数据库平滑迁移工作流。
+description: 掌握 Foundry 多数据库 SPI 架构、Code-First 实体模型定义、链式查询构造器与数据库平滑迁移工作流。
 ---
 
 # 05. 数据库配置与 Code-First ORM
@@ -8,14 +8,12 @@ description: 掌握 Foundry 多数据库 SPI 架构、Code-First 实体模型定
 > **本章目标**：
 > 1. 理解 Foundry 多数据库 SPI 插件化架构与连接配置；
 > 2. 学会在子系统中通过代码优先（Code-First）定义实体表结构与索引；
-> 3. 熟练运用 ThinkPHP 风格的链式 ORM 查询构造器进行增删改查；
+> 3. 熟练运用链式 ORM 查询构造器进行增删改查；
 > 4. 掌握软删除（Soft Delete）与全自动数据库迁移（Migrations）。
 
 ---
 
 ## 1. 多数据库 SPI 架构与连接配置
-
-在 ThinkPHP 中，我们通过 `config/database.php` 配置不同的数据库连接。
 
 Foundry 采用现代的 **SPI (Service Provider Interface) 存储架构**，底层网络驱动彻底封装，对业务层零泄漏。统一通过根目录下的 `.env` 声明：
 
@@ -88,16 +86,16 @@ impl SubsystemModule for ShopSubsystem {
 
 ---
 
-## 3. ThinkPHP 风格的链式查询构造器
+## 3. 链式查询构造器 (ORM Query Builder)
 
-对于熟悉 ThinkPHP `Db::table('...')->where(...)->select()` 的开发者，Foundry 提供了完全自适应各数据库方言（自动替换 `$1` 与 `?` 参数占位符）的链式构造器：
+Foundry 提供了完全自适应各数据库方言（自动替换 `$1` 与 `?` 参数占位符）的强类型链式构造器：
 
 ### 3.1 链式查询 (`OrmSelect`)
 
 ```rust
 use foundry::prelude::*;
 
-// 1. 链式分页查询 (类似 Db::name('shop_orders')->whereNull('deleted_at')->select())
+// 1. 链式分页查询 (自动过滤软删除)
 let (sql, binds) = OrmSelect::from_table("shop_orders")
     .column("id")
     .column("order_no")
@@ -120,7 +118,6 @@ let (sql, binds) = OrmSelect::from_table("shop_orders")
 ### 3.2 链式插入 (`OrmInsert`)
 
 ```rust
-// 类似 Db::name('shop_orders')->insert($data)
 let (insert_sql, binds) = OrmInsert::into_table("shop_orders")
     .value("system_id", "shop")
     .value("order_no", "ORD-20261015-001")
@@ -134,7 +131,6 @@ let (insert_sql, binds) = OrmInsert::into_table("shop_orders")
 ### 3.3 链式更新 (`OrmUpdate`)
 
 ```rust
-// 类似 Db::name('shop_orders')->where('order_no', '...')->update(['status' => 'paid'])
 let (update_sql, binds) = OrmUpdate::into_table("shop_orders")
     .set("status", "paid")
     .set_now("updated_at")

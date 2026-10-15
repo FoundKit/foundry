@@ -13,9 +13,7 @@ description: 掌握 Foundry 强类型参数验证器 (DTO) 设计、validator �
 
 ---
 
-## 1. 验证器设计理念 (对比 ThinkPHP Validate)
-
-在 ThinkPHP 8.0 中，通常通过继承 `think\Validate` 类来声明字段规则（如 `protected $rule = ['name' => 'require|max:25', ...];`）。
+## 1. 验证器设计理念与防御性编程
 
 Foundry 将数据验证直接与 Rust 的强类型系统深度绑定：
 * **编译期强类型**：通过 `#[derive(Deserialize, Validate)]` 在 DTO 结构体字段上直接声明验证规则；

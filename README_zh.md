@@ -296,7 +296,7 @@ foundry validate
 
 - 🌐 [官方文档站点](https://foundkit.github.io/foundry/zh/)
 - 📘 [快速入门指南 (5 分钟极简起步)](docs/src/content/docs/zh/getting-started.md)
-- 🚀 [系统开发核心教程 (ThinkPHP 风格模块化手册)](docs/src/content/docs/zh/development/index.md)
+- 🚀 [系统开发核心教程 (模块化开发手册)](docs/src/content/docs/zh/development/index.md)
 - 🏗️ [架构设计蓝图](docs/src/content/docs/zh/architecture/blueprint.md)
 - 💾 [数据库配置与 Code-First ORM](docs/src/content/docs/zh/development/05-database-orm.md)
 - ✉️ [邮件服务与验证码中心](docs/src/content/docs/zh/guides/email-verification.md)

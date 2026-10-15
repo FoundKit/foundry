@@ -9,15 +9,13 @@ description: Deep dive into Foundry's decoupled platform architecture, bootstrap
 > 1. Understand Foundry's "framework-application complete decoupling" philosophy;
 > 2. Master application bootstrapping with `FoundryApp::builder()`;
 > 3. Trace an HTTP request through middleware, routing, controllers, validation, ORM, and hooks;
-> 4. Establish conceptual parity with ThinkPHP 8.0, Laravel, and Spring Boot.
+> 4. Master component layering and separation of concerns.
 
 ---
 
-## 1. Architectural Philosophy (ThinkPHP vs. Foundry)
+## 1. Architectural Layering
 
-In ThinkPHP 8.0, applications use Container, Facade, Service Providers, and Middleware to achieve separation of concerns.
-
-Foundry expresses these patterns with Rust's memory safety and concurrency primitives:
+Foundry leverages Rust's memory safety and high-concurrency runtime to partition systems into a framework layer and an application layer:
 
 ```text
 Foundry Framework Layer (crates/foundry, crates/foundry_core, crates/foundry_engine...)
@@ -25,25 +23,25 @@ Foundry Framework Layer (crates/foundry, crates/foundry_core, crates/foundry_eng
     │  Consumed via standard Cargo dependency
     ▼
 User Application (Standalone Git Repository)
-    ├── src/main.rs             # Application entry point (equivalent to public/index.php)
-    └── src/systems/            # Domain subsystems (equivalent to app/ directory)
+    ├── src/main.rs             # Bootstrapping & service launch entry point
+    └── src/systems/            # Domain subsystems directory
         ├── shop/               # E-commerce subsystem (controllers, logic, DTOs, custom admin UI)
         └── billing/            # Billing subsystem
 ```
 
-### Concept Comparison
+### Component Responsibility Table
 
-| ThinkPHP 8.0 Concept | Foundry Equivalent | Description |
+| Component | Foundry Implementation | Description & Responsibility |
 |---|---|---|
-| **Entry File (`public/index.php`)** | **`src/main.rs` (`#[foundry::main]`)** | Bootstrapping entry point, reads `.env`, invokes `FoundryApp::builder()` |
-| **Application Module (`app/`)** | **Subsystem (`SubsystemModule`)** | High-cohesion, self-contained business domain package |
-| **Facade (`Facade`)** | **`use foundry::prelude::*;`** | Re-exports standard primitives, extractors, and macros |
-| **Container / DI (`Container`)** | **`Extension<SystemContext>` / `AppState`** | State injection with zero runtime reflection overhead |
-| **Route Definition (`Route::rule`)** | **`SubsystemModule::register_routes`** | Mounted automatically under subsystem namespace |
-| **Controller (`Controller`)** | **Axum Handler Function** | Async function extracting params and returning `ApiResponse` |
-| **Validator (`Validate`)** | **`#[derive(Validate)]` DTO** | Compile-time validation annotations, rejecting malformed input |
-| **Query Builder (`Db::name`)** | **`EntitySchema` / `OrmSelect`** | Code-First schemas and dialect-adaptive query builders |
-| **Model Events (`Event / Hook`)** | **`MutationHook` Pipeline** | Lifecycle pre/post mutation hooks (`before_create`, `after_create`) |
+| **Application Entry Point** | **`src/main.rs` (`#[foundry::main]`)** | Bootstrapping entry point, reads `.env`, invokes `FoundryApp::builder()` |
+| **Business Subsystem** | **`SubsystemModule` trait** | High-cohesion, self-contained business domain package |
+| **Unified Facade** | **`use foundry::prelude::*;`** | Re-exports standard primitives, extractors, and macros |
+| **State Injection** | **`Extension<SystemContext>` / `AppState`** | State injection with zero runtime reflection overhead |
+| **Route Registration** | **`SubsystemModule::register_routes`** | Mounted automatically under subsystem namespace |
+| **Controller Handlers** | **Axum Handler Function** | Async function extracting params and returning `ApiResponse` |
+| **Request Validator** | **`#[derive(Validate)]` DTO** | Compile-time validation annotations, rejecting malformed input |
+| **ORM Schemas & Queries** | **`EntitySchema` / `OrmSelect`** | Code-First schemas and dialect-adaptive query builders |
+| **Lifecycle Hooks** | **`MutationHook` Pipeline** | Lifecycle pre/post mutation hooks (`before_create`, `after_create`) |
 
 ---
 
@@ -91,7 +89,7 @@ sequenceDiagram
 
 ## 3. Application Bootstrapping (`main.rs`)
 
-Similar to how ThinkPHP instantiates `think\App`, Foundry uses a fluent Builder API:
+Foundry uses a fluent Builder API to configure and start services:
 
 ```rust
 // src/main.rs

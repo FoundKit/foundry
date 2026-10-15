@@ -1,11 +1,9 @@
 ---
 title: 系统开发教程总览与学习路线
-description: 参考 ThinkPHP 8.0 架构思想的 Foundry 系统开发完全教程导读。模块化目录结构、架构分层、心智模型映射与学习路线。
+description: Foundry 业务系统开发完全教程导读。模块化目录结构、架构分层、核心组件与学习路线。
 ---
 
 # Foundry 系统开发教程总览
-
-> **设计思想**：本教程借鉴了 [ThinkPHP 8.0 完全开发手册](https://doc.thinkphp.cn/v8_0/architecture.html) 的模块化分类思想与现代 Web 框架工程规范。通过将架构、路由、控制器、验证器、ORM、安全、钩子和后台集成彻底解耦为独立章节，帮助开发者以最高效的方式掌握在 Foundry 平台构建企业级业务系统的精髓。
 
 Foundry 秉持 **“平台与业务完全解耦”、“约定优于配置”** 与 **“高内聚低耦合”** 的现代工程哲学：
 * **业务完全独立**：业务开发者在自己的独立 Git 仓库中通过标准 Cargo 依赖引入 `foundry`，升级框架仅需 `cargo update`，绝无上游代码合并冲突；
@@ -13,11 +11,13 @@ Foundry 秉持 **“平台与业务完全解耦”、“约定优于配置”** 
 * **双模存储引擎**：严谨关系业务采用 Code-First 强类型 ORM，敏捷多变业务采用 Zero-DDL 免建表动态模型；
 * **开箱即用控制台**：所有子系统自动融入解耦的 React Admin 控制台，支持免密 postMessage 鉴权与沙箱大屏。
 
+本教程采用高度结构化的模块化分类，将架构、路由、控制器、验证器、ORM、安全、钩子和后台集成解耦为独立章节，帮助开发者以最高效的方式掌握在 Foundry 平台构建企业级业务系统的精髓。
+
 ---
 
-## 🧭 教程章节结构 (ThinkPHP 风格模块化目录)
+## 🧭 教程章节结构 (模块化目录)
 
-教程按照 Web 系统开发的标准流程划分为 11 个递进模块，你可以根据学习阶段或实际工作需求针对性阅读：
+教程按照系统开发的标准流程划分为 11 个递进模块，你可以根据学习阶段或实际工作需求针对性阅读：
 
 ```mermaid
 flowchart TD
@@ -52,37 +52,37 @@ flowchart TD
 
 ### 章节快速索引
 
-| 序号 | 章节名称 | 核心内容 | 对应 ThinkPHP 概念 |
+| 序号 | 章节名称 | 核心内容 | 核心职责与关键组件 |
 |:---:|---|---|---|
-| **01** | [基础架构与请求生命周期](./01-architecture-lifecycle/) | 平台解耦理念、HTTP 全流程时序图、门面体系 | 架构总览、请求生命周期、Facade |
-| **02** | [路由系统与子系统路由](./02-routing/) | 统一路由空间规划、子系统路由挂载、参数提取 | 路由定义、路由参数、路由分组 |
-| **03** | [控制器、参数与响应规范](./03-controllers/) | Axum 控制器、请求提取器、`ApiResponse`、`AppError` | 控制器定义、Request 对象、统一输出 |
-| **04** | [请求验证器与 DTO 设计](./04-validation/) | `#[derive(Validate)]` 注解、常用规则速查、HTTP 422 映射 | 验证器 (Validate)、验证规则 |
-| **05** | [数据库配置与 Code-First ORM](./05-database-orm/) | 多数据库 SPI、Code-First 实体声明、链式查询构造器、软删除 | 数据库连接、查询构造器、ORM 模型 |
-| **06** | [Zero-DDL 动态模型与 Auto-CRUD](./06-dynamic-models/) | 免 DDL 动态模型、`RecordStore` API、RESTful Auto-CRUD | 动态表单、MongoDB 集合 |
-| **07** | [认证安全与分级 RBAC](./07-auth-security/) | 管理员 IAM、Argon2id、JWT、三级 RBAC 租户隔离 | 用户鉴权、Auth 权限认证、中间件保护 |
-| **08** | [生命周期突变钩子](./08-mutation-hooks/) | `MutationHook` 管道、6 大生命周期事件、业务审计 | 模型事件 (Event / Hook)、行为拦截 |
-| **09** | [管理控制台与 postMessage 桥接](./09-admin-integration/) | React Admin 外壳、自定义沙箱大屏、`postMessage` 协议 | 后台模块、模板渲染、单点登录 |
-| **10** | [综合实战：从零构建电商系统](./10-walkthrough-shop/) | 从 DTO、Service、Controller、Subsystem 到 main.rs 全流程 | 完整电商商城开发实战 |
-| **11** | [架构最佳实践与生产部署](./11-best-practices/) | Thin Controller/Fat Service、连接池调优、生产 Docker 部署 | 部署与性能调优、安全规范 |
+| **01** | [基础架构与请求生命周期](./01-architecture-lifecycle/) | 平台解耦理念、HTTP 全流程时序图、门面体系 | 架构总览、请求生命周期、`foundry::prelude` |
+| **02** | [路由系统与子系统路由](./02-routing/) | 统一路由空间规划、子系统路由挂载、参数提取 | 路由定义、子系统命名空间、方法绑定 |
+| **03** | [控制器、参数与响应规范](./03-controllers/) | Axum 控制器、请求提取器、`ApiResponse`、`AppError` | 控制器 Handler、请求提取、统一输出 |
+| **04** | [请求验证器与 DTO 设计](./04-validation/) | `#[derive(Validate)]` 注解、常用规则速查、HTTP 422 映射 | 验证 DTO、强类型规则、参数截断 |
+| **05** | [数据库配置与 Code-First ORM](./05-database-orm/) | 多数据库 SPI、Code-First 实体声明、链式查询构造器、软删除 | 数据库连接、EntitySchema、查询构造器 |
+| **06** | [Zero-DDL 动态模型与 Auto-CRUD](./06-dynamic-models/) | 免 DDL 动态模型、`RecordStore` API、RESTful Auto-CRUD | 动态表单、RecordStore、自动 CRUD 路由 |
+| **07** | [认证安全与分级 RBAC](./07-auth-security/) | 管理员 IAM、Argon2id、JWT、三级 RBAC 租户隔离 | 身份认证、JWT 令牌、权限守卫 |
+| **08** | [生命周期突变钩子](./08-mutation-hooks/) | `MutationHook` 管道、6 大生命周期事件、业务审计 | 生命周期事件、字段拦截注入、异步通知 |
+| **09** | [管理控制台与 postMessage 桥接](./09-admin-integration/) | React Admin 外壳、自定义沙箱大屏、`postMessage` 协议 | 控制台大屏、沙箱 iframe、免密鉴权 |
+| **10** | [综合实战：从零构建电商系统](./10-walkthrough-shop/) | 从 DTO、Service、Controller、Subsystem 到 main.rs 全流程 | 完整电商商城实战、单元与集成测试 |
+| **11** | [架构最佳实践与生产部署](./11-best-practices/) | Thin Controller/Fat Service、连接池调优、生产 Docker 部署 | 架构分层、性能调优、安全规范与部署 |
 
 ---
 
-## 🎯 初学者心智模型转换 (ThinkPHP / Laravel / Spring -> Foundry)
+## 🎯 通用 Web 架构到 Foundry 的概念映射
 
-如果你拥有其他 Web 框架背景，下表能帮助你快速建立对应的概念映射：
+如果你熟悉现代分层 Web 架构，下表能帮助你快速建立与 Foundry 核心原语的概念对应：
 
-| 传统 Web 概念 (ThinkPHP / Laravel) | Foundry (Rust) 实现 | 优势与设计考量 |
+| 通用 Web 架构概念 | Foundry (Rust) 实现 | 优势与设计考量 |
 |---|---|---|
-| **`app/` 业务代码** | **`src/systems/<slug>/` 子系统** | 领域高内聚，子系统间强隔离，可插拔管理 |
-| **`route/app.php` 路由注册** | **`SubsystemModule::register_routes`** | 自动加上 `/api/v1/s/<slug>/ext/` 命名空间前缀 |
-| **`Controller` 类与操作方法** | **Axum Handler 异步函数** | 无畏并发、零对象分配开销、强类型提取 |
-| **`$request->param()` 提取入参** | **`Query` / `Json` / `Path` 提取器** | 编译期强类型反序列化，非法格式自动拦截 |
-| **`Validate` 验证器** | **`#[derive(Validate)]` DTO** | 编译期验证注解，在 Handler 顶层直接校验 |
-| **`Db::table()->where()->select()`** | **`OrmSelect::from_table()->...`** | 链式强类型构造，底层自动适配 `$1` 与 `?` 占位符 |
-| **`Db::name()->insert()`** | **`OrmInsert::into_table()->...`** | 统一参数化防注入，支持多方言输出 |
-| **`Middleware` 中间件** | **Tower / Axum Layer 中间件** | 高性能异步管道，负责链路耗时与审计入库 |
-| **`Event` / 模型事件** | **`MutationHook` 钩子特征** | 支持实体创建、更新、删除前后的异步非阻塞拦截 |
+| **业务应用模块 (Module)** | **`src/systems/<slug>/` 子系统** | 领域高内聚，子系统间强隔离，可插拔管理 |
+| **模块路由注册 (Route Registration)** | **`SubsystemModule::register_routes`** | 自动加上 `/api/v1/s/<slug>/ext/` 命名空间前缀 |
+| **控制器与操作 (Controller Handler)** | **Axum Handler 异步函数** | 无畏并发、零对象分配开销、强类型提取 |
+| **请求参数提取 (Input Extraction)** | **`Query` / `Json` / `Path` 提取器** | 编译期强类型反序列化，非法格式自动拦截 |
+| **参数验证器 (Validator DTO)** | **`#[derive(Validate)]` DTO** | 编译期验证注解，在 Handler 顶层直接校验 |
+| **关系查询构造器 (Query Builder)** | **`OrmSelect::from_table()->...`** | 链式强类型构造，底层自动适配 `$1` 与 `?` 占位符 |
+| **记录写入构造器 (Insert Builder)** | **`OrmInsert::into_table()->...`** | 统一参数化防注入，支持多方言输出 |
+| **管道中间件 (Middleware)** | **Tower / Axum Layer 中间件** | 高性能异步管道，负责链路耗时与审计入库 |
+| **实体生命周期事件 (Lifecycle Event)** | **`MutationHook` 钩子特征** | 支持实体创建、更新、删除前后的异步非阻塞拦截 |
 
 ---
 

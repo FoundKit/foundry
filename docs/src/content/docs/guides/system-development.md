@@ -1,14 +1,12 @@
 ---
 title: System Development Tutorial Hub
-description: Complete modular Foundry system development tutorial navigation inspired by ThinkPHP principles. Access all 11 core chapters.
+description: Complete modular Foundry system development tutorial navigation. Access all 11 core chapters.
 ---
 
 # Foundry System Development Tutorial Hub
 
-> **Major Upgrade Notice**:
-> In alignment with the modular engineering principles of modern frameworks such as [ThinkPHP 8.0](https://doc.thinkphp.cn/v8_0/architecture.html), this development guide has been restructured and decoupled into **11 dedicated, focused chapters**.
->
-> Say goodbye to endless single-page scrolling! You can now explore architecture, routing, controllers, validation, Code-First ORM, and admin integration in dedicated modules.
+> **Overview**:
+> This tutorial is structured into **11 focused, dedicated chapters** covering architecture, routing, controllers, validation, Code-First ORM, dynamic models, and admin integration.
 
 ---
 

@@ -15,8 +15,6 @@ description: 掌握 Foundry 统一命名空间路由体系、子系统扩展路�
 
 ## 1. 全局统一路由空间规划
 
-在 ThinkPHP 中，路由通常通过 `Route::group('admin', ...)` 进行分组隔离。
-
 Foundry 在框架引擎层面规定了高度统一的全局路由命名空间。这种设计保证了多业务子系统共存时**永不发生路由命名冲突**：
 
 ```text
@@ -104,7 +102,7 @@ use foundry::prelude::*;
 
 pub fn build_routes() -> Router {
     Router::new()
-        // 1. 同一路由绑定多种方法 (类似 ThinkPHP 的 Route::rule)
+        // 1. 同一路由绑定多种方法
         .route("/orders", post(create_order).get(list_orders))
 
         // 2. 路径参数路由 (使用 {param} 格式)

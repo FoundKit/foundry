@@ -6,7 +6,7 @@ description: Foundry 多数据库 SPI 架构、PostgreSQL、MySQL、MariaDB 与 
 # 数据库与存储引擎开发指南
 
 > [!TIP]
-> **完整系统开发手册**：若需查阅 ThinkPHP 风格的链式 ORM 查询构造器 (`OrmSelect`, `OrmInsert`, `OrmUpdate`, `OrmDelete`)、Code-First 实体声明与全流程实战，请参阅 [系统开发完全指南](./system-development/)。
+> **完整系统开发教程**：若需查阅链式 ORM 查询构造器 (`OrmSelect`, `OrmInsert`, `OrmUpdate`, `OrmDelete`)、Code-First 实体声明与全流程实战，请参阅 [05. 数据库配置与 Code-First ORM](../development/05-database-orm/)。
 
 Foundry 采用现代化的 **多数据库 SPI (Service Provider Interface) 插件化存储架构**。业务层、领域逻辑服务、AutoCRUD 引擎与 Axum 处理器统一依赖 `Database` 门面与标准 Store Traits，**彻底实现底层网络驱动零泄露**。
 

@@ -6,7 +6,7 @@ description: Learn how to develop modular business subsystems, custom endpoints,
 # Subsystems & Custom Features Guide
 
 > [!TIP]
-> **Complete System Development Manual**: If you are looking for an end-to-end guide covering architecture, ThinkPHP-style development workflows, and a full e-commerce practical walkthrough, please refer to the new [Complete System Development Guide](./system-development/).
+> **Complete System Development Tutorial**: If you are looking for an end-to-end guide covering architecture, modular development workflows, and a full e-commerce practical walkthrough, please refer to the new [System Development Tutorial Overview](../development/).
 
 Foundry empowers developers to build modular, maintainable backend applications by organizing business capabilities into **Subsystems** and **Lifecycle Hooks**.
 

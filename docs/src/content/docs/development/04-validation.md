@@ -15,7 +15,7 @@ description: Master compile-time request validation DTOs in Foundry, validator m
 
 ## 1. Validation Philosophy
 
-In ThinkPHP, validation is typically written in dedicated `Validate` classes. Foundry binds validation directly to Rust's type system:
+Foundry binds validation directly to Rust's type system via declarative annotations:
 
 ```rust
 // src/systems/shop/dto/mod.rs

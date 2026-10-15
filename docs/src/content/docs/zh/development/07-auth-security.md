@@ -15,8 +15,6 @@ description: 掌握 Foundry 企业级安全鉴权体系、Argon2id 密码哈希�
 
 ## 1. 认证安全架构总览
 
-在 ThinkPHP 中，我们通常使用 Auth 类库或编写中间件来拦截无权限请求。
-
 Foundry 在框架层内聚了现代化的 **身份识别与访问管理 (IAM)** 体系：
 
 ```mermaid

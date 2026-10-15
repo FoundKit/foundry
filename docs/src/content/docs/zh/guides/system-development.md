@@ -1,18 +1,18 @@
 ---
 title: 系统开发教程导航枢纽
-description: 参考 ThinkPHP 手册设计理念的 Foundry 完整系统开发模块化教程导航。各核心章节快速通道与架构心智模型映射。
+description: Foundry 完整业务系统开发模块化教程导航。各核心章节快速通道与架构索引。
 ---
 
 # Foundry 系统开发教程导航枢纽
 
-> **🎉 重磅升级提示**：
-> 为提供最优质的开发者体验，参考 [ThinkPHP 8.0 官方手册](https://doc.thinkphp.cn/v8_0/architecture.html) 的模块化工程思想，本开发教程已全面重构并解耦为 **11 个独立的专业章节**。
+> **导读**：
+> 为提供清晰高效的开发指引，本系统开发教程采用模块化架构解耦为 **11 个独立的专业章节**。
 >
-> 告别繁琐单页的长篇滚动，现在你可以按模块、按需求精确查阅架构设计、路由绑定、控制器编写、DTO 验证、Code-First ORM 与后台集成！
+> 你可以按模块、按需求精确查阅架构设计、路由绑定、控制器编写、DTO 验证、Code-First ORM、动态模型以及管理控制台集成。
 
 ---
 
-## 📚 教程模块导航 (ThinkPHP 风格分类)
+## 📚 教程模块导航
 
 ```mermaid
 flowchart TD
@@ -55,7 +55,7 @@ flowchart TD
 * 🛡️ **[04. 请求验证器与 DTO 设计](../../development/04-validation/)**：基于 `validator` 宏注解的参数强校验、常用规则速查表（length, email, range, regex, nested）、HTTP 422 自动截断；
 
 ### 三、数据持久化与模型
-* 💾 **[05. 数据库配置与 Code-First ORM](../../development/05-database-orm/)**：多数据库 SPI 驱动、Code-First 实体声明（`EntitySchema`）、ThinkPHP 风格链式查询构造器（`OrmSelect`、`OrmInsert`、`OrmUpdate`、软删除）与方言迁移；
+* 💾 **[05. 数据库配置与 Code-First ORM](../../development/05-database-orm/)**：多数据库 SPI 驱动、Code-First 实体声明（`EntitySchema`）、链式查询构造器（`OrmSelect`、`OrmInsert`、`OrmUpdate`、软删除）与方言迁移；
 * ⚡ **[06. Zero-DDL 动态模型与 Auto-CRUD](../../development/06-dynamic-models/)**：免 SQL DDL 动态模型概念、`RecordStore` 存储 API、开箱即用的 RESTful Auto-CRUD 引擎；
 
 ### 四、安全、扩展与后台集成

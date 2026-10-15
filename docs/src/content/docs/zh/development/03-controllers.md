@@ -15,8 +15,6 @@ description: 学习如何在 Foundry 中编写清晰精简的 Axum 控制器、�
 
 ## 1. 控制器定位与设计理念
 
-在 ThinkPHP 中，控制器负责调度模型和视图，处理用户输入并返回响应。
-
 在 Foundry 中，我们极力提倡 **“精简控制器 (Thin Controller)”** 的设计原则：
 * **控制器的职责**：参数反序列化、入参格式校验（调用 DTO 校验）、调用领域逻辑服务（Service/Logic）、组装并返回统一响应信封 `ApiResponse`；
 * **控制器不应做的事**：不要在控制器中直接堆叠复杂业务算法、跨表一致性逻辑或拼装底层 SQL 查询。这些代码应当下沉到独立的服务层（如 `src/systems/<slug>/logic/`）。
@@ -106,7 +104,7 @@ ApiResponse::error("VALIDATION_FAILED")
 
 ## 4. 统一错误处理 (`AppError` 与 `AppResult`)
 
-类似 ThinkPHP 的 `throw new HttpException(...)`，Foundry 使用类型安全的统一枚举 `AppError` 表达各类异常，并通过 Rust 的 `?` 运算符向上传播：
+Foundry 使用类型安全的统一枚举 `AppError` 表达各类异常，并通过 Rust 的 `?` 运算符向上传播：
 
 ```rust
 pub type AppResult<T> = Result<T, AppError>;

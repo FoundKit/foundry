@@ -217,7 +217,7 @@ curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
 
 ---
 
-## 🧩 Next Steps (ThinkPHP-Inspired Modular Tutorial)
+## 🧩 Next Steps (Modular System Development Tutorial)
 
 * 🏗️ **[01. Architecture & Lifecycle](../development/01-architecture-lifecycle/)**
 * 🛣️ **[02. Routing System & Namespaces](../development/02-routing/)**

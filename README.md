@@ -296,7 +296,7 @@ Explore [`examples/blog_platform`](examples/blog_platform) for a complete refere
  
 - 🌐 [Official Documentation](https://foundkit.github.io/foundry/)
 - 📘 [Getting Started Guide (5-Minute Quickstart)](docs/src/content/docs/getting-started.md)
-- 🚀 [System Development Tutorial (ThinkPHP-Inspired Modular Manual)](docs/src/content/docs/development/index.md)
+- 🚀 [System Development Tutorial (Modular Development Manual)](docs/src/content/docs/development/index.md)
 - 🏗️ [Architecture Blueprint](docs/src/content/docs/architecture/blueprint.md)
 - 💾 [Database Setup & Code-First ORM](docs/src/content/docs/development/05-database-orm.md)
 - ✉️ [Email & Verification Services](docs/src/content/docs/guides/email-verification.md)

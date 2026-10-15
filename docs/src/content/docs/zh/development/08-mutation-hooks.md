@@ -13,9 +13,7 @@ description: 掌握 Foundry 实体生命周期突变钩子流水线，实现数�
 
 ---
 
-## 1. 钩子设计理念 (对比 ThinkPHP 模型事件)
-
-在 ThinkPHP 中，我们经常使用模型事件（如 `afterInsert`、`beforeUpdate`）或观察者类（`Observer`）来解耦核心业务与副流程。
+## 1. 钩子设计理念与拦截流水线
 
 Foundry 提供了流水线式的 **生命周期突变钩子 (`MutationHook`)**：
 * **前置拦截 (`before_*`)**：拥有可变数据引用（`&mut Value`），允许在数据落库前对其进行安全风控校验、补全默认字段或直接抛错阻断持久化；

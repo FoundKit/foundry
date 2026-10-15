@@ -1,6 +1,6 @@
 ---
 title: 05. Database Setup & Code-First ORM
-description: Master Foundry's multi-database SPI storage, Code-First ORM schema definitions, ThinkPHP-style fluent query builders, and database migrations.
+description: Master Foundry's multi-database SPI storage, Code-First ORM schema definitions, fluent query builders, and database migrations.
 ---
 
 # 05. Database Setup & Code-First ORM
@@ -56,7 +56,7 @@ impl SubsystemModule for ShopSubsystem {
 
 ---
 
-## 3. Fluent Query Builders (ThinkPHP Style)
+## 3. Fluent Query Builders (ORM Query Builder)
 
 ```rust
 use foundry::prelude::*;

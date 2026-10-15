@@ -318,14 +318,14 @@ curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
 
 ---
 
-## 🧩 系统进阶教程 (ThinkPHP 风格模块化学习)
+## 🧩 系统进阶教程 (模块化学习路径)
 
 按需查阅我们的全新模块化教程：
 * 🏗️ **[01. 基础架构与生命周期](../development/01-architecture-lifecycle/)**：理解底层解耦机制与时序流转
 * 🛣️ **[02. 路由系统与子系统路由](../development/02-routing/)**：掌握子系统命名空间与参数绑定
 * 🎮 **[03. 控制器、参数与响应规范](../development/03-controllers/)**：熟练编写 Thin Controller
 * 🛡️ **[04. 请求验证器与 DTO 设计](../development/04-validation/)**：使用 validator 宏实现强校验
-* 💾 **[05. 数据库配置与 Code-First ORM](../development/05-database-orm/)**：Prisma 风格定义实体与链式查询
+* 💾 **[05. 数据库配置与 Code-First ORM](../development/05-database-orm/)**：类型安全实体定义与链式查询
 * ⚡ **[06. Zero-DDL 动态数据模型](../development/06-dynamic-models/)**：免写 SQL 即刻获得 Auto-CRUD
 * 🔐 **[07. 认证安全与分级 RBAC](../development/07-auth-security/)**：JWT 与三级角色权限控制
 * 🪝 **[08. 生命周期突变钩子](../development/08-mutation-hooks/)**：拦截实体创建、更新与删除
