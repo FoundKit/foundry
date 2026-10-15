@@ -5,7 +5,17 @@ description: 基于 Git 依赖创建、构建并启动独立 Foundry 应用的 5
 
 # Foundry 快速入门
 
-Foundry 是一个现代、模块化、完全解耦的 Rust 后端平台与开发框架。在当前测试与验证阶段（正式发布至 crates.io 前），开发者可以通过 **Git 依赖** 的方式在自己的独立仓库中引入并使用 Foundry。
+> **初学者友好指南**：本篇指南专为首次接触 Foundry 的开发者设计。无需深奥的底层架构知识，只需跟随以下步骤，你将在 **5 分钟内** 完成环境准备、工程创建、首个业务接口编写与本地服务启动！
+
+Foundry 是一个现代、模块化、完全解耦的 Rust 后端平台与开发框架。在当前测试与验证阶段，开发者可以通过 **Git 依赖** 的方式在自己的独立仓库中引入并使用 Foundry。
+
+```mermaid
+flowchart LR
+    Step1["1. 安装 CLI 工具"] --> Step2["2. 创建独立应用工程"]
+    Step2 --> Step3["3. 启动本地数据库"]
+    Step3 --> Step4["4. 启动服务 & 访问控制台"]
+    Step4 --> Step5["5. 编写首个业务接口"]
+```
 
 > [!NOTE]
 > **原生企业级多数据库 SPI 驱动支持**：Foundry 通过统一零驱动泄露的 `Database` 门面与 SPI 架构，原生支持四大主流数据库引擎：
@@ -84,9 +94,9 @@ my-app/
 
 #### 查看生成的 `Cargo.toml`：
 
-Foundry 秉承 **“极简内核，渐进增强”**（类似 ThinkPHP / Spring Boot 开箱即用）的框架哲学：底层 Web 路由、HTTP 中间件、JSON 序列化、追踪日志及错误信封等基础设施全部由官方 `foundry` 门面 crate 内聚封装并重导出（`foundry::prelude::*`）。
+Foundry 秉承 **“极简内核，开箱即用”** 的哲学：底层 Web 路由、HTTP 中间件、JSON 序列化、追踪日志及错误信封等基础设施全部由官方 `foundry` 门面 crate 内聚封装并重导出（`foundry::prelude::*`）。
 
-因此，新工程接手时**仅需 3 个核心依赖**，无任何臃肿冗余依赖干扰：
+新工程**仅需 3 个核心依赖**，无任何臃肿冗余依赖干扰：
 
 ```toml
 [package]
@@ -96,30 +106,12 @@ edition = "2024"
 
 [dependencies]
 # 1. 核心框架门面（根据需求开启对应的数据库特性）
-# 选项 A: PostgreSQL (默认已启用，无需额外配置)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
 
-# 选项 B: MongoDB (Zero-DDL 原生文档引擎)
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mongodb"] }
-
-# 选项 C: MySQL
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mysql"] }
-
-# 选项 D: MariaDB
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mariadb"] }
-
-# 选项 E: 全数据库支持 (同时编译所有引擎)
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
-
-# 2. 异步运行时与模型序列化（按需最小化特性）
+# 2. 异步运行时与模型序列化
 tokio = { version = "1.44", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
-
-> [!TIP]
-> **按需扩展，无缝集成**：
-> 框架已在 `foundry::prelude::*` 与 `foundry::*` 中统一重导出了 `Router`、`Json`、`Extension`、`Path`、`Query`、`ServeDir`、`ApiResponse`、`AppResult`、`AppError`、`tracing` 等。编写业务控制器时只需一条 `use foundry::prelude::*;` 即可全套就绪。
-> 若后续业务需要更复杂的注解校验（如 `validator`）或第三方生态库，使用者在 `Cargo.toml` 中按需添加即可。
 
 ---
 
@@ -127,12 +119,12 @@ serde = { version = "1.0", features = ["derive"] }
 
 Foundry 应用通过根目录下 `.env` 的 `DATABASE_URL` 与 `DATABASE_TYPE` 连接底层数据库，并使用 Redis 作为租户隔离缓存与分布式锁。
 
-#### 方式一：使用 Docker 启动本地数据库容器
+#### 方式一：使用 Docker 启动本地容器 (最快捷)
 
 在本地快速体验时，可直接通过 Docker 启动所需的数据库与 Redis 7 容器：
 
 ```bash
-# 1. 启动 Redis 7 缓存服务 (所有数据库引擎均需配套使用)
+# 1. 启动 Redis 7 缓存服务
 docker run -d --name my-redis -p 6379:6379 redis:7-alpine
 
 # --- 请选择以下四种数据库之一启动 ---
@@ -159,55 +151,23 @@ docker run -d --name my-mariadb -p 3307:3306 \
 
 #### 方式二：配置环境变量 (`.env`)
 
-检查项目根目录下的 `.env` 配置，根据实际所使用的数据库进行配置：
+检查项目根目录下的 `.env` 配置，根据实际所使用的数据库调整：
 
 ```bash
 HOST=0.0.0.0
 PORT=8080
 
-# -----------------------------------------------------------------------------
-# 数据库配置（根据实际使用的数据库取消对应注释）
-# -----------------------------------------------------------------------------
-
 # 选项 A: PostgreSQL (默认)
 DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 DATABASE_TYPE=postgres
 
-# 选项 B: MongoDB (Zero-DDL，需在 Cargo.toml 开启 features = ["standard", "mongodb"])
-# DATABASE_URL=mongodb://127.0.0.1:27017/foundry
-# DATABASE_TYPE=mongodb
-
-# 选项 C: MySQL (需在 Cargo.toml 开启 features = ["standard", "mysql"])
-# DATABASE_URL=mysql://root:root@localhost:3306/foundry
-# DATABASE_TYPE=mysql
-
-# 选项 D: MariaDB (需在 Cargo.toml 开启 features = ["standard", "mariadb"])
-# DATABASE_URL=mariadb://root:root@localhost:3307/foundry
-# DATABASE_TYPE=mariadb
-
-# -----------------------------------------------------------------------------
-# 缓存与安全配置
-# -----------------------------------------------------------------------------
+# 缓存与安全
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 
-# 服务启动时是否执行自动建表/创建集合与超管初始化
+# 自动建表与超管初始化 (开发环境保持 true)
 AUTO_MIGRATE=true
 ```
-
-> [!IMPORTANT]
-> **深入理解 AUTO_MIGRATE 与 DBA 模式**：
-> - **当 `AUTO_MIGRATE=true` 时（开发与轻量生产默认推荐）**：
->   执行 `cargo run` 启动时，Foundry 会根据所配置的数据库自动完成初始化：
->   - **SQL 系列（PostgreSQL / MySQL / MariaDB）**：自动检查基础元数据表，按需创建缺失表、生成覆盖索引并注入默认超级管理员。
->   - **MongoDB**：自动创建全量集合（`records`, `models`, `systems`, `configs`, `admins`, `audit_logs`），创建唯一/通配符索引，并写入超管文档，全程 **无需任何 SQL DDL 迁移**。
-> - **当 `AUTO_MIGRATE=false` 时（严格生产 DBA 审批审计模式）**：
->   可通过 CLI 导出离线初始化脚本：
->   - 关系型数据库：执行 `foundry ddl -d postgres`（或 `mysql` / `mariadb`）导出 `migrations/init.sql`。
->   - MongoDB：执行 `foundry ddl -d mongodb` 导出 `migrations/init.js` 和 `migrations/README.md`，供 DBA 通过 Mongo Shell 离线执行：
->     ```bash
->     mongosh "mongodb://127.0.0.1:27017/foundry" migrations/init.js
->     ```
 
 ---
 
@@ -220,20 +180,18 @@ cargo run
 ```
 
 服务启动时，Foundry 将全自动完成以下初始化流程：
-1. 通过协议嗅探智能连接所配置的数据库（**PostgreSQL**、**MongoDB**、**MySQL** 或 **MariaDB**）与 Redis。
-2. 自动检查数据库元数据与创建索引，并确保初始超级管理员账号就绪（`AUTO_MIGRATE=true`）。
+1. 智能连接所配置的底层数据库与 Redis。
+2. 自动检查数据库元数据并创建所需表与索引，确保初始超级管理员账号就绪（`AUTO_MIGRATE=true`）。
 3. 挂载内置的嵌入式 React 管理后台与所有业务子系统自定义路由。
-4. 监听并在 `http://0.0.0.0:8080` 提供对外服务。
+4. 在 `http://0.0.0.0:8080` 开始对外提供服务。
 
 ---
 
 ### 5. 打开后台管理控制台
 
-在浏览器中直接访问根路径或管理路径（访问根路径将自动重定向至管理后台）：
+在浏览器中直接访问管理路径：
 
 ```text
-http://localhost:8080/
-# 或
 http://localhost:8080/admin/
 ```
 
@@ -242,11 +200,7 @@ http://localhost:8080/admin/
 * **初始密码**: `admin123456`
 * **角色**: `super_admin`（超级管理员）
 
-#### 管理控制台核心能力：
-* **管理员与 RBAC 权限管理**：添加多级管理员、重置密码、精细分配子系统访问权限（`allowed_systems`）。
-* **Zero-DDL 动态数据建模中心**：在界面上直接查看和配置动态模型、字段结构与数据记录（在 PostgreSQL、MySQL、MariaDB 和 MongoDB 上获得完全一致的体验）。
-* **子系统扩展页面**：通过内嵌 iframe 容器，完美融入各业务子系统自定义定制的 Admin 大屏看板（如示例工程中的 Sample 页面）。
-* **平台系统配置与审计日志**：全局系统参数修改、实时审计与操作跟踪记录。
+在管理控制台中，你可以可视化查看当前注册的全部业务子系统、配置系统参数、添加管理员或直接管理 Zero-DDL 动态模型。
 
 ---
 
@@ -254,28 +208,15 @@ http://localhost:8080/admin/
 
 #### 1. 系统健康检查：
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8080/health
 # 返回: OK
 ```
 
-#### 2. 超管登录与 JWT 鉴权：
+#### 2. 超管登录与 JWT 获取：
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "admin", "password": "admin123456"}'
-
-# 返回:
-# {
-#   "code": 0,
-#   "message": "success",
-#   "data": {
-#     "token": "eyJhbGciOiJIUzI1NiIsIn...",
-#     "user": {
-#       "username": "admin",
-#       "role": "super_admin"
-#     }
-#   }
-# }
 ```
 
 #### 3. 示例业务子系统接口：
@@ -296,31 +237,98 @@ curl -X POST http://localhost:8080/api/v1/s/sample/ext/greet \
 
 ---
 
-### 7. 常用 CLI 研发与脚手架指令
+## 🛠️ 3 分钟实战：编写你的首个业务接口
 
-在日常研发中，你可以使用 `foundry` CLI 提高开发效率：
+为帮助初学者迅速体会 Foundry 的开发手感，我们为现有的 `sample` 子系统增加一个**计算器接口**：
+
+### 步骤 1：在 `src/systems/sample/controllers/mod.rs` 增加处理函数
+
+```rust
+use foundry::prelude::*;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+pub struct CalcRequest {
+    pub a: f64,
+    pub b: f64,
+    pub op: String, // "add", "sub", "mul", "div"
+}
+
+// 编写你的异步控制器 Handler
+pub async fn handle_calc(
+    Json(payload): Json<CalcRequest>,
+) -> AppResult<ApiResponse<f64>> {
+    let result = match payload.op.as_str() {
+        "add" => payload.a + payload.b,
+        "sub" => payload.a - payload.b,
+        "mul" => payload.a * payload.b,
+        "div" => {
+            if payload.b == 0.0 {
+                return Err(AppError::BadRequest("除数不能为零".into()));
+            }
+            payload.a / payload.b
+        }
+        _ => return Err(AppError::BadRequest("未知运算符".into())),
+    };
+
+    Ok(ApiResponse::ok(result))
+}
+```
+
+### 步骤 2：绑定路由
+
+在同一个文件的 `build_routes()` 中追加一行 `.route("/calc", post(handle_calc))`：
+
+```rust
+pub fn build_routes() -> Router {
+    Router::new()
+        .route("/greet", post(handle_greet))
+        .route("/calc", post(handle_calc)) // 新增这行
+}
+```
+
+### 步骤 3：测试运行
+
+保存后重新执行 `cargo run`，使用 `curl` 即可调用你的新接口：
 
 ```bash
-# 在现有应用中新建业务子系统模块 (如 billing 计费中心、orders 订单中心)
-foundry system new billing --name "计费中心"
+curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
+  -H "Content-Type: application/json" \
+  -d '{"a": 100, "b": 25, "op": "div"}'
 
-# 扫描并列出当前工程中所有已发现的业务子系统
-foundry system list
-
-# 导出当前数据库方言建表脚本或 MongoDB 初始化脚本 (供 DBA 归档审计)
-foundry ddl --db postgres    # 导出 migrations/init.sql
-foundry ddl --db mongodb     # 导出 migrations/init.js
-
-# 校验当前工程的项目结构、子系统规范与 Cargo 依赖完整性
-foundry validate
+# 返回：
+# {"code":0,"message":"success","data":4.0,"meta":null}
 ```
+
+恭喜你！你已经成功编写并运行了属于自己的第一个 Foundry API！
 
 ---
 
-## 🧩 下一步指南
+## ❓ 新手常见疑问与避坑 FAQ
 
-- **[系统开发完全指南](../guides/system-development/)**：参考 ThinkPHP / NestJS 架构思维，掌握三层架构、链式 ORM 查询构造器与全流程实战。
-- **[数据库与自定义存储开发](../guides/database/)**：深入学习 Multi-Database SPI、MongoDB BSON 原生存储、PostgreSQL GIN 索引与自定义 ORM 实体编写。
-- **[子系统与自定义功能开发](../guides/extensions/)**：学习自定义控制器、生命周期钩子以及 Admin 扩展看板设计。
-- **[CLI 命令行工具指南](../guides/cli/)**：全面掌握脚手架创建、子系统生成与运维命令。
-- **[存储引擎架构设计](../architecture/storage-engines/)**：深入了解底层 SPI 设计蓝图与各数据库性能优化考量。
+> [!TIP]
+> **Q1: 为什么我的代码里找不到 Axum 或 Tokio 的某些类型？**
+> **答**：只需一条 `use foundry::prelude::*;`，框架已统一重导出了 `Router`、`Json`、`Query`、`Path`、`Extension`、`ApiResponse`、`AppResult`、`info!` 等 95% 的日常类型，无需在 `Cargo.toml` 中显式引入零碎库。
+>
+> **Q2: 本地没有安装 Redis，可以运行吗？**
+> **答**：可以！在 `.env` 中留空 `REDIS_URL=`，Foundry 会自动安全降级为内存模式，绝不会导致服务崩溃。
+>
+> **Q3: 为什么第一次 `cargo run` 比较慢？**
+> **答**：Rust 在首次构建时需要编译底层高性能网络栈与数据库驱动。后续增量编译通常只需 1~2 秒即可完成热构建。
+
+---
+
+## 🧩 系统进阶教程 (ThinkPHP 风格模块化学习)
+
+按需查阅我们的全新模块化教程：
+* 🏗️ **[01. 基础架构与生命周期](../development/01-architecture-lifecycle/)**：理解底层解耦机制与时序流转
+* 🛣️ **[02. 路由系统与子系统路由](../development/02-routing/)**：掌握子系统命名空间与参数绑定
+* 🎮 **[03. 控制器、参数与响应规范](../development/03-controllers/)**：熟练编写 Thin Controller
+* 🛡️ **[04. 请求验证器与 DTO 设计](../development/04-validation/)**：使用 validator 宏实现强校验
+* 💾 **[05. 数据库配置与 Code-First ORM](../development/05-database-orm/)**：Prisma 风格定义实体与链式查询
+* ⚡ **[06. Zero-DDL 动态数据模型](../development/06-dynamic-models/)**：免写 SQL 即刻获得 Auto-CRUD
+* 🔐 **[07. 认证安全与分级 RBAC](../development/07-auth-security/)**：JWT 与三级角色权限控制
+* 🪝 **[08. 生命周期突变钩子](../development/08-mutation-hooks/)**：拦截实体创建、更新与删除
+* 🖥️ **[09. 管理控制台与 postMessage 桥接](../development/09-admin-integration/)**：将自定义运营大屏接入后台
+* 🛒 **[10. 综合实战：从零构建电商系统](../development/10-walkthrough-shop/)**：完整的端到端实战开发
+* 🏆 **[11. 架构最佳实践与生产部署](../development/11-best-practices/)**：高并发调优与 Docker 容器化

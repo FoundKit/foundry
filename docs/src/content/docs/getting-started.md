@@ -1,92 +1,70 @@
 ---
 title: Getting Started
-description: Quick start guide to creating, building, and running standalone applications using the Foundry Framework with PostgreSQL, MySQL, MariaDB, or MongoDB.
+description: 5-minute quickstart guide to create, build, and run an independent Foundry application with PostgreSQL, MySQL, MariaDB, and MongoDB.
 ---
 
-# Getting Started with Foundry
+# Foundry Getting Started
 
-Foundry is a modern, modular, fully decoupled Rust backend platform and framework. During the current development and testing phase (prior to official publication on crates.io), developers consume Foundry as a **Git Dependency** in their own independent repositories.
+> **Beginner-Friendly Guide**: Follow these simple steps to set up your environment, initialize a new project, write your first custom business endpoint, and launch your server in **less than 5 minutes**!
+
+Foundry is a modern, decoupled Rust backend platform and framework. During initial development, projects consume Foundry via **Git dependencies** in standalone repositories.
+
+```mermaid
+flowchart LR
+    Step1["1. Install CLI Tool"] --> Step2["2. Create Standalone App"]
+    Step2 --> Step3["3. Start Database"]
+    Step3 --> Step4["4. Launch App & Admin"]
+    Step4 --> Step5["5. Write First API"]
+```
 
 > [!NOTE]
-> **Enterprise Multi-Database SPI Support**: Foundry natively supports four major database engines through a unified Zero-Driver-Leakage SPI:
-> 1. **PostgreSQL (14+)** *(Default)* — Relational engine with native JSONB and GIN inverted indexing.
-> 2. **MongoDB (6.0+)** — Native BSON document engine with atomic sequence counters and dynamic wildcard indexing (Zero-DDL).
-> 3. **MySQL (8.0+)** — Universal single-table relational engine with covering indexes and deferred join pagination.
-> 4. **MariaDB (10.5+)** — Dedicated MariaDB dialect engine with fine-tuned InnoDB indexes.
+> **Enterprise Multi-Database SPI Support**: Foundry provides zero-driver-leakage abstractions over:
+> 1. **PostgreSQL (14+)** *(Default)* — Relational storage with native JSONB and GIN inverted index acceleration.
+> 2. **MongoDB (6.0+)** — Native BSON document engine with atomic counter sequences and wildcard dynamic indexing (Zero-DDL).
+> 3. **MySQL (8.0+)** — General relational engine with covering indexes and deferred join pagination.
+> 4. **MariaDB (10.5+)** — Dedicated MariaDB dialect with tuned InnoDB indexes.
 
 ---
 
-## ⚡ 5-Minute Quick Start
+## ⚡ 5-Minute Quickstart
 
-### 1. Install the Foundry CLI
+### 1. Install Foundry CLI
 
-Install the `foundry` CLI directly from the GitHub repository using Cargo:
+Install the `foundry` CLI directly via Cargo:
 
 ```bash
-# Install from GitHub repository
 cargo install --git https://github.com/foundkit/foundry foundry_cli
 ```
 
-Verify your installation:
+Verify the installation:
 
 ```bash
 foundry --help
 ```
 
-> [!TIP]
-> **Local Development**: If you have cloned the Foundry source repository locally, compile and install directly from the local path:
-> ```bash
-> cargo install --path crates/foundry_cli
-> ```
-
 ---
 
-### 2. Scaffold a New Application
+### 2. Create a Standalone Application
 
-Use `foundry new` to create a standalone user application. You can select your preferred database engine using the `--db` (or `-d`) flag:
+Use `foundry new` to generate a clean application. Choose your database with `--db`:
 
 ```bash
-# Option 1: Default (PostgreSQL)
+# Default (PostgreSQL)
 foundry new my-app
 
-# Option 2: MongoDB (Zero-DDL Document Engine)
+# MongoDB (Zero-DDL schema-free document engine)
 foundry new my-app --db mongodb
 
-# Option 3: MySQL (8.0+)
+# MySQL (8.0+)
 foundry new my-app --db mysql
 
-# Option 4: MariaDB (10.5+)
+# MariaDB (10.5+)
 foundry new my-app --db mariadb
 
 cd my-app
 ```
 
-The CLI generates a clean, self-contained Rust project with matching Cargo feature flags and environment configuration:
-
-```text
-my-app/
-├── Cargo.toml                # Pre-configured with database feature flags & Foundry dependency
-├── src/
-│   ├── main.rs               # Application bootstrap with FoundryApp::builder()
-│   └── systems/
-│       ├── mod.rs
-│       └── sample/           # Starter business subsystem
-│           ├── controllers/  # Axum routes (/api/v1/s/sample/ext/*)
-│           ├── logic/        # Domain business logic
-│           ├── dto/          # Request validation schemas
-│           ├── custom_pages/ # Custom Admin UI Studio (HTML / React iframe)
-│           └── mod.rs
-├── migrations/               # (Optional) On-demand dialect scripts via `foundry ddl` (init.sql / init.js)
-├── .env                      # Local environment configuration (DATABASE_URL, DATABASE_TYPE, AUTO_MIGRATE)
-├── .env.example              # Environment variables template
-└── README.md
-```
-
-#### Inside `Cargo.toml`:
-
-Foundry embraces a **"Minimal Core, Progressive Enhancement"** framework philosophy (similar to ThinkPHP / Spring Boot / batteries-included frameworks): underlying web routing, HTTP middleware, JSON serialization, tracing, and standard error envelopes are encapsulated and re-exported by the official `foundry` facade crate (`foundry::prelude::*`).
-
-New projects start with **only 3 clean dependencies**:
+#### Generated `Cargo.toml`:
 
 ```toml
 [package]
@@ -95,233 +73,160 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# 1. Main Framework Facade (with your target database engine)
-# Option A: PostgreSQL (Default)
 foundry = { git = "https://github.com/foundkit/foundry", branch = "main" }
-
-# Option B: MongoDB (Zero-DDL Document Engine)
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mongodb"] }
-
-# Option C: MySQL
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mysql"] }
-
-# Option D: MariaDB
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", default-features = false, features = ["standard", "mariadb"] }
-
-# Option E: Multi-Database Support (Enables all engines simultaneously)
-# foundry = { git = "https://github.com/foundkit/foundry", branch = "main", features = ["all-databases"] }
-
-# 2. Async Runtime & Model Serialization (targeted minimal feature set)
 tokio = { version = "1.44", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
 
-> [!TIP]
-> **Progressive Disclosure & On-Demand Extensions**:
-> Foundry automatically re-exports `Router`, `Json`, `Extension`, `Path`, `Query`, `ServeDir`, `ApiResponse`, `AppResult`, `AppError`, and `tracing` through `foundry::prelude::*`. A single `use foundry::prelude::*;` imports everything needed for controllers and services.
-> If your application needs additional validation derives (like `validator`) or third-party crates, you can add them to `Cargo.toml` as needed.
-
 ---
 
-### 3. Start & Initialize Database and Cache Services
+### 3. Start Database & Redis
 
-Foundry connects to your database via `DATABASE_URL` and `DATABASE_TYPE` in `.env`, and utilizes Redis for caching and distributed locks.
-
-#### Option 1: Run Local Containers (Docker)
-
-Start your preferred database and Redis 7 container using Docker:
+Using Docker for rapid local development:
 
 ```bash
-# 1. Start Redis 7 (Required by all storage backends)
+# 1. Start Redis 7
 docker run -d --name my-redis -p 6379:6379 redis:7-alpine
 
-# --- Choose ONE of the following database engines ---
-
-# Option A: PostgreSQL 18 (Default)
+# 2. Start PostgreSQL 18 (Default)
 docker run -d --name my-postgres -p 5432:5432 \
   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgrespassword -e POSTGRES_DB=foundry \
   postgres:18-alpine
-
-# Option B: MongoDB 7 (Zero-DDL Document Engine)
-docker run -d --name my-mongodb -p 27017:27017 \
-  mongo:7
-
-# Option C: MySQL 8.4
-docker run -d --name my-mysql -p 3306:3306 \
-  -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=foundry \
-  mysql:8.4
-
-# Option D: MariaDB 11
-docker run -d --name my-mariadb -p 3307:3306 \
-  -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=foundry \
-  mariadb:11
 ```
 
-#### Option 2: Configure Environment Variables (`.env`)
-
-Configure your `.env` file according to your selected database:
-
+Check `.env`:
 ```bash
 HOST=0.0.0.0
 PORT=8080
-
-# -----------------------------------------------------------------------------
-# Database Configuration (Choose Option A, B, C, or D)
-# -----------------------------------------------------------------------------
-
-# Option A: PostgreSQL (Default)
 DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 DATABASE_TYPE=postgres
-
-# Option B: MongoDB (Zero-DDL, requires features = ["standard", "mongodb"] in Cargo.toml)
-# DATABASE_URL=mongodb://127.0.0.1:27017/foundry
-# DATABASE_TYPE=mongodb
-
-# Option C: MySQL (Requires features = ["standard", "mysql"] in Cargo.toml)
-# DATABASE_URL=mysql://root:root@localhost:3306/foundry
-# DATABASE_TYPE=mysql
-
-# Option D: MariaDB (Requires features = ["standard", "mariadb"] in Cargo.toml)
-# DATABASE_URL=mariadb://root:root@localhost:3307/foundry
-# DATABASE_TYPE=mariadb
-
-# -----------------------------------------------------------------------------
-# Cache & Security Configuration
-# -----------------------------------------------------------------------------
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
-
-# Automatic database schema check and superadmin seeding on startup
 AUTO_MIGRATE=true
 ```
-
-> [!IMPORTANT]
-> **Understanding Automatic Migration vs. Strict DBA Mode**:
-> - **When `AUTO_MIGRATE=true` (Default)**:
->   Foundry checks and initializes the database on startup (`cargo run`):
->   - **For SQL Engines (PostgreSQL / MySQL / MariaDB)**: Verifies table structures, creates missing platform tables, applies covering indexes, and seeds the superadmin user.
->   - **For MongoDB**: Verifies collections (`records`, `models`, `systems`, `configs`, `admins`, `audit_logs`), creates unique and wildcard indexes, and seeds the default superadmin document without any manual DDL.
-> - **When `AUTO_MIGRATE=false` (Strict DBA Production Auditing)**:
->   You can generate offline initialization scripts using the CLI:
->   - SQL: `foundry ddl -d postgres` (or `mysql` / `mariadb`) generates `migrations/init.sql`.
->   - MongoDB: `foundry ddl -d mongodb` generates `migrations/init.js` and `migrations/README.md`. DBAs can execute it directly via:
->     ```bash
->     mongosh "mongodb://127.0.0.1:27017/foundry" migrations/init.js
->     ```
 
 ---
 
 ### 4. Run the Application
 
-Start the backend server:
-
 ```bash
 cargo run
 ```
 
-When the server starts, Foundry will automatically:
-1. Connect to the configured database (**PostgreSQL**, **MongoDB**, **MySQL**, or **MariaDB**) using smart protocol sniffing.
-2. Initialize connections to Redis.
-3. Verify metadata tables/collections and ensure the superadmin user exists (`AUTO_MIGRATE=true`).
-4. Mount the embedded React Admin SPA and register all user subsystems.
-5. Begin listening on `http://0.0.0.0:8080`.
+The application will:
+1. Connect to the database and Redis.
+2. Auto-migrate tables/collections and inject the default superadmin (`AUTO_MIGRATE=true`).
+3. Mount the embedded React Admin console and all subsystem routes.
+4. Listen on `http://0.0.0.0:8080`.
 
 ---
 
-### 5. Access the Admin Control Plane
+### 5. Open the Admin Console
 
-Open your browser and navigate to the application URL (visiting `/` automatically redirects to the admin portal):
-
+Visit:
 ```text
-http://localhost:8080/
-# or
 http://localhost:8080/admin/
 ```
-
-#### Default Administrator Credentials:
 * **Username**: `admin`
 * **Password**: `admin123456`
 * **Role**: `super_admin`
 
-#### Admin Capabilities & Governance:
-* **Administrators & IAM**: Manage team members, reset passwords, and bind fine-grained subsystem permissions.
-* **Zero-DDL Data Studio**: Visually inspect dynamic models, fields, and records across PostgreSQL, MySQL, MariaDB, or MongoDB.
-* **Subsystem Console**: Embedded UI extensions (like the starter sample subsystem dashboard) are rendered directly inside the Admin Shell.
-* **Audit Logs & Configs**: Track platform activity logs and manage tenant-scoped system configurations.
-
 ---
 
-### 6. Verify APIs
+### 6. Verify Endpoints
 
-#### 1. System Health Check:
 ```bash
-curl http://localhost:8080/api/v1/health
-# Response: OK
-```
+# Health check
+curl http://localhost:8080/health
 
-#### 2. Administrator Login & JWT Authentication:
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123456"}'
-
-# Response:
-# {
-#   "code": 0,
-#   "message": "success",
-#   "data": {
-#     "token": "eyJhbGciOiJIUzI1NiIsIn...",
-#     "user": {
-#       "username": "admin",
-#       "role": "super_admin"
-#     }
-#   }
-# }
-```
-
-#### 3. Subsystem Extension Endpoint:
-```bash
+# Sample subsystem greeting
 curl -X POST http://localhost:8080/api/v1/s/sample/ext/greet \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice"}'
-
-# Response:
-# {
-#   "code": 0,
-#   "message": "success",
-#   "data": {
-#     "message": "Hello, Alice! Welcome to Foundry Framework."
-#   }
-# }
 ```
 
 ---
 
-### 7. Essential CLI Developer Commands
+## 🛠️ 3-Minute Practical: Writing Your First Custom API
 
-The Foundry CLI includes rich tooling for scaffolded projects:
+Let's add a calculator endpoint to the `sample` subsystem:
+
+### Step 1: Add the handler in `src/systems/sample/controllers/mod.rs`
+
+```rust
+use foundry::prelude::*;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+pub struct CalcRequest {
+    pub a: f64,
+    pub b: f64,
+    pub op: String,
+}
+
+pub async fn handle_calc(
+    Json(payload): Json<CalcRequest>,
+) -> AppResult<ApiResponse<f64>> {
+    let result = match payload.op.as_str() {
+        "add" => payload.a + payload.b,
+        "sub" => payload.a - payload.b,
+        "mul" => payload.a * payload.b,
+        "div" => {
+            if payload.b == 0.0 {
+                return Err(AppError::BadRequest("Division by zero".into()));
+            }
+            payload.a / payload.b
+        }
+        _ => return Err(AppError::BadRequest("Unknown operator".into())),
+    };
+
+    Ok(ApiResponse::ok(result))
+}
+```
+
+### Step 2: Bind the route
+
+```rust
+pub fn build_routes() -> Router {
+    Router::new()
+        .route("/greet", post(handle_greet))
+        .route("/calc", post(handle_calc)) // Add this line
+}
+```
+
+### Step 3: Test with curl
 
 ```bash
-# Scaffold a new business subsystem (e.g., billing, orders, cms)
-foundry system new billing --name "Billing Center"
+curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
+  -H "Content-Type: application/json" \
+  -d '{"a": 100, "b": 25, "op": "div"}'
 
-# List all discovered subsystems in current project
-foundry system list
-
-# Export schema migration or MongoDB initialization script for DBA review
-foundry ddl --db postgres    # Outputs migrations/init.sql
-foundry ddl --db mongodb     # Outputs migrations/init.js
-
-# Validate project structure, manifests, and subsystem conventions
-foundry validate
+# {"code":0,"message":"success","data":4.0,"meta":null}
 ```
 
 ---
 
-## 🧩 Next Steps
+## ❓ Beginner FAQs
 
-- **[System Development Complete Guide](../guides/system-development/)**: Master the ThinkPHP/NestJS-style 3-Layer architecture, chainable ORM queries, and end-to-end development.
-- **[Database & Custom Storage Guide](../guides/database/)**: In-depth guide to Multi-Database SPI, MongoDB BSON storage, PostgreSQL GIN indexing, and custom ORM schemas.
-- **[Subsystems & Custom Features](../guides/extensions/)**: Build business domain controllers, lifecycle hooks, and custom Admin UI pages.
-- **[CLI Tooling Reference](../guides/cli/)**: Master all CLI flags, scaffolding options, and maintenance commands.
-- **[Storage Engines Architecture](../architecture/storage-engines/)**: Architectural blueprints and multi-database roadmaps.
+> [!TIP]
+> **Can I run without Redis installed?**
+> Yes! Leave `REDIS_URL=` blank in `.env`, and Foundry will gracefully degrade to in-memory mode without crashing.
+>
+> **Where are the core types imported from?**
+> A single `use foundry::prelude::*;` re-exports 95% of daily web types (`Router`, `Json`, `Query`, `Path`, `ApiResponse`, `AppResult`, `info!`, etc.).
+
+---
+
+## 🧩 Next Steps (ThinkPHP-Inspired Modular Tutorial)
+
+* 🏗️ **[01. Architecture & Lifecycle](../development/01-architecture-lifecycle/)**
+* 🛣️ **[02. Routing System & Namespaces](../development/02-routing/)**
+* 🎮 **[03. Controllers & Response Envelope](../development/03-controllers/)**
+* 🛡️ **[04. Request Validation & DTOs](../development/04-validation/)**
+* 💾 **[05. Database Setup & Code-First ORM](../development/05-database-orm/)**
+* ⚡ **[06. Zero-DDL Dynamic Models & Auto-CRUD](../development/06-dynamic-models/)**
+* 🔐 **[07. Authentication & Hierarchical RBAC](../development/07-auth-security/)**
+* 🪝 **[08. Lifecycle Mutation Hooks](../development/08-mutation-hooks/)**
+* 🖥️ **[09. Admin Console & postMessage SDK](../development/09-admin-integration/)**
+* 🛒 **[10. Hands-on Walkthrough: E-Commerce System](../development/10-walkthrough-shop/)**
+* 🏆 **[11. Architectural Best Practices & Production](../development/11-best-practices/)**

@@ -293,12 +293,14 @@ Explore [`examples/blog_platform`](examples/blog_platform) for a complete refere
 ---
 
 ## 📖 Documentation
-
+ 
 - 🌐 [Official Documentation](https://foundkit.github.io/foundry/)
-- 📘 [Getting Started Guide](docs/src/content/docs/getting-started.md)
-- 🚀 [Complete System Development Guide](docs/src/content/docs/guides/system-development.md)
+- 📘 [Getting Started Guide (5-Minute Quickstart)](docs/src/content/docs/getting-started.md)
+- 🚀 [System Development Tutorial (ThinkPHP-Inspired Modular Manual)](docs/src/content/docs/development/index.md)
 - 🏗️ [Architecture Blueprint](docs/src/content/docs/architecture/blueprint.md)
-- 🔌 [Subsystems & Extensions Guide](docs/src/content/docs/guides/extensions.md)
+- 💾 [Database Setup & Code-First ORM](docs/src/content/docs/development/05-database-orm.md)
+- ✉️ [Email & Verification Services](docs/src/content/docs/guides/email-verification.md)
+- 🔌 [External Standalone Subsystems](docs/src/content/docs/guides/external-subsystems.md)
 - 🗺️ [Development Roadmap](docs/src/content/docs/roadmap.md)
 
 ---

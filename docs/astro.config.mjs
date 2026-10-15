@@ -523,9 +523,172 @@ export default defineConfig({
           link: '/getting-started/',
         },
         {
-          label: 'Architecture',
+          label: 'System Development Tutorial',
           translations: {
-            'zh-CN': '架构设计',
+            'zh-CN': '系统开发核心教程',
+          },
+          items: [
+            {
+              label: 'Overview & Learning Roadmap',
+              translations: {
+                'zh-CN': '教程总览与学习路线',
+              },
+              link: '/development/',
+            },
+            {
+              label: '01. Architecture & Lifecycle',
+              translations: {
+                'zh-CN': '01. 基础架构与请求生命周期',
+              },
+              link: '/development/01-architecture-lifecycle/',
+            },
+            {
+              label: '02. Routing System & Namespaces',
+              translations: {
+                'zh-CN': '02. 路由系统与子系统路由',
+              },
+              link: '/development/02-routing/',
+            },
+            {
+              label: '03. Controllers & Response',
+              translations: {
+                'zh-CN': '03. 控制器、参数与响应规范',
+              },
+              link: '/development/03-controllers/',
+            },
+            {
+              label: '04. Validation & DTOs',
+              translations: {
+                'zh-CN': '04. 请求验证器与 DTO 设计',
+              },
+              link: '/development/04-validation/',
+            },
+            {
+              label: '05. Database & Code-First ORM',
+              translations: {
+                'zh-CN': '05. 数据库配置与 Code-First ORM',
+              },
+              link: '/development/05-database-orm/',
+            },
+            {
+              label: '06. Zero-DDL Dynamic Models',
+              translations: {
+                'zh-CN': '06. Zero-DDL 动态模型与 Auto-CRUD',
+              },
+              link: '/development/06-dynamic-models/',
+            },
+            {
+              label: '07. Authentication & Hierarchical RBAC',
+              translations: {
+                'zh-CN': '07. 认证安全与分级 RBAC',
+              },
+              link: '/development/07-auth-security/',
+            },
+            {
+              label: '08. Mutation Hooks Pipeline',
+              translations: {
+                'zh-CN': '08. 生命周期突变钩子 (Mutation Hook)',
+              },
+              link: '/development/08-mutation-hooks/',
+            },
+            {
+              label: '09. Admin Console Integration',
+              translations: {
+                'zh-CN': '09. 管理控制台与 postMessage 桥接',
+              },
+              link: '/development/09-admin-integration/',
+            },
+            {
+              label: '10. Walkthrough: E-Commerce System',
+              translations: {
+                'zh-CN': '10. 综合实战：从零构建电商系统',
+              },
+              link: '/development/10-walkthrough-shop/',
+            },
+            {
+              label: '11. Architecture Best Practices',
+              translations: {
+                'zh-CN': '11. 架构最佳实践与生产部署',
+              },
+              link: '/development/11-best-practices/',
+            },
+          ],
+        },
+        {
+          label: 'Feature Guides',
+          translations: {
+            'zh-CN': '专题与进阶指南',
+          },
+          items: [
+            {
+              label: 'Tutorial Hub & Roadmap',
+              translations: {
+                'zh-CN': '系统开发教程导航枢纽',
+              },
+              link: '/guides/system-development/',
+            },
+            {
+              label: 'Configuration & Environments',
+              translations: {
+                'zh-CN': '应用配置与环境变量',
+              },
+              link: '/guides/configuration/',
+            },
+            {
+              label: 'Logging, Tracing & Audit',
+              translations: {
+                'zh-CN': '日志、追踪与审计日志',
+              },
+              link: '/guides/logging/',
+            },
+            {
+              label: 'Email & Verification Services',
+              translations: {
+                'zh-CN': '邮件服务与验证码中心',
+              },
+              link: '/guides/email-verification/',
+            },
+            {
+              label: 'External Standalone Subsystems',
+              translations: {
+                'zh-CN': '动态外部子系统扩展',
+              },
+              link: '/guides/external-subsystems/',
+            },
+            {
+              label: 'Database & Custom Storage',
+              translations: {
+                'zh-CN': '数据库与自定义存储开发',
+              },
+              link: '/guides/database/',
+            },
+            {
+              label: 'Subsystems & Custom Features',
+              translations: {
+                'zh-CN': '子系统与自定义功能开发',
+              },
+              link: '/guides/extensions/',
+            },
+            {
+              label: 'Authentication & Security Deep-Dive',
+              translations: {
+                'zh-CN': '认证、RBAC 权限与安全进阶',
+              },
+              link: '/guides/auth-security/',
+            },
+            {
+              label: 'CLI Tooling Reference',
+              translations: {
+                'zh-CN': 'CLI 命令行工具指南',
+              },
+              link: '/guides/cli/',
+            },
+          ],
+        },
+        {
+          label: 'Architecture Blueprint',
+          translations: {
+            'zh-CN': '底层架构设计',
           },
           items: [
             {
@@ -612,63 +775,6 @@ export default defineConfig({
                 'zh-CN': '08. 前端管理后台深度剖析 (Admin)',
               },
               link: '/code-analysis/08-admin-frontend/',
-            },
-          ],
-        },
-        {
-          label: 'Guides',
-          translations: {
-            'zh-CN': '开发指南',
-          },
-          items: [
-            {
-              label: 'System Development Guide',
-              translations: {
-                'zh-CN': '系统开发完全指南',
-              },
-              link: '/guides/system-development/',
-            },
-            {
-              label: 'Logging, Tracing & Audit',
-              translations: {
-                'zh-CN': '日志、追踪与审计日志',
-              },
-              link: '/guides/logging/',
-            },
-            {
-              label: 'Configuration & Environments',
-              translations: {
-                'zh-CN': '应用配置与环境变量',
-              },
-              link: '/guides/configuration/',
-            },
-            {
-              label: 'Authentication & Security',
-              translations: {
-                'zh-CN': '认证、RBAC 权限与安全',
-              },
-              link: '/guides/auth-security/',
-            },
-            {
-              label: 'Subsystems & Custom Features',
-              translations: {
-                'zh-CN': '子系统与自定义功能开发',
-              },
-              link: '/guides/extensions/',
-            },
-            {
-              label: 'Database & Custom Storage',
-              translations: {
-                'zh-CN': '数据库与自定义存储开发',
-              },
-              link: '/guides/database/',
-            },
-            {
-              label: 'CLI Tooling Reference',
-              translations: {
-                'zh-CN': 'CLI 命令行工具指南',
-              },
-              link: '/guides/cli/',
             },
           ],
         },

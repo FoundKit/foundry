@@ -1,0 +1,47 @@
+---
+title: 06. Zero-DDL Dynamic Models & Auto-CRUD
+description: Master Foundry's Zero-DDL schema-free dynamic data models, RecordStore storage API, and instantly generated RESTful Auto-CRUD engine.
+---
+
+# 06. Zero-DDL Dynamic Models & Auto-CRUD
+
+> **Chapter Objectives**:
+> 1. Understand Zero-DDL schema-free storage philosophy;
+> 2. Use `RecordStore` APIs for creating, reading, updating, and querying records;
+> 3. Understand auto-generated RESTful Auto-CRUD endpoints;
+> 4. Choose between Code-First ORM and Zero-DDL Dynamic Models.
+
+---
+
+## 1. Zero-DDL Philosophy
+
+Unlike traditional frameworks where every new table requires SQL DDL migrations, Foundry allows dynamic model definition via the Admin Console with instant REST API generation under `/api/v1/s/{subsystem}/{model}`:
+
+```rust
+use foundry::prelude::*;
+use serde_json::json;
+
+// Create record in domain service
+let record = state.db.records().create(
+    &ctx.system_slug,
+    "feedbacks",
+    json!({
+        "score": 5,
+        "comment": "Fast shipping!"
+    })
+).await?;
+```
+
+---
+
+## 2. Auto-CRUD Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/s/{subsystem}/{model}` | Paginated list with search |
+| `POST` | `/api/v1/s/{subsystem}/{model}` | Create record |
+| `GET` | `/api/v1/s/{subsystem}/{model}/{id}` | Get record |
+| `PUT` | `/api/v1/s/{subsystem}/{model}/{id}` | Update record |
+| `DELETE` | `/api/v1/s/{subsystem}/{model}/{id}` | Delete record |
+
+Next chapter: [07. Authentication & Hierarchical RBAC](./07-auth-security/)

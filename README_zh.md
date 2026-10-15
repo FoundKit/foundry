@@ -295,10 +295,12 @@ foundry validate
 ## 📖 文档指南
 
 - 🌐 [官方文档站点](https://foundkit.github.io/foundry/zh/)
-- 📘 [快速入门指南](docs/src/content/docs/zh/getting-started.md)
-- 🚀 [系统开发完全指南](docs/src/content/docs/zh/guides/system-development.md)
+- 📘 [快速入门指南 (5 分钟极简起步)](docs/src/content/docs/zh/getting-started.md)
+- 🚀 [系统开发核心教程 (ThinkPHP 风格模块化手册)](docs/src/content/docs/zh/development/index.md)
 - 🏗️ [架构设计蓝图](docs/src/content/docs/zh/architecture/blueprint.md)
-- 🔌 [子系统与扩展开发指南](docs/src/content/docs/zh/guides/extensions.md)
+- 💾 [数据库配置与 Code-First ORM](docs/src/content/docs/zh/development/05-database-orm.md)
+- ✉️ [邮件服务与验证码中心](docs/src/content/docs/zh/guides/email-verification.md)
+- 🔌 [动态外部子系统扩展](docs/src/content/docs/zh/guides/external-subsystems.md)
 - 🗺️ [项目开发路线图](docs/src/content/docs/zh/roadmap.md)
 
 ---
