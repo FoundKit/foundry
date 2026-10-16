@@ -41,8 +41,8 @@ import Terminal from '../../components/Terminal.astro';
   <Card title="Self-Contained Subsystems" icon="document">
     Subsystems encapsulate custom API controllers, business services, DTO validation, and Admin UI pages in clean, cohesive modules.
   </Card>
-  <Card title="Zero-DDL Dynamic Storage" icon="setting">
-    Visually define system configs and dynamic data models without database DDL migrations, schema locks, or downtime.
+  <Card title="Dual-Tier Storage & Multi-DB SPI" icon="setting">
+    Database-native strategy: genuine Zero-DDL dynamic models & Auto-CRUD for PostgreSQL/MongoDB; isolated subsystem DDL tables & deferred joins for MySQL/MariaDB.
   </Card>
   <Card title="Automatic RESTful CRUD" icon="rocket">
     Instant, high-performance REST APIs generated for all dynamic models (`GET`, `POST`, `PUT`, `DELETE`) with fine-grained access control.
@@ -83,7 +83,25 @@ import Terminal from '../../components/Terminal.astro';
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">💾</div>
-    <div class="node-title">Zero-DDL Storage</div>
-    <div class="node-desc">Multi-Database SPI (Postgres / Mongo / MySQL / MariaDB) + Redis</div>
+    <div class="node-title">Dual-Tier Storage</div>
+    <div class="node-desc">Multi-DB SPI: Zero-DDL (PG/Mongo) + Subsystem DDL (MySQL/MariaDB) + Redis</div>
   </div>
 </div>
+
+---
+
+## 💾 Multi-Database Strategy Matrix
+
+Foundry adopts a **Database-Native Strategy**, avoiding "lowest common denominator SQL" while providing a unified, driver-agnostic method API (`state.db.records()`) with tailored physical storage implementations:
+
+| Database Engine | Architecture Mode | Physical Implementation | Subsystem & Model Lifecycle | Recommended Scenarios |
+| :--- | :--- | :--- | :--- | :--- |
+| **PostgreSQL** `14+` | **Native Zero-DDL** | `JSONB` binary storage + `USING GIN(data)` inverted indexes + partial indexes | **Genuine 0-DDL**<br/>Visual model creation in Admin UI; single-table multi-tenant isolation | Agile dynamic forms, rapid prototyping, medium-to-high concurrency |
+| **MongoDB** `6.0+` | **Native 0-DDL** | Native BSON Documents + Wildcard (`$**`) dynamic indexing + atomic `_counters` | **Pure Schemaless**<br/>Zero schema migrations; collections auto-instantiate on write | Massive unstructured records, document-first workloads, high ingest rates |
+| **MySQL** `8.0+ / 8.4+` | **Dedicated Subsystem DDL** | Subsystem-isolated physical tables + compact covering indexes + deferred joins | **Dialect DDL Migration**<br/>Scaffold generates DDL (`migrations/mysql/*.sql`); dev auto-sync & production DBA offline audit | High-volume transactional orders, rigid relational structures, enterprise DBA audits |
+| **MariaDB** `10.5+` | **Dedicated Subsystem DDL** | Dedicated `MariaDbProvider` + dialect initialization + InnoDB compact indexes | **Dialect DDL Migration**<br/>Native `mariadb://` protocol routing + subsystem isolated table DDL | Open-source enterprise clusters, high-concurrency transactional subsystems |
+
+> [!NOTE]
+> **Universal Engine Baseline**:
+> - **Driver-Agnostic Facade**: Application logic accesses data via clean standard Trait methods (`state.db.records()`, `state.db.systems()`) with 0 driver object leakage.
+> - **Zero Physical DELETE Privilege Guarantee**: Strict soft-deletion (`deleted_at`) across all modules ensures 100% full operational capability even if DBAs revoke physical `DELETE` permissions.

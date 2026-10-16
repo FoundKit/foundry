@@ -41,8 +41,8 @@ import Terminal from '../../../components/Terminal.astro';
   <Card title="高内聚业务子系统" icon="document">
     子系统封装自定义 API 控制器、业务领域服务、DTO 校验与 Admin 扩展页面，结构清晰内聚。
   </Card>
-  <Card title="Zero-DDL 动态存储引擎" icon="setting">
-    可视化配置系统参数与动态数据模型，无需编写数据库 DDL 迁移，避免元数据锁与停机维护。
+  <Card title="双模存储与多数据库 SPI" icon="setting">
+    因地制宜特化策略：PostgreSQL 与 MongoDB 原生支持极致 Zero-DDL 动态模型与 Auto-CRUD；MySQL 与 MariaDB 采用专题专属物理分表 DDL 与覆盖索引优化，兼顾敏捷迭代与千万级生产吞吐。
   </Card>
   <Card title="自动生成 RESTful CRUD" icon="rocket">
     所有动态模型即刻获得开箱即用的高并发 RESTful CRUD 接口（`GET`, `POST`, `PUT`, `DELETE`）。
@@ -83,7 +83,25 @@ import Terminal from '../../../components/Terminal.astro';
   </div>
   <div class="tech-pipeline-node">
     <div class="node-icon">💾</div>
-    <div class="node-title">Zero-DDL 存储</div>
-    <div class="node-desc">多数据库 SPI (PostgreSQL / MongoDB / MySQL / MariaDB) + Redis</div>
+    <div class="node-title">双模存储引擎</div>
+    <div class="node-desc">Multi-DB SPI: 0-DDL (PG/Mongo) + 专属分表 DDL (MySQL/MariaDB) + Redis</div>
   </div>
 </div>
+
+---
+
+## 💾 数据库策略与选型矩阵
+
+Foundry 秉承**因地制宜特化策略（Database-Native Strategy）**，拒绝抹杀各数据库物理特性的“最低公倍数 SQL”，在上层纯方法调用的统一门面下，提供差异化的底层落地模式：
+
+| 数据库引擎 | 架构模式 | 物理实现方式 | 专题与模型变更机制 | 最佳适用场景 |
+| :--- | :--- | :--- | :--- | :--- |
+| **PostgreSQL** `14+` | **原生 Zero-DDL** | `JSONB` 格式 + `USING GIN(data)` 倒排索引 + 部分索引 | **真正的 0-DDL**<br/>Admin 后台秒级增改模型，单表支撑多专题 | 敏捷业务中台、运营动态表单、中高并发动态实体 |
+| **MongoDB** `6.0+` | **原生 0-DDL** | 原生 BSON 文档 + Wildcard (`$**`) 索引 + 原子自增序列 | **纯粹 Schemaless**<br/>无需表模式维护，集合首次写入自愈生成 | 海量动态数据、天然文档结构、高吞吐内容存储 |
+| **MySQL** `8.0+ / 8.4+` | **专属分表 DDL** | 专题独立物理单表 + 紧凑覆盖索引 + 延迟关联分页 | **专题 DDL 迁移**<br/>脚手架一键生成方言 DDL，开发自动同步/生产 DBA 离线审计 | 千万级核心结算、强一致关系交易、企业级规范交付 |
+| **MariaDB** `10.5+` | **专属分表 DDL** | 独立 `MariaDbProvider` + 专属方言脚本 + InnoDB 紧凑索引 | **专题 DDL 迁移**<br/>原生兼容 MariaDB 连接与系统变量，专属分表 DDL | 开源自建集群、高并发并发交易、分表业务落地 |
+
+> [!NOTE]
+> **全引擎通用安全底座**：
+> - **驱动零泄露**：业务层与 Auto-CRUD 统一调用标准纯方法 (`state.db.records()`, `state.db.systems()`)，无底层连接池对象泄露。
+> - **零物理 DELETE 权限运行**：全系统所有模块均严格执行软删除（`deleted_at` 标记更新），即使生产环境 DBA 回收了物理 `DELETE` 权限，系统依然 100% 顺畅运行。
