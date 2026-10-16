@@ -3,8 +3,6 @@ title: Subsystems & Custom Features Guide
 description: Learn how to develop modular business subsystems, custom endpoints, database integration, Admin UI extensions, and mutation hooks with Foundry.
 ---
 
-# Subsystems & Custom Features Guide
-
 > [!TIP]
 > **Complete System Development Tutorial**: If you are looking for an end-to-end guide covering architecture, modular development workflows, and a full e-commerce practical walkthrough, please refer to the new [System Development Tutorial Overview](../development/).
 

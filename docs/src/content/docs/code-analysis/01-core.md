@@ -5,8 +5,6 @@ description: "Stage 1: In-depth analysis of Context, Error handling, and Subsyst
 
 > **Codebase Navigation**：⬅️ Previous: [Learning Guide & Overview](./) · [📋 Overview & Guide](./) · ➡️ Next: [02. Storage Layer & Model Engine (foundry_storage)](./02-storage/)
 
-# Foundry Core 代码深度分析
-
 > 第一阶段：理解核心类型与接口定义
 >
 > Crate: `foundry_core`

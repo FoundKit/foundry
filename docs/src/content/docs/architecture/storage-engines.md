@@ -3,9 +3,6 @@ title: Storage Engines & Multi-Database Architecture
 description: Foundry pluggable multi-database architecture, SPI design, dialect-native strategies, and phased implementation roadmap.
 ---
 
-# Foundry Multi-Database & Pluggable Storage Architecture
-# (Architecture Design & Implementation Roadmap)
-
 > **Target Versions**: `v0.2.0` ~ `v0.3.0`  
 > **Core Objective**: Decouple the hardcoded PostgreSQL binding by introducing an **SPI (Service Provider Interface) pluggable mechanism** and **Strategy Pattern**. Encapsulate raw drivers completely, expose clean method-based domain interfaces, support automatic database selection via a single environment variable or connection URL, and progressively implement database support strictly in sequence: **PostgreSQL (1st, Completed)**, **MySQL (2nd, Completed)**, **MariaDB (3rd, Completed)**, and **MongoDB (4th, Completed)**.  
 > **Support Matrix & Sequence**:

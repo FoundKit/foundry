@@ -3,8 +3,6 @@ title: 开发路线图与版本策略
 description: Foundry 平台与框架的开发里程碑、已实现特性、版本策略与后续规划。
 ---
 
-# Foundry 路线图与版本管理策略
-
 > **项目**: `foundry`  
 > **组织**: [foundkit](https://github.com/foundkit)  
 

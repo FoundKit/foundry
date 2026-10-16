@@ -5,8 +5,6 @@ description: "阶段 5：深度剖析 Axum 路由装配、中间件栈、Auto-CR
 
 > **源码导读导航**：⬅️ 上一篇：[04. 扩展系统与生命周期钩子 (foundry_extension)](./04-extension/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[06. 门面层与应用组装 (foundry)](./06-foundry/)
 
-# Foundry Engine 代码深度分析
-
 > 第五阶段：理解请求引擎（路由、处理器、中间件、Auto-CRUD）
 >
 > Crate: `foundry_engine`

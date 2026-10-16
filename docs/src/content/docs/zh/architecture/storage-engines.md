@@ -3,9 +3,6 @@ title: 存储引擎架构与多数据库规划
 description: Foundry 多数据库引擎 SPI 插件化架构设计、方言特化策略与落地实施。
 ---
 
-# Foundry 多数据库引擎与插件化存储架构设计与路线图
-# (Multi-Database & Pluggable Storage Architecture)
-
 > **版本定位**：`v0.2.0` ~ `v0.3.0`  
 > **核心目标**：解耦单一 PostgreSQL 绑定，引入 **SPI (Service Provider Interface) 插件化机制** 与 **策略模式 (Strategy Pattern)**，实现底层驱动全面封装、上层纯方法调用，支持通过单一环境变量或连接串自动切换数据库，并全面落地支持 **PostgreSQL（第一，已完成）**、**MySQL（第二，已完成）**、**MariaDB（第三，已完成）** 与 **MongoDB（第四，已完成）**。  
 > **支持矩阵与接入状态**：

@@ -5,8 +5,6 @@ description: "阶段 1：深度剖析 Context、Error、SubsystemModule trait �
 
 > **源码导读导航**：⬅️ 上一篇：[全景学习指南与代码导读](./) · [📋 学习指南与总览](./) · ➡️ 下一篇：[02. 存储层实现与动态模型 (foundry_storage)](./02-storage/)
 
-# Foundry Core 代码深度分析
-
 > 第一阶段：理解核心类型与接口定义
 >
 > Crate: `foundry_core`

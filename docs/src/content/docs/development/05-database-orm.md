@@ -3,8 +3,6 @@ title: Database Setup & Code-First ORM
 description: Master Foundry's multi-database SPI storage, Code-First ORM schema definitions, fluent query builders, and database migrations.
 ---
 
-# Database Setup & Code-First ORM
-
 This chapter covers:
 1. Foundry's multi-database SPI plugin storage architecture
 2. Defining relational schemas and indexes using Code-First `EntitySchema`

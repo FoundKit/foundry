@@ -5,8 +5,6 @@ description: "Stage 2: In-depth analysis of database pool, Redis session caching
 
 > **Codebase Navigation**：⬅️ Previous: [01. Core Types & Trait Abstractions (foundry_core)](./01-core/) · [📋 Overview & Guide](./) · ➡️ Next: [03. Authentication & RBAC (foundry_auth)](./03-auth/)
 
-# Foundry Storage 代码深度分析
-
 > 第二阶段：理解存储层实现
 >
 > Crate: `foundry_storage`

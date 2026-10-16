@@ -1,0 +1,178 @@
+---
+interface Props {
+  lang?: 'en' | 'zh';
+}
+
+const { lang = 'en' } = Astro.props;
+
+const isZh = lang === 'zh';
+
+const steps = isZh
+  ? [
+      {
+        comment: '# 1. 从 GitHub 仓库安装 CLI 工具',
+        cmd: 'cargo install --git https://github.com/foundkit/foundry foundry_cli',
+        outputs: [],
+      },
+      {
+        comment: '# 2. 创建全新的独立业务应用工程 (默认 PostgreSQL，可选 --db mysql / mariadb / mongodb)',
+        cmd: 'foundry new my-app',
+        outputs: ['✔ 创建独立业务应用工程: my-app/'],
+      },
+      {
+        comment: '# 3. 进入项目目录并启动服务 (自动执行数据迁移与管理员初始化)',
+        cmd: 'cd my-app && cargo run',
+        outputs: [
+          '✔ Foundry 应用成功监听于: http://0.0.0.0:8080',
+          '✔ REST API 统一接入点: /api/v1',
+          '✔ 可视化 Admin 控制台: /admin',
+        ],
+      },
+    ]
+  : [
+      {
+        comment: '# 1. Install CLI from GitHub repository',
+        cmd: 'cargo install --git https://github.com/foundkit/foundry foundry_cli',
+        outputs: [],
+      },
+      {
+        comment: '# 2. Scaffold a brand-new independent user application (PostgreSQL default, or --db mysql / mariadb / mongodb)',
+        cmd: 'foundry new my-app',
+        outputs: ['✔ Created independent application project: my-app/'],
+      },
+      {
+        comment: '# 3. Enter project directory & run (auto-initializes schema & superadmin)',
+        cmd: 'cd my-app && cargo run',
+        outputs: [
+          '✔ Foundry Application listening on http://0.0.0.0:8080',
+          '✔ REST APIs available at /api/v1',
+          '✔ Admin Shell connected at /admin',
+        ],
+      },
+    ];
+
+const allCommands = steps.map(s => s.cmd).join(' && ');
+const copyText = isZh ? '复制' : 'Copy';
+const copiedText = isZh ? '已复制!' : 'Copied!';
+const copyAllText = isZh ? '复制全部命令' : 'Copy all';
+---
+
+<div class="tech-terminal not-content" role="region" aria-label="Quickstart Terminal">
+  <div class="tech-terminal-header">
+    <div class="tech-terminal-controls" aria-hidden="true">
+      <span class="tech-terminal-dot dot-red"></span>
+      <span class="tech-terminal-dot dot-yellow"></span>
+      <span class="tech-terminal-dot dot-green"></span>
+    </div>
+    <div class="tech-terminal-title">
+      <svg class="terminal-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25Zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM3.22 4.97a.75.75 0 0 1 1.06 0l2.5 2.5a.75.75 0 0 1 0 1.06l-2.5 2.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L5.19 8 3.22 6.03a.75.75 0 0 1 0-1.06Zm4.53 5.78a.75.75 0 0 1 .75-.75h4a.75.75 0 0 1 0 1.5h-4a.75.75 0 0 1-.75-.75Z"></path>
+      </svg>
+      <span>bash — foundry CLI v0.1.0</span>
+    </div>
+    <button
+      type="button"
+      class="tech-terminal-copy-all"
+      data-clipboard={allCommands}
+      title={copyAllText}
+      aria-label={copyAllText}
+    >
+      <svg class="icon-copy" viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+        <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>
+        <path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+      </svg>
+      <svg class="icon-check" viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+        <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+      </svg>
+      <span class="btn-label">{copyAllText}</span>
+    </button>
+  </div>
+
+  <div class="tech-terminal-body">
+    {steps.map((step, idx) => (
+      <div class="terminal-step" data-step={idx + 1}>
+        <div class="terminal-comment">{step.comment}</div>
+        <div class="terminal-cmd-row">
+          <div class="terminal-cmd-content">
+            <span class="t-prompt" aria-hidden="true">➜</span>
+            <code class="t-cmd">{step.cmd}</code>
+          </div>
+          <button
+            type="button"
+            class="terminal-copy-btn"
+            data-clipboard={step.cmd}
+            title={`${copyText}: ${step.cmd}`}
+            aria-label={`${copyText}: ${step.cmd}`}
+          >
+            <svg class="icon-copy" viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+              <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path>
+              <path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+            </svg>
+            <svg class="icon-check" viewBox="0 0 16 16" width="13" height="13" fill="currentColor">
+              <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+            </svg>
+            <span class="copy-badge">{copiedText}</span>
+          </button>
+        </div>
+        {step.outputs.length > 0 && (
+          <div class="terminal-outputs">
+            {step.outputs.map((out) => (
+              <div class="terminal-output-line">
+                <span class="t-ok">✔</span>
+                <span class="t-path">{out.replace(/^✔\s*/, '')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  function initTerminalCopy() {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-clipboard]');
+    buttons.forEach((btn) => {
+      // Avoid duplicate binding
+      if (btn.dataset.copyInitialized) return;
+      btn.dataset.copyInitialized = 'true';
+
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const textToCopy = btn.getAttribute('data-clipboard');
+        if (!textToCopy) return;
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(textToCopy);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+          }
+
+          btn.classList.add('is-copied');
+          setTimeout(() => {
+            btn.classList.remove('is-copied');
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy to clipboard:', err);
+        }
+      });
+    });
+  }
+
+  // Initialize on load and on Astro page transitions
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTerminalCopy);
+  } else {
+    initTerminalCopy();
+  }
+  document.addEventListener('astro:page-load', initTerminalCopy);
+</script>

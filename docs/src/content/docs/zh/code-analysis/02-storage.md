@@ -5,8 +5,6 @@ description: "阶段 2：深度剖析数据库连接池、Redis 会话缓存、�
 
 > **源码导读导航**：⬅️ 上一篇：[01. 核心类型与接口定义 (foundry_core)](./01-core/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[03. 认证与权限控制系统 (foundry_auth)](./03-auth/)
 
-# Foundry Storage 代码深度分析
-
 > 第二阶段：理解存储层实现
 >
 > Crate: `foundry_storage`

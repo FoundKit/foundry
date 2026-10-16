@@ -3,8 +3,6 @@ title: Database & Storage Engine Guide
 description: Foundry Multi-Database SPI architecture, PostgreSQL, MySQL, MariaDB, and MongoDB configurations, Zero-DDL dynamic models, and local development.
 ---
 
-# Database & Storage Engine Guide
-
 > [!TIP]
 > **Complete System Development Tutorial**: For chainable ORM query builders (`OrmSelect`, `OrmInsert`, `OrmUpdate`, `OrmDelete`), Code-First entity schemas, and end-to-end practical walkthroughs, refer to [05. Database Setup & Code-First ORM](../development/05-database-orm/).
 

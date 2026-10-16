@@ -3,8 +3,6 @@ title: 请求验证器与 DTO 设计
 description: 掌握 Foundry 强类型参数验证器 (DTO) 设计、validator 宏注解、常用校验规则速查与 HTTP 422 错误截断机制。
 ---
 
-# 请求验证器与 DTO 设计
-
 本章内容：
 1. 理解请求验证在前后端交互中的防御性编程价值；
 2. 掌握基于 `validator` 宏的 DTO 数据传输对象设计；

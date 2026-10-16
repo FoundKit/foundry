@@ -3,8 +3,6 @@ title: Architecture Blueprint
 description: Complete architectural design and blueprint for the Foundry Backend Platform & Framework.
 ---
 
-# Foundry Architecture Blueprint
-
 > **Organization**: [foundkit](https://github.com/foundkit)  
 > **Project**: `foundry`  
 > **Positioning**: *A modern, modular, decoupled Rust backend platform and application framework.*

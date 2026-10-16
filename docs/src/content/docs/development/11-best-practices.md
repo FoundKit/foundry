@@ -1,9 +1,7 @@
 ---
-title: 11. Architectural Best Practices & Production
+title: Architectural Best Practices & Production
 description: Production-grade architecture rules, connection pool tuning, cursor pagination, Redis caching, and Docker containerization deployment.
 ---
-
-# Architectural Best Practices & Production
 
 This chapter covers:
 1. Adhere to Thin Controller / Fat Service conventions;

@@ -14,8 +14,6 @@ description: "Systematic learning path, architecture overview, data flow, and re
 > 7. [Stage 7: Blog Platform Full-Stack Real-World Example](./07-blog-platform/)
 > 8. [Stage 8: Admin Frontend Console Deep Dive (apps/admin)](./08-admin-frontend/)
 
-# Foundry 项目学习指南
-
 > 完全掌控 Foundry 框架的系统性学习路径
 >
 > 最后更新：2026-09-15

@@ -3,8 +3,6 @@ title: 架构设计蓝图
 description: Foundry 后端平台与框架的核心架构设计与完全解耦模型。
 ---
 
-# Foundry 架构设计蓝图
-
 > **组织**: [foundkit](https://github.com/foundkit)  
 > **项目**: `foundry`  
 > **定位**: *现代、模块化、完全解耦的 Rust 后端平台与应用开发框架。*

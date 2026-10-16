@@ -3,8 +3,6 @@ title: Logging, Distributed Tracing & Audit Guide
 description: "Comprehensive guide to Foundry's layered observability architecture: from structured business logging with tracing, RUST_LOG dynamic filtering, TraceLayer HTTP telemetry to enterprise audit logs and custom subscriber integrations."
 ---
 
-# Logging, Distributed Tracing & Audit Guide
-
 In modern high-concurrency backend systems and multi-tenant architectures, **Observability** is an essential pillar for safeguarding service stability, troubleshooting production anomalies rapidly, and maintaining an immutable record of business operations.
 
 Foundry provides a modern, high-performance, layered observability solution:

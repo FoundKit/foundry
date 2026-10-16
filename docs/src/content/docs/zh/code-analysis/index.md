@@ -14,8 +14,6 @@ description: "Foundry 框架系统性学习路径、架构概览、数据流与�
 > 7. [阶段 7：Blog Platform 完整业务实战示例](./07-blog-platform/)
 > 8. [阶段 8：apps/admin 前端后台深度剖析](./08-admin-frontend/)
 
-# Foundry 项目学习指南
-
 > 完全掌控 Foundry 框架的系统性学习路径
 >
 > 最后更新：2026-09-15

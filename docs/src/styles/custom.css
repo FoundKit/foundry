@@ -191,6 +191,344 @@ header.header {
 }
 
 /* --------------------------------------------------------------------------
+   Homepage Badges & Tech Terminal
+   -------------------------------------------------------------------------- */
+.tech-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--fk-code-bg);
+  border: 1px solid var(--fk-code-border);
+  color: var(--fk-accent-text);
+  font-size: 0.825rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0.5rem 0 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.tech-badge:hover {
+  transform: translateY(-1px);
+  border-color: var(--fk-accent-text);
+}
+
+.tech-terminal {
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.4), 0 0 24px -6px rgba(37, 99, 235, 0.15);
+  margin: 1.5rem 0 2.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  position: relative;
+}
+
+:root:not([data-theme='dark']) .tech-terminal {
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.2), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+}
+
+.tech-terminal-header {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  user-select: none;
+}
+
+.tech-terminal-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tech-terminal-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.tech-terminal-header:hover .tech-terminal-dot {
+  opacity: 1;
+}
+
+.dot-red { background: #ff5f56; }
+.dot-yellow { background: #ffbd2e; }
+.dot-green { background: #27c93f; }
+
+.tech-terminal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+
+.tech-terminal-title .terminal-icon {
+  opacity: 0.75;
+}
+
+.tech-terminal-copy-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  border-radius: 5px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.725rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.tech-terminal-copy-all:hover {
+  background: rgba(37, 99, 235, 0.25);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #ffffff;
+}
+
+.tech-terminal-copy-all .icon-check,
+.terminal-copy-btn .icon-check {
+  display: none;
+}
+
+.tech-terminal-copy-all.is-copied .icon-copy,
+.terminal-copy-btn.is-copied .icon-copy {
+  display: none;
+}
+
+.tech-terminal-copy-all.is-copied .icon-check,
+.terminal-copy-btn.is-copied .icon-check {
+  display: block;
+  color: #22c55e;
+}
+
+.tech-terminal-copy-all.is-copied {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.tech-terminal-body {
+  padding: 1.25rem 1.5rem;
+  font-size: 0.875rem;
+  color: #e2e8f0;
+  line-height: 1.65;
+}
+
+.terminal-step {
+  margin-bottom: 1.15rem;
+}
+
+.terminal-step:last-child {
+  margin-bottom: 0;
+}
+
+.terminal-comment {
+  color: #64748b;
+  font-size: 0.78rem;
+  margin-bottom: 0.35rem;
+  user-select: none;
+  font-style: italic;
+}
+
+.terminal-cmd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  transition: all 0.18s ease;
+}
+
+.terminal-cmd-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.terminal-cmd-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.terminal-cmd-content::-webkit-scrollbar {
+  display: none;
+}
+
+.tech-terminal-body .t-prompt {
+  color: #22c55e;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 0.85rem;
+}
+
+.tech-terminal-body .t-cmd {
+  color: #38bdf8 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.5;
+}
+
+.terminal-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.terminal-copy-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.terminal-copy-btn .copy-badge {
+  position: absolute;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #4ade80;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.terminal-copy-btn.is-copied .copy-badge {
+  opacity: 1;
+}
+
+.terminal-copy-btn.is-copied {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.terminal-outputs {
+  margin-top: 0.35rem;
+  padding-left: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terminal-output-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.tech-terminal-body .t-ok {
+  color: #10b981;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 0.75rem;
+}
+
+.tech-terminal-body .t-path {
+  color: #94a3b8;
+  font-size: 0.8125rem;
+}
+
+/* --------------------------------------------------------------------------
+   Architecture Visual Pipeline
+   -------------------------------------------------------------------------- */
+.tech-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+  align-items: stretch;
+}
+
+.tech-pipeline-node {
+  background: var(--fk-surface);
+  border: 1px solid var(--fk-border);
+  border-radius: 0.75rem;
+  padding: 1.35rem 1rem;
+  text-align: center;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: var(--fk-card-shadow);
+}
+
+.tech-pipeline-node:hover {
+  transform: translateY(-2px);
+  border-color: var(--fk-accent-text) !important;
+  box-shadow: var(--fk-card-shadow-hover);
+}
+
+.tech-pipeline-node .node-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  margin-bottom: 0.65rem;
+}
+
+.tech-pipeline-node .node-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--fk-text);
+  margin-bottom: 0.35rem;
+}
+
+.tech-pipeline-node .node-desc {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--fk-text-muted);
+}
+
+/* --------------------------------------------------------------------------
    Cards - Clean design
    -------------------------------------------------------------------------- */
 .card {

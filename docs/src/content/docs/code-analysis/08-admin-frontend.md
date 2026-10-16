@@ -5,8 +5,6 @@ description: "Stage 8: In-depth analysis of React 18 + TailwindCSS admin console
 
 > **Codebase Navigation**：⬅️ Previous: [07. Blog Platform Full-Stack Example (blog_platform)](./07-blog-platform/) · [📋 Overview & Guide](./)
 
-# 阶段 8：Admin 前端管理后台 (apps/admin)
-
 ## 概述
 
 `apps/admin` 是 Foundry 框架的**完整前端管理后台**，采用现代 Web 技术栈构建：

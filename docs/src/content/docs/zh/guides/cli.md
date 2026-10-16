@@ -3,8 +3,6 @@ title: CLI 命令行工具指南
 description: foundry 与 foundry-cli 开发者命令行工具完整参考手册。
 ---
 
-# Foundry CLI 命令行工具指南
-
 Foundry 提供了功能完备的开发者命令行工具，可同时通过 `foundry` 或 `foundry-cli` 命令调用。
 
 ---

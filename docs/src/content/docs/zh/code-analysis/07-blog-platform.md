@@ -5,8 +5,6 @@ description: "阶段 7：深度剖析完整多租户业务系统实战，包含�
 
 > **源码导读导航**：⬅️ 上一篇：[06. 门面层与应用组装 (foundry)](./06-foundry/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[08. 前端管理后台系统 (apps/admin)](./08-admin-frontend/)
 
-# 阶段 7：Blog Platform 示例 (examples/blog_platform)
-
 ## 概述
 
 `blog_platform` 是一个**完整的示例应用**，演示如何使用 Foundry 框架构建实际业务系统。它展示了：

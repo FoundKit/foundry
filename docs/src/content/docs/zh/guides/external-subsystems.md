@@ -3,8 +3,6 @@ title: 动态外部子系统扩展
 description: 掌握无需重新编译核心二进制的动态外部子系统 (External Subsystems) 架构、subsystem.json 清单规范与运行时热加载机制。
 ---
 
-# 动态外部子系统扩展
-
 > **导读**：在构建大型 SaaS 平台或企业级集成平台时，经常需要支持第三方厂商或插件开发者以非侵入方式接入系统，甚至无需重新编译主程序即可挂载新的业务运营大屏和控制台菜单。Foundry 提供了 **动态外部子系统 (External Standalone Subsystems)** 机制，允许通过文件系统清单（`subsystem.json`）动态发现并挂载独立子系统。
 
 ---

@@ -3,8 +3,6 @@ title: Application Configuration & Environment Variables Guide
 description: "Complete reference for Foundry runtime configuration and environments: environment variables cheat sheet, FoundryBuilder fluent API, connection pool tuning, and runtime dynamic subsystem configs."
 ---
 
-# Application Configuration & Environment Variables Guide
-
 Foundry adheres to the philosophy of **"Convention Over Configuration, Minimalist yet Highly Controllable"**. Configuration is logically segmented into two tiers:
 1. **Static Infrastructure Configuration**: Configured via system environment variables, `.env` files, and the fluent `FoundryBuilder` API to define network bindings, database connection strings, Redis, JWT secrets, and SMTP relays.
 2. **Runtime Dynamic Subsystem Configuration**: Driven by `ConfigSchema` within the dynamic configuration center, allowing business administrators to view and adjust operational parameters in real time without restarting the server.

@@ -3,8 +3,6 @@ title: Admin Console & postMessage SDK
 description: Master Foundry's decoupled React Admin shell, subsystem custom page specifications, and postMessage token injection protocol.
 ---
 
-# Admin Console & postMessage SDK
-
 This chapter covers:
 1. Understand the decoupled Admin Console architecture (`apps/admin`);
 2. Declare custom admin navigation items via `custom_admin_pages`;

@@ -5,8 +5,6 @@ description: "Stage 5: In-depth analysis of Axum route assembly, middleware stac
 
 > **Codebase Navigation**：⬅️ Previous: [04. Extension System & Hooks (foundry_extension)](./04-extension/) · [📋 Overview & Guide](./) · ➡️ Next: [06. Facade Layer & Assembly (foundry)](./06-foundry/)
 
-# Foundry Engine 代码深度分析
-
 > 第五阶段：理解请求引擎（路由、处理器、中间件、Auto-CRUD）
 >
 > Crate: `foundry_engine`

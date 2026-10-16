@@ -5,8 +5,6 @@ description: "阶段 4：深度剖析 HookContext、ExtensionRegistry、HookRunn
 
 > **源码导读导航**：⬅️ 上一篇：[03. 认证与权限控制系统 (foundry_auth)](./03-auth/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[05. 请求引擎与自动 CRUD (foundry_engine)](./05-engine/)
 
-# Foundry Extension 代码深度分析
-
 > 第四阶段：理解扩展系统（生命周期钩子）
 >
 > Crate: `foundry_extension`

@@ -5,8 +5,6 @@ description: "Stage 4: In-depth analysis of HookContext, ExtensionRegistry, Hook
 
 > **Codebase Navigation**：⬅️ Previous: [03. Authentication & RBAC (foundry_auth)](./03-auth/) · [📋 Overview & Guide](./) · ➡️ Next: [05. Request Engine & Auto-CRUD (foundry_engine)](./05-engine/)
 
-# Foundry Extension 代码深度分析
-
 > 第四阶段：理解扩展系统（生命周期钩子）
 >
 > Crate: `foundry_extension`

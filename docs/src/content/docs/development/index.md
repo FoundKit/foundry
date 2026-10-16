@@ -3,8 +3,6 @@ title: System Development Tutorial
 description: Complete modular Foundry system development tutorial with chapter breakdown and learning roadmap.
 ---
 
-# System Development Tutorial
-
 Foundry is built on three core principles:
 
 * **Framework-Application Decoupling**: Build in your own Git repository, consume Foundry via Cargo, upgrade upstream with zero conflicts

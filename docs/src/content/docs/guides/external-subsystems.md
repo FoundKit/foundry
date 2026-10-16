@@ -3,8 +3,6 @@ title: External Standalone Subsystems
 description: Extend Foundry without recompiling the main binary via External Standalone Subsystems, subsystem.json manifests, and runtime hot-discovery.
 ---
 
-# External Standalone Subsystems
-
 > **Overview**: For modular enterprise platforms and plugin ecosystems, Foundry supports **External Standalone Subsystems**, allowing dynamic discovery and mounting of subsystem directories via `subsystem.json` manifests without recompiling the main Rust binary.
 
 ---

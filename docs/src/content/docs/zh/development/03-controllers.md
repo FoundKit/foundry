@@ -3,8 +3,6 @@ title: 控制器、参数与响应规范
 description: 学习如何在 Foundry 中编写清晰精简的 Axum 控制器、提取请求参数、记录结构化日志并返回统一标准的 ApiResponse 与 AppError。
 ---
 
-# 控制器、参数与响应规范
-
 本章内容：
 1. 掌握 Axum 控制器 Handler 异步函数的设计与编写；
 2. 熟练使用 `Json`、`Query`、`Path`、`Extension` 提取各类入参；

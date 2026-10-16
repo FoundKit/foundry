@@ -3,8 +3,6 @@ title: Controllers & Response Envelope
 description: Write clean Axum controllers, extract request payloads, record structured logs, and return standardized ApiResponse and AppError envelopes.
 ---
 
-# Controllers & Response Envelope
-
 This chapter covers:
 1. Designing thin async Axum controller handlers
 2. Extracting inputs with `Json`, `Query`, `Path`, and `Extension`

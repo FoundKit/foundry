@@ -5,8 +5,6 @@ description: "阶段 6：深度剖析 FoundryApp、FoundryBuilder 构建器模�
 
 > **源码导读导航**：⬅️ 上一篇：[05. 请求引擎与自动 CRUD (foundry_engine)](./05-engine/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[07. 博客实战示例应用 (blog_platform)](./07-blog-platform/)
 
-# Foundry 门面层代码深度分析
-
 > 第六阶段：理解门面层（应用组装与启动）
 >
 > Crate: `foundry`

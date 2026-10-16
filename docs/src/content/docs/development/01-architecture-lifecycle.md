@@ -3,8 +3,6 @@ title: Architecture & Request Lifecycle
 description: Deep dive into Foundry's decoupled platform architecture, bootstrapping process, FoundryApp Builder, and the full HTTP request lifecycle.
 ---
 
-# Architecture & Request Lifecycle
-
 This chapter covers:
 1. Foundry's "framework-application complete decoupling" philosophy
 2. Application bootstrapping with `FoundryApp::builder()`

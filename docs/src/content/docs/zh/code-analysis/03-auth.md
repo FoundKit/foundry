@@ -5,8 +5,6 @@ description: "阶段 3：深度剖析管理员模型、密码哈希、JWT 令牌
 
 > **源码导读导航**：⬅️ 上一篇：[02. 存储层实现与动态模型 (foundry_storage)](./02-storage/) · [📋 学习指南与总览](./) · ➡️ 下一篇：[04. 扩展系统与生命周期钩子 (foundry_extension)](./04-extension/)
 
-# Foundry Auth 代码深度分析
-
 > 第三阶段：理解认证与授权实现
 >
 > Crate: `foundry_auth`

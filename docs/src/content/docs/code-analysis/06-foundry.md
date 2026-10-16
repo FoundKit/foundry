@@ -5,8 +5,6 @@ description: "Stage 6: In-depth analysis of FoundryApp, FoundryBuilder pattern, 
 
 > **Codebase Navigation**：⬅️ Previous: [05. Request Engine & Auto-CRUD (foundry_engine)](./05-engine/) · [📋 Overview & Guide](./) · ➡️ Next: [07. Blog Platform Full-Stack Example (blog_platform)](./07-blog-platform/)
 
-# Foundry 门面层代码深度分析
-
 > 第六阶段：理解门面层（应用组装与启动）
 >
 > Crate: `foundry`

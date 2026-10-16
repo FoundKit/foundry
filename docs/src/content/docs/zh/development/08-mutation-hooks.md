@@ -3,8 +3,6 @@ title: 生命周期突变钩子 (Mutation Hook)
 description: 掌握 Foundry 实体生命周期突变钩子流水线，实现数据前置校验拦截、字段动态注入与后置异步事件触发。
 ---
 
-# 生命周期突变钩子 (Mutation Hook)
-
 本章内容：
 1. 理解生命周期突变钩子（Mutation Hook）的设计意图与运行机制；
 2. 掌握 6 大核心生命周期事件方法的实现；

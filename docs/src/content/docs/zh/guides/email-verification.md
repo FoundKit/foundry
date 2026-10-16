@@ -3,8 +3,6 @@ title: 邮件服务与验证码中心
 description: 掌握 Foundry 内置的 SMTP 邮件发送服务、VerificationService 验证码中心、Redis 冷却防刷与双模存储机制。
 ---
 
-# 邮件服务与验证码中心
-
 > **导读**：在各类企业级后端系统与用户管理平台中，邮件通知与身份验证码是极其常见的核心能力。Foundry 在引擎层（`foundry_engine`）原生内聚了开箱即用的 **SMTP 邮件发送服务** 与高可靠的 **`VerificationService` 验证码中心**，业务工程无需手动组装复杂的邮件与防刷逻辑。
 
 ---

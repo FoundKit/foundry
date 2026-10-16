@@ -3,8 +3,6 @@ title: Email & Verification Services
 description: Master Foundry's built-in SMTP email dispatch, VerificationService, Redis cooldown throttling, and dual-mode storage architecture.
 ---
 
-# Email & Verification Services
-
 > **Overview**: Email notifications and verification codes are vital across enterprise web applications. Foundry's engine (`foundry_engine`) provides built-in **SMTP email delivery** and a production-grade **`VerificationService`**, eliminating external boilerplate.
 
 ---

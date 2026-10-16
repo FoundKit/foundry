@@ -3,8 +3,6 @@ title: 基础架构与请求生命周期
 description: 深入理解 Foundry 平台的解耦架构、引导启动流程、FoundryApp Builder 与 HTTP 全请求生命周期时序流转。
 ---
 
-# 基础架构与请求生命周期
-
 本章内容：
 1. 理解 Foundry “平台与业务完全解耦”的核心架构哲学；
 2. 掌握 `FoundryApp::builder()` 应用引导与服务启动过程；

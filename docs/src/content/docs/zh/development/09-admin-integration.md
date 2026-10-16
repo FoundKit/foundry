@@ -3,8 +3,6 @@ title: 管理控制台与 postMessage 桥接
 description: 掌握 Foundry 解耦 Admin 控制台架构、子系统自定义大屏声明与前端 postMessage 免密鉴权协议。
 ---
 
-# 管理控制台与 postMessage 桥接
-
 本章内容：
 1. 理解 Foundry 解耦的可视化 Admin 控制台架构；
 2. 学会在子系统中声明专属运营大屏或自定义管理页面；

@@ -3,8 +3,6 @@ title: Authentication, RBAC & Security Guide
 description: Complete guide to Foundry authentication, JWT mechanisms, Argon2id password hashing, SMTP two-factor login, multi-tenant RBAC topic isolation, and security middlewares.
 ---
 
-# Authentication, RBAC & Security Guide
-
 In modern multi-tenant enterprise platforms, **Authentication** and **Role-Based Access Control (RBAC)** are essential for protecting core data assets.
 
 Foundry integrates enterprise-grade security infrastructure into the framework:

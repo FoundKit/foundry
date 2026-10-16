@@ -3,8 +3,6 @@ title: Development Roadmap & Versioning
 description: Foundry development milestones, completed features, versioning strategy, and upcoming roadmap.
 ---
 
-# Foundry Roadmap & Versioning Strategy
-
 > **Project**: `foundry`  
 > **Organization**: [foundkit](https://github.com/foundkit)  
 

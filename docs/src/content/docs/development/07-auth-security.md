@@ -3,8 +3,6 @@ title: Authentication & Hierarchical RBAC
 description: Master Foundry's IAM security, Argon2id password hashing, JWT service, and 3-tier hierarchical RBAC subsystem tenant isolation.
 ---
 
-# Authentication & Hierarchical RBAC
-
 This chapter covers:
 1. Understand Foundry's IAM architecture;
 2. Master Argon2id password hashing and JWT token verification;

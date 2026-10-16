@@ -3,8 +3,6 @@ title: CLI Tooling Reference
 description: Complete command-line interface reference for foundry and foundry-cli developer tooling.
 ---
 
-# Foundry CLI Tooling Reference
-
 Foundry provides a comprehensive command-line tool available as both `foundry` and `foundry-cli`.
 
 ---

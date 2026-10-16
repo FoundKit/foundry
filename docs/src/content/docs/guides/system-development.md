@@ -3,8 +3,6 @@ title: System Development Tutorial Hub
 description: Complete modular Foundry system development tutorial navigation. Access all 11 core chapters.
 ---
 
-# Foundry System Development Tutorial Hub
-
 > **Overview**:
 > This tutorial is structured into **11 focused, dedicated chapters** covering architecture, routing, controllers, validation, Code-First ORM, dynamic models, and admin integration.
 

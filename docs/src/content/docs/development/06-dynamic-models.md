@@ -3,8 +3,6 @@ title: Zero-DDL Dynamic Models & Auto-CRUD
 description: Master Foundry's Zero-DDL schema-free dynamic data models, RecordStore storage API, and instantly generated RESTful Auto-CRUD engine.
 ---
 
-# Zero-DDL Dynamic Models & Auto-CRUD
-
 This chapter covers:
 1. Understand Zero-DDL schema-free storage philosophy;
 2. Use `RecordStore` APIs for creating, reading, updating, and querying records;

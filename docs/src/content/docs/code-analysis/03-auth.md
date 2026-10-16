@@ -5,8 +5,6 @@ description: "Stage 3: In-depth analysis of Admin models, password hashing, JWT 
 
 > **Codebase Navigation**：⬅️ Previous: [02. Storage Layer & Model Engine (foundry_storage)](./02-storage/) · [📋 Overview & Guide](./) · ➡️ Next: [04. Extension System & Hooks (foundry_extension)](./04-extension/)
 
-# Foundry Auth 代码深度分析
-
 > 第三阶段：理解认证与授权实现
 >
 > Crate: `foundry_auth`

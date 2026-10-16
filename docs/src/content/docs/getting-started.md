@@ -3,8 +3,6 @@ title: Getting Started
 description: 5-minute quickstart guide to create, build, and run an independent Foundry application with PostgreSQL, MySQL, MariaDB, and MongoDB.
 ---
 
-# Foundry Getting Started
-
 > **Beginner-Friendly Guide**: Follow these simple steps to set up your environment, initialize a new project, write your first custom business endpoint, and launch your server in **less than 5 minutes**!
 
 Foundry is a modern, decoupled Rust backend platform and framework. During initial development, projects consume Foundry via **Git dependencies** in standalone repositories.

@@ -3,8 +3,6 @@ title: 应用配置与环境变量完全指南
 description: Foundry 全局运行时配置与环境系统完全参考：包含环境变量速查表、FoundryBuilder 流式 API、数据库连接池调优与运行时动态业务配置。
 ---
 
-# 应用配置与环境变量完全指南
-
 Foundry 秉持 **“约定优于配置，极简且高可控”** 的设计哲学。系统将配置清晰地划分为两层：
 1. **静态基础设施配置 (Static Infrastructure Config)**：通过环境变量、`.env` 文件以及 `FoundryBuilder` 链式方法配置主机监听、数据库连接串、Redis、JWT 密钥与邮件中继；
 2. **运行时动态业务配置 (Runtime Dynamic Business Config)**：通过 `ConfigSchema` 驱动的动态配置中心，在管理控制台可视化定义并在业务运行期间实时修改、热生效，无需重启服务。

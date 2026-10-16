@@ -3,8 +3,6 @@ title: Lifecycle Mutation Hooks
 description: Master Foundry's entity lifecycle mutation hook pipeline for pre-mutation validation, field injection, and post-mutation async side-effects.
 ---
 
-# Lifecycle Mutation Hooks
-
 This chapter covers:
 1. Understand the design and purpose of `MutationHook`;
 2. Implement the 6 lifecycle event methods;

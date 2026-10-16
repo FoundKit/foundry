@@ -3,8 +3,6 @@ title: 数据库与存储引擎开发指南
 description: Foundry 多数据库 SPI 架构、PostgreSQL、MySQL、MariaDB 与 MongoDB 配置、Zero-DDL 动态模型引擎与容器化快速起步。
 ---
 
-# 数据库与存储引擎开发指南
-
 > [!TIP]
 > **完整系统开发教程**：若需查阅链式 ORM 查询构造器 (`OrmSelect`, `OrmInsert`, `OrmUpdate`, `OrmDelete`)、Code-First 实体声明与全流程实战，请参阅 [05. 数据库配置与 Code-First ORM](../development/05-database-orm/)。
 

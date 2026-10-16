@@ -3,8 +3,6 @@ title: Request Validation & DTOs
 description: Master compile-time request validation DTOs in Foundry, validator macro annotations, common rule reference, and HTTP 422 short-circuiting.
 ---
 
-# Request Validation & DTOs
-
 This chapter covers:
 1. Defensive validation principles
 2. Implementing DTOs with `#[derive(Validate)]`

@@ -5,8 +5,6 @@ description: "阶段 8：深度剖析 React 18 + TailwindCSS 前端管理控制�
 
 > **源码导读导航**：⬅️ 上一篇：[07. 博客实战示例应用 (blog_platform)](./07-blog-platform/) · [📋 学习指南与总览](./)
 
-# 阶段 8：Admin 前端管理后台 (apps/admin)
-
 ## 概述
 
 `apps/admin` 是 Foundry 框架的**完整前端管理后台**，采用现代 Web 技术栈构建：

@@ -3,8 +3,6 @@ title: Routing System & Namespaces
 description: Master Foundry's unified namespace routing, subsystem extension routing, HTTP verb binding, and path parameter extraction.
 ---
 
-# Routing System & Namespaces
-
 This chapter covers:
 1. Foundry's global routing layout and unified namespace
 2. Registering custom business routes in `SubsystemModule`

@@ -1,9 +1,7 @@
 ---
-title: "10. Hands-on Walkthrough: E-Commerce System"
+title: "Hands-on Walkthrough: E-Commerce System"
 description: Build a complete, production-grade e-commerce shop subsystem with validation, domain services, Code-First ORM, unified responses, and tests.
 ---
-
-# Hands-on Walkthrough: E-Commerce System
 
 This chapter covers:
 1. Connect all foundational concepts in a real-world e-commerce shop implementation;

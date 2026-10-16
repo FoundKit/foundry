@@ -3,8 +3,6 @@ title: Zero-DDL 动态数据模型与 Auto-CRUD
 description: 掌握 Foundry 独创的 Zero-DDL 免建表动态数据模型、RecordStore 存储接口与即刻生成的 RESTful Auto-CRUD 引擎。
 ---
 
-# Zero-DDL 动态数据模型与 Auto-CRUD
-
 本章内容：
 1. 理解 Zero-DDL 免模式（Schema-Free）动态数据模型的设计理念；
 2. 掌握 `RecordStore` API 的增删改查使用方式；

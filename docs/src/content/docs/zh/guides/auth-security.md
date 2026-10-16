@@ -3,8 +3,6 @@ title: 认证、RBAC 权限与安全完全指南
 description: Foundry 身份认证、JWT 机制、Argon2id 密码哈希、SMTP 邮箱双因素验证、多租户 RBAC 权限隔离与安全中间件完全指南。
 ---
 
-# 认证、RBAC 权限与安全完全指南
-
 在现代多租户企业级平台中，**身份认证 (Authentication)** 与 **细粒度访问控制 (Authorization / RBAC)** 是守护数据资产的核心防线。
 
 Foundry 在框架层封装了开箱即用的安全基础设施：

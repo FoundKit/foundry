@@ -5,8 +5,6 @@ description: "Stage 7: In-depth analysis of a complete real-world multi-subsyste
 
 > **Codebase Navigation**：⬅️ Previous: [06. Facade Layer & Assembly (foundry)](./06-foundry/) · [📋 Overview & Guide](./) · ➡️ Next: [08. Admin Frontend Console (apps/admin)](./08-admin-frontend/)
 
-# 阶段 7：Blog Platform 示例 (examples/blog_platform)
-
 ## 概述
 
 `blog_platform` 是一个**完整的示例应用**，演示如何使用 Foundry 框架构建实际业务系统。它展示了：
