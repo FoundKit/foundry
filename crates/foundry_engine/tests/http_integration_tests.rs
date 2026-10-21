@@ -53,6 +53,8 @@ async fn handle_participate(
     })))
 }
 
+static INIT_CARNIVAL_PAGES: std::sync::Once = std::sync::Once::new();
+
 pub struct TestCarnivalSubsystemModule;
 
 impl SubsystemModule for TestCarnivalSubsystemModule {
@@ -78,11 +80,13 @@ impl SubsystemModule for TestCarnivalSubsystemModule {
 
     fn custom_pages_dir(&self) -> Option<std::path::PathBuf> {
         let dir = std::env::temp_dir().join("foundry_test_carnival_custom_pages");
-        let _ = std::fs::create_dir_all(&dir);
-        let _ = std::fs::write(
-            dir.join("lottery_dashboard.html"),
-            "<html><body>Lottery Dashboard</body></html>",
-        );
+        INIT_CARNIVAL_PAGES.call_once(|| {
+            let _ = std::fs::create_dir_all(&dir);
+            let _ = std::fs::write(
+                dir.join("lottery_dashboard.html"),
+                "<html><body>Lottery Dashboard</body></html>",
+            );
+        });
         Some(dir)
     }
 
@@ -470,5 +474,8 @@ async fn test_subsystem_custom_admin_page_served_under_admin_ext() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let body_str = String::from_utf8_lossy(&body);
-    assert!(body_str.contains("Lottery Dashboard"));
+    assert!(
+        body_str.contains("Lottery Dashboard"),
+        "Expected body to contain 'Lottery Dashboard', but got: {body_str}"
+    );
 }
