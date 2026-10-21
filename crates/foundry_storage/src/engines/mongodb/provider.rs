@@ -110,12 +110,14 @@ impl StorageDriverProvider for MongoProvider {
             return Ok(Vec::new());
         }
 
-        let client_options = ClientOptions::parse(connection_url).await.map_err(|e| {
+        let mut client_options = ClientOptions::parse(connection_url).await.map_err(|e| {
             AppError::Database(format!(
                 "Failed to parse MongoDB URL for schema verification: {}",
                 e
             ))
         })?;
+        client_options.server_selection_timeout = Some(std::time::Duration::from_secs(3));
+        client_options.connect_timeout = Some(std::time::Duration::from_secs(3));
 
         let db_name = client_options
             .default_database

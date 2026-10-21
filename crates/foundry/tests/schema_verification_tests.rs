@@ -220,6 +220,31 @@ async fn test_schema_verification_fails_when_collections_missing_mongodb() {
     let mongo_url = std::env::var("MONGODB_URL")
         .unwrap_or_else(|_| "mongodb://127.0.0.1:27017/foundry_dev".to_string());
 
+    // Probe if MongoDB is running and accessible (skip quickly if unavailable in CI)
+    let mut client_options =
+        match foundry_storage::mongodb::options::ClientOptions::parse(&mongo_url).await {
+            Ok(opt) => opt,
+            Err(_) => {
+                eprintln!("Skipping test: MongoDB URL parse failed");
+                return;
+            }
+        };
+    client_options.server_selection_timeout = Some(std::time::Duration::from_secs(2));
+    client_options.connect_timeout = Some(std::time::Duration::from_secs(2));
+
+    let client = match foundry_storage::mongodb::Client::with_options(client_options) {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!("Skipping test: MongoDB client creation failed");
+            return;
+        }
+    };
+
+    if client.list_database_names().await.is_err() {
+        eprintln!("Skipping test: MongoDB not accessible at {}", mongo_url);
+        return;
+    }
+
     let result = FoundryApp::builder()
         .database_url(&mongo_url)
         .auto_migrate(false)
@@ -227,20 +252,11 @@ async fn test_schema_verification_fails_when_collections_missing_mongodb() {
         .build()
         .await;
 
-    // If mongo is not accessible, skip test
-    let err_msg = match result {
-        Err(e) => e.to_string(),
-        Ok(_) => panic!("Expected startup to fail when MongoDB collections are missing"),
-    };
-
-    if err_msg.contains("Failed to create MongoDB client")
-        || err_msg.contains("Failed to parse MongoDB URL")
-        || err_msg.contains("ServerSelection")
-    {
-        eprintln!("Skipping test: MongoDB not accessible at {}", mongo_url);
-        return;
-    }
-
+    assert!(
+        result.is_err(),
+        "Expected startup to fail when MongoDB collections are missing"
+    );
+    let err_msg = result.err().unwrap().to_string();
     assert!(
         err_msg.contains("Database schema verification failed for driver 'mongodb'"),
         "Unexpected error: {}",
