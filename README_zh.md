@@ -172,7 +172,7 @@ foundry migrate --generate          # 为当前项目生成 migrations/ 目录�
 ```
 
 * **全自动初始化 (`AUTO_MIGRATE=true`)**：运行 `cargo run` 启动时，框架自动检测并完成数据库表结构/集合、覆盖索引创建与初始超管账号（`admin` / `admin123456`）注入。
-* **DBA 严格审计管控 (`AUTO_MIGRATE=false`)**：可由 DBA 在部署前手动执行 `migrations/` 下的原生脚本（`psql -f migrations/init.sql`、`mysql < migrations/init.sql`、`mongosh migrations/init.js` 等）。
+* **DBA 严格审计管控 (`AUTO_MIGRATE=false`)**：可由 DBA 在部署前手动执行 `migrations/` 下的原生脚本（`psql -f migrations/init.sql`、`mysql < migrations/init.sql`、`mongosh migrations/init.js` 等）。当配置为 `AUTO_MIGRATE=false` 时，Foundry 在启动时严格校验基础表结构完整性，若基本表尚未同步完毕将直接拒绝启动并提示错误退出（亦可使用 `foundry migrate --check` 提前探测）。
 
 ### 2. 子系统（子项目）操作
 

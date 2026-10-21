@@ -97,6 +97,38 @@ impl StorageDriverProvider for PostgresProvider {
         Ok(())
     }
 
+    async fn get_existing_tables(&self, connection_url: &str) -> AppResult<Vec<String>> {
+        if connection_url.contains("dummy") {
+            return Ok(Vec::new());
+        }
+
+        let pool = PgPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(connection_url)
+            .await
+            .map_err(|e| {
+                AppError::Database(format!(
+                    "Failed to connect to PostgreSQL for schema verification: {}",
+                    e
+                ))
+            })?;
+
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = ANY(current_schemas(false))",
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| {
+            AppError::Database(format!(
+                "Failed to query PostgreSQL table metadata: {}",
+                e
+            ))
+        })?;
+
+        Ok(rows.into_iter().map(|(t,)| t).collect())
+    }
+
     fn get_baseline_ddl(&self) -> String {
         crate::orm::compile_all_ddl(crate::orm::Dialect::Postgres)
     }

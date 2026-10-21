@@ -70,9 +70,9 @@ OrmSelect::from_table("shop_orders")
 
 * **参数化绑定杜绝 SQL 注入**：无论使用 `OrmSelect`、`RecordStore` 还是原生 SQL，严禁使用 `format!` 拼接 SQL 字符串；
 * **生产密钥脱敏**：`JWT_SECRET`、数据库密码与第三方私钥一律通过系统环境变量注入，严禁硬编码提交至 Git 仓库；
-* **生产环境关闭 `AUTO_MIGRATE`**：
+* **生产环境关闭 `AUTO_MIGRATE` 与启动强校验**：
   * 开发测试环境：`AUTO_MIGRATE=true`，实现全自动平滑建表；
-  * 企业生产环境：必须配置 `AUTO_MIGRATE=false`，通过 `foundry ddl --db <type>` 导出方言脚本，经 DBA 审计后统一由数据库发布系统（如 Flyway / Liquibase / GitLab CI）执行。
+  * 企业生产环境：必须配置 `AUTO_MIGRATE=false`，通过 `foundry ddl --db <type>` 导出方言脚本，经 DBA 审计后统一由数据库发布系统（如 Flyway / Liquibase / GitLab CI）执行。当配置为 `AUTO_MIGRATE=false` 时，Foundry 在启动时严格校验基础表结构完整性，若基本表尚未同步完毕将直接拒绝启动并提示错误退出（亦可使用 `foundry migrate --check` 提前探测）。
 
 ---
 

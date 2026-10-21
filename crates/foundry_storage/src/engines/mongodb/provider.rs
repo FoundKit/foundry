@@ -105,6 +105,41 @@ impl StorageDriverProvider for MongoProvider {
         Ok(())
     }
 
+    async fn get_existing_tables(&self, connection_url: &str) -> AppResult<Vec<String>> {
+        if connection_url.contains("dummy") {
+            return Ok(Vec::new());
+        }
+
+        let client_options = ClientOptions::parse(connection_url).await.map_err(|e| {
+            AppError::Database(format!(
+                "Failed to parse MongoDB URL for schema verification: {}",
+                e
+            ))
+        })?;
+
+        let db_name = client_options
+            .default_database
+            .clone()
+            .unwrap_or_else(|| "foundry".to_string());
+
+        let client = Client::with_options(client_options).map_err(|e| {
+            AppError::Database(format!(
+                "Failed to create MongoDB client for schema verification: {}",
+                e
+            ))
+        })?;
+
+        let db = client.database(&db_name);
+        let names = db.list_collection_names().await.map_err(|e| {
+            AppError::Database(format!(
+                "Failed to query MongoDB collection metadata: {}",
+                e
+            ))
+        })?;
+
+        Ok(names)
+    }
+
     fn get_baseline_ddl(&self) -> String {
         include_str!("../../../migrations/mongodb/init.js").to_string()
     }

@@ -168,15 +168,51 @@ impl Database {
         max_connections: u32,
         auto_migrate: bool,
     ) -> AppResult<Self> {
+        Self::connect_with_validation_control(
+            url,
+            explicit_type,
+            max_connections,
+            auto_migrate,
+            false,
+        )
+        .await
+    }
+
+    /// Connect with explicit database type and validation control
+    pub async fn connect_with_validation_control(
+        url: &str,
+        explicit_type: Option<&str>,
+        max_connections: u32,
+        auto_migrate: bool,
+        skip_schema_validation: bool,
+    ) -> AppResult<Self> {
         let registry = StorageRegistry::default_registry();
         let provider = registry.find_provider(url, explicit_type)?;
 
         if auto_migrate {
             provider.run_migrations(url).await?;
+        } else if !url.contains("dummy") && !skip_schema_validation {
+            let env_skip = std::env::var("SKIP_SCHEMA_VALIDATION")
+                .map(|v| v == "true" || v == "1")
+                .unwrap_or(false);
+            if !env_skip {
+                let models = crate::orm::get_all_orm_models();
+                let table_names: Vec<&str> = models.iter().map(|m| m.table_name.as_str()).collect();
+                provider.verify_schema(url, &table_names).await?;
+            }
         }
 
         let engines = provider.create_engines(url, max_connections).await?;
         Ok(Self::from_engines(engines))
+    }
+
+    /// Verifies that the database schema is complete and contains all required tables/collections.
+    pub async fn verify_schema(url: &str, explicit_type: Option<&str>) -> AppResult<()> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider(url, explicit_type)?;
+        let models = crate::orm::get_all_orm_models();
+        let table_names: Vec<&str> = models.iter().map(|m| m.table_name.as_str()).collect();
+        provider.verify_schema(url, &table_names).await
     }
 
     /// Returns the complete dialect DDL or initialization script generated directly from the binary SPI,

@@ -46,6 +46,47 @@ pub trait StorageDriverProvider: Send + Sync {
     /// Executes database-specific initialization and migration scripts
     async fn run_migrations(&self, connection_url: &str) -> AppResult<()>;
 
+    /// Retrieves all existing table (or collection) names currently in the database
+    async fn get_existing_tables(&self, connection_url: &str) -> AppResult<Vec<String>>;
+
+    /// Verifies whether the database contains all required tables/collections.
+    /// If incomplete, returns an AppError::Database with diagnostic details.
+    async fn verify_schema(&self, connection_url: &str, required_tables: &[&str]) -> AppResult<()> {
+        if connection_url.contains("dummy") {
+            return Ok(());
+        }
+
+        let existing = self.get_existing_tables(connection_url).await?;
+        let existing_set: std::collections::HashSet<String> = existing
+            .into_iter()
+            .map(|t| t.to_ascii_lowercase())
+            .collect();
+
+        let mut missing = Vec::new();
+        for req in required_tables {
+            if !existing_set.contains(&req.to_ascii_lowercase()) {
+                missing.push(*req);
+            }
+        }
+
+        if !missing.is_empty() {
+            let db_name = self.driver_name();
+            let migration_file = self.default_migration_filename();
+            return Err(foundry_core::error::AppError::Database(format!(
+                "Database schema verification failed for driver '{}'!\n\
+                The following required table(s) or collection(s) are missing from the database: {:?}.\n\
+                Root cause: AUTO_MIGRATE=false is active, but the baseline database schema DDL has not been synchronized.\n\
+                Remediation Options:\n\
+                  1. Run platform migrations manually: `foundry migrate`\n\
+                  2. Apply the dialect DDL script directly (e.g. `migrations/{}`)\n\
+                  3. Or set AUTO_MIGRATE=true in your .env or environment to allow automatic schema synchronization.",
+                db_name, missing, migration_file
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Returns the baseline dialect DDL or initialization script compiled from ORM or embedded in the driver
     fn get_baseline_ddl(&self) -> String;
 

@@ -20,6 +20,7 @@ pub struct FoundryConfig {
     pub jwt_secret: String,
     pub jwt_expiry_hours: i64,
     pub auto_migrate: bool,
+    pub skip_schema_validation: bool,
     pub db_pool_size: u32,
     pub external_systems_dirs: Vec<PathBuf>,
     pub admin_static_dirs: Vec<PathBuf>,
@@ -49,6 +50,9 @@ impl Default for FoundryConfig {
             auto_migrate: std::env::var("AUTO_MIGRATE")
                 .map(|v| v == "true" || v == "1")
                 .unwrap_or(true),
+            skip_schema_validation: std::env::var("SKIP_SCHEMA_VALIDATION")
+                .map(|v| v == "true" || v == "1")
+                .unwrap_or(false),
             db_pool_size: 20,
             external_systems_dirs: Vec::new(),
             admin_static_dirs: Vec::new(),
@@ -132,6 +136,11 @@ impl FoundryBuilder {
 
     pub fn auto_migrate(mut self, auto: bool) -> Self {
         self.config.auto_migrate = auto;
+        self
+    }
+
+    pub fn skip_schema_validation(mut self, skip: bool) -> Self {
+        self.config.skip_schema_validation = skip;
         self
     }
 
@@ -242,14 +251,21 @@ impl FoundryBuilder {
 
         info!("Initializing Foundry Platform Application...");
 
-        // 1. Initialize Database facade (with auto migrations if enabled)
+        // 1. Initialize Database facade (with auto migrations if enabled, or schema verification if disabled)
         info!("Connecting to database...");
-        let db = Database::connect(
+        let explicit_type = std::env::var("DATABASE_TYPE").ok();
+        let db = Database::connect_with_validation_control(
             &self.config.database_url,
+            explicit_type.as_deref(),
             self.config.db_pool_size,
             self.config.auto_migrate,
+            self.config.skip_schema_validation,
         )
-        .await?;
+        .await
+        .map_err(|e| {
+            tracing::error!("Database initialization failed: {}", e);
+            e
+        })?;
 
         // 3. Initialize Redis if configured
         let redis_pool = if let Some(ref rurl) = self.config.redis_url {

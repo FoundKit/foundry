@@ -172,7 +172,7 @@ foundry migrate --generate          # Generates migrations/ for current project 
 ```
 
 * **Zero-Setup Startup (`AUTO_MIGRATE=true`)**: Running `cargo run` automatically initializes tables/collections, covering indexes, and superadmin seed (`admin` / `admin123456`).
-* **Strict DBA Auditing (`AUTO_MIGRATE=false`)**: Execute generated migration scripts directly (`psql -f migrations/init.sql`, `mysql < migrations/init.sql`, etc.).
+* **Strict DBA Auditing (`AUTO_MIGRATE=false`)**: Execute generated migration scripts directly (`psql -f migrations/init.sql`, `mysql < migrations/init.sql`, etc.). When `AUTO_MIGRATE=false`, Foundry strictly validates baseline schema completeness at startup; if required tables/collections have not been synchronized, startup is rejected with diagnostic instructions (preflight validation available via `foundry migrate --check`).
 
 ### 2. Subsystem (Subproject) Operations
 

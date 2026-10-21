@@ -60,7 +60,7 @@ enum Commands {
     },
     /// Apply database migrations, or generate dialect DDL files
     Migrate {
-        #[arg(short, long, env = "DATABASE_URL")]
+        #[arg(short = 'u', long, env = "DATABASE_URL")]
         database_url: Option<String>,
         /// Explicit database type override (postgres, mysql, mariadb, mongodb)
         #[arg(long, short = 'd', alias = "database", env = "DATABASE_TYPE")]
@@ -71,6 +71,9 @@ enum Commands {
         /// Target output file path when generating DDL (defaults to migrations/init.sql or init.js)
         #[arg(short, long)]
         output: Option<String>,
+        /// Check whether database schema is complete and synchronized without applying migrations
+        #[arg(long, short = 'c')]
+        check: bool,
     },
     /// Generate dialect-specific DDL / migration scripts
     #[command(alias = "generate-ddl", alias = "gen-ddl")]
@@ -357,7 +360,25 @@ pub async fn run_cli() -> anyhow::Result<()> {
             database_type,
             generate,
             output,
+            check,
         } => {
+            if check {
+                let db_url = database_url.unwrap_or_else(|| {
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                        "postgres://postgres:postgrespassword@localhost:5432/foundry".to_string()
+                    })
+                });
+                let explicit_type = database_type.or_else(|| std::env::var("DATABASE_TYPE").ok());
+                println!(
+                    "Verifying database schema completeness for {} (type: {:?})...",
+                    db_url,
+                    explicit_type.as_deref().unwrap_or("auto-detect")
+                );
+                foundry_storage::Database::verify_schema(&db_url, explicit_type.as_deref()).await?;
+                println!("✅ Database schema is complete and fully synchronized.");
+                return Ok(());
+            }
+
             if generate {
                 let explicit_type = database_type
                     .or_else(|| std::env::var("DATABASE_TYPE").ok())
@@ -864,6 +885,7 @@ REDIS_URL=redis://127.0.0.1:6379
 
 * **DBA 手动执行与严格管控（生产环境）**：
   若生产环境需严格审计，将 `.env` 中的 `AUTO_MIGRATE=false` 关闭自动迁移。
+  当配置为 `AUTO_MIGRATE=false` 时，Foundry 在服务启动时会严格校验底层库表完整性，若基本表结构未同步完成将拒绝启动并输出明确诊断提示与修复建议（亦可通过 `foundry migrate --check` 提前校验）。
   本项目默认不预设 `migrations/` 目录，如需获取针对 **{db_display}** 的方言 DDL 脚本，请在当前工程下执行：
   ```bash
   foundry ddl

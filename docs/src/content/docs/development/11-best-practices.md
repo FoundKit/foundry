@@ -46,4 +46,4 @@ CMD ["/app/server"]
 ## 3. Production Migration Strategy
 
 * **Development & CI**: `AUTO_MIGRATE=true` for zero-friction schema creation.
-* **Production**: `AUTO_MIGRATE=false`. Export offline migration scripts via `foundry ddl --db <type>` into `migrations/init.sql` for DBA auditing and controlled deployment.
+* **Production**: `AUTO_MIGRATE=false`. Export offline migration scripts via `foundry ddl --db <type>` into `migrations/init.sql` for DBA auditing and controlled deployment. When `AUTO_MIGRATE=false`, Foundry strictly validates baseline schema completeness upon server bootstrap, immediately rejecting startup if required tables or collections are missing (preflight verification can also be run via `foundry migrate --check`).

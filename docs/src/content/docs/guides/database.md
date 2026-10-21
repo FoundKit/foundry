@@ -115,7 +115,7 @@ JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-> **Note**: When `AUTO_MIGRATE=true`, Foundry will automatically verify that the database exists (creating it if absent for SQL engines or creating default collections and indexes for MongoDB) and execute migrations (schema, covering indexes, and seed superadmin account).
+> **Note**: When `AUTO_MIGRATE=true`, Foundry will automatically verify that the database exists (creating it if absent for SQL engines or creating default collections and indexes for MongoDB) and execute migrations (schema, covering indexes, and seed superadmin account). When `AUTO_MIGRATE=false`, Foundry strictly validates baseline schema completeness during server bootstrap, refusing to start if required tables/collections are missing (preflight verification can also be run via `foundry migrate --check`).
 
 ---
 

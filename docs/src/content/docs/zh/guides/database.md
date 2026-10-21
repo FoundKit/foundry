@@ -115,7 +115,7 @@ JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
 
-> **提示**：当 `AUTO_MIGRATE=true` 时，服务启动时会自动检测数据库是否存在；若不存在会自动建库（SQL 引擎自动建库与执行表结构迁移；MongoDB 自动创建集合与索引），并初始化超级管理员账号。
+> **提示**：当 `AUTO_MIGRATE=true` 时，服务启动时会自动检测数据库是否存在；若不存在会自动建库（SQL 引擎自动建库与执行表结构迁移；MongoDB 自动创建集合与索引），并初始化超级管理员账号。当配置为 `AUTO_MIGRATE=false` 时，系统严禁在库表不完整的情况下启动，启动引导期间将自动核验基础结构并拦截未完成同步的数据库，提示错误并安全退出（可执行 `foundry migrate --check` 提前检测）。
 
 ---
 
