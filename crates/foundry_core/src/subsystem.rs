@@ -21,7 +21,13 @@ pub trait SubsystemModule: Send + Sync + 'static {
     /// Human-readable display name of the sub-system
     fn display_name(&self) -> &'static str;
 
-    /// Mounts custom HTTP routes under `/api/v1/s/{slug}/ext/...`
+    /// Mounts extension admin management API routes under `/api/admin/ext/{slug}/...`
+    /// These routes are part of the administrative control plane and require admin authentication.
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router
+    }
+
+    /// Mounts public / client-facing extension HTTP routes under `/api/ext/{slug}/...`
     fn register_routes(&self, router: Router) -> Router {
         router
     }

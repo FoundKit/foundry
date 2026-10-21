@@ -14,13 +14,13 @@ description: 动手实战教程。从零到一构建一个包含参数强校验�
 ## 1. 业务场景与需求拆解
 
 我们将实现一个高可靠的电商结算模块，具备以下核心能力：
-1. **顾客下单接口 (`POST /api/v1/s/shop/ext/orders`)**：
+1. **顾客下单接口 (`POST /api/s/shop/ext/orders`)**：
    * 必须校验顾客姓名、合法邮箱、收货地址与至少一件商品；
    * 自动生成带时间戳的唯一订单号；
    * 自动计算订单总金额；
    * 持久化到 `shop_orders` 实体表中；
    * 返回 HTTP 201 与标准化统一响应 `ApiResponse`；
-2. **订单列表接口 (`GET /api/v1/s/shop/ext/orders`)**：
+2. **订单列表接口 (`GET /api/s/shop/ext/orders`)**：
    * 支持按页码与状态过滤；
    * 过滤软删除记录；
    * 返回带总数和分页元数据的响应。
@@ -175,7 +175,7 @@ pub fn build_routes() -> Router {
         .route("/orders", post(create_order).get(list_orders))
 }
 
-/// POST /api/v1/s/shop/ext/orders
+/// POST /api/s/shop/ext/orders
 pub async fn create_order(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
@@ -194,7 +194,7 @@ pub async fn create_order(
     Ok(ApiResponse::created(order))
 }
 
-/// GET /api/v1/s/shop/ext/orders
+/// GET /api/s/shop/ext/orders
 pub async fn list_orders(
     Extension(ctx): Extension<SystemContext>,
     Extension(state): Extension<AppState>,
@@ -296,7 +296,7 @@ cargo run
 
 ### 1. 测试成功创建订单
 ```bash
-curl -X POST http://127.0.0.1:8080/api/v1/s/shop/ext/orders \
+curl -X POST http://127.0.0.1:8080/api/s/shop/ext/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customer_name": "张三",
@@ -326,7 +326,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/s/shop/ext/orders \
 
 ### 2. 测试参数校验失败截断 (故意传入错误邮箱)
 ```bash
-curl -X POST http://127.0.0.1:8080/api/v1/s/shop/ext/orders \
+curl -X POST http://127.0.0.1:8080/api/s/shop/ext/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customer_name": "李四",
@@ -370,7 +370,7 @@ async fn test_create_order_workflow() {
     let server = TestServer::new(app.into_router()).unwrap();
 
     // 2. 发起 POST 下单测试
-    let response = server.post("/api/v1/s/shop/ext/orders")
+    let response = server.post("/api/s/shop/ext/orders")
         .json(&json!({
             "customer_name": "王五",
             "customer_email": "wangwu@example.com",

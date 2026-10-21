@@ -138,7 +138,7 @@ http://localhost:8080/admin/
 curl http://localhost:8080/health
 
 # Sample subsystem greeting
-curl -X POST http://localhost:8080/api/v1/s/sample/ext/greet \
+curl -X POST http://localhost:8080/api/s/sample/ext/greet \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice"}'
 ```
@@ -195,7 +195,7 @@ pub fn build_routes() -> Router {
 ### Step 3: Test with curl
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
+curl -X POST http://localhost:8080/api/s/sample/ext/calc \
   -H "Content-Type: application/json" \
   -d '{"a": 100, "b": 25, "op": "div"}'
 

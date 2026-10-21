@@ -68,8 +68,22 @@ impl SubsystemModule for TestCarnivalSubsystemModule {
         "Test carnival subsystem for integration testing"
     }
 
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.route("/manage", post(handle_participate))
+    }
+
     fn register_routes(&self, router: Router) -> Router {
         router.route("/participate", post(handle_participate))
+    }
+
+    fn custom_pages_dir(&self) -> Option<std::path::PathBuf> {
+        let dir = std::env::temp_dir().join("foundry_test_carnival_custom_pages");
+        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::write(
+            dir.join("lottery_dashboard.html"),
+            "<html><body>Lottery Dashboard</body></html>",
+        );
+        Some(dir)
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
@@ -78,7 +92,7 @@ impl SubsystemModule for TestCarnivalSubsystemModule {
             title: "抽奖运营大屏".to_string(),
             icon: "Gift".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/carnival_demo/ext/custom-pages/lottery_dashboard.html".to_string(),
+            entry: "/admin/ext/carnival_demo/lottery_dashboard.html".to_string(),
             required_role: None,
         }]
     }
@@ -101,7 +115,7 @@ async fn test_health_check_endpoint() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/health")
+                .uri("/api/health")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -127,7 +141,7 @@ async fn test_subsystem_custom_route_success() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/carnival_demo/ext/participate")
+                .uri("/api/ext/carnival_demo/participate")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -146,6 +160,66 @@ async fn test_subsystem_custom_route_success() {
 }
 
 #[tokio::test]
+async fn test_subsystem_admin_custom_route_success() {
+    let state = dummy_app_state();
+    let jwt = JwtService::new("test_secret_key_1234567890", 24);
+    let token = jwt
+        .generate_token(
+            uuid::Uuid::new_v4(),
+            "carnival_admin_user",
+            "topic_admin",
+            vec!["carnival_demo".to_string()],
+        )
+        .unwrap();
+    let app = build_router(state);
+
+    let payload = serde_json::json!({
+        "nickname": "AdminTester",
+        "lucky_number": 14
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/ext/carnival_demo/manage")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", token))
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_subsystem_admin_custom_route_unauthorized() {
+    let state = dummy_app_state();
+    let app = build_router(state);
+
+    let payload = serde_json::json!({
+        "nickname": "AdminTester",
+        "lucky_number": 14
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/ext/carnival_demo/manage")
+                .header("Content-Type", "application/json")
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
 async fn test_subsystem_custom_route_validation_error() {
     let state = dummy_app_state();
     let app = build_router(state);
@@ -160,7 +234,7 @@ async fn test_subsystem_custom_route_validation_error() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/carnival_demo/ext/participate")
+                .uri("/api/ext/carnival_demo/participate")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -184,7 +258,7 @@ async fn test_admin_systems_auth_required() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/systems")
+                .uri("/api/admin/systems")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -202,7 +276,7 @@ async fn test_admin_platform_summary_auth_required() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/platform/summary")
+                .uri("/api/admin/platform/summary")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -230,7 +304,7 @@ async fn test_general_admin_forbidden_on_admins_management() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/admins")
+                .uri("/api/admin/admins")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::empty())
                 .unwrap(),
@@ -259,7 +333,7 @@ async fn test_topic_admin_forbidden_on_platform_summary() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/platform/summary")
+                .uri("/api/admin/platform/summary")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::empty())
                 .unwrap(),
@@ -294,7 +368,7 @@ async fn test_topic_admin_forbidden_on_creating_subsystems() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/admin/systems")
+                .uri("/api/admin/systems")
                 .header("Authorization", format!("Bearer {}", token))
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
@@ -324,7 +398,7 @@ async fn test_topic_admin_forbidden_on_unauthorized_topic_access() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/s/vip_mall/details")
+                .uri("/api/admin/s/vip_mall/details")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::empty())
                 .unwrap(),
@@ -376,4 +450,25 @@ async fn test_admin_serves_html_and_spa_fallback() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let body_str = String::from_utf8_lossy(&body);
     assert!(body_str.contains("<div id=\"root\"></div>"));
+}
+
+#[tokio::test]
+async fn test_subsystem_custom_admin_page_served_under_admin_ext() {
+    let state = dummy_app_state();
+    let app = build_router(state);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin/ext/carnival_demo/lottery_dashboard.html")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let body_str = String::from_utf8_lossy(&body);
+    assert!(body_str.contains("Lottery Dashboard"));
 }

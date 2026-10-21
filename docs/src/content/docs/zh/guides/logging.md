@@ -20,7 +20,7 @@ Foundry 的日志与可观测性体系在架构上清晰划分为三个层级：
 ```mermaid
 flowchart TD
     subgraph Client["客户端请求"]
-        Req["HTTP 请求 /api/v1/..."]
+        Req["HTTP 请求 /api/..."]
     end
 
     subgraph Layer1["1. HTTP 中间件追踪层 (TraceLayer)"]
@@ -252,7 +252,7 @@ RUST_LOG="info,my_app::systems::shop=trace"
 每当客户端向 Foundry 服务端发起任何请求，控制台都会自动打印一条标准链路日志：
 
 ```text
-2026-10-14T10:20:00.102Z  INFO tower_http::trace::on_request: started processing request method=GET uri=/api/v1/s/blog/posts version=HTTP/1.1
+2026-10-14T10:20:00.102Z  INFO tower_http::trace::on_request: started processing request method=GET uri=/api/s/blog/posts version=HTTP/1.1
 2026-10-14T10:20:00.115Z  INFO tower_http::trace::on_response: finished processing request latency=13ms status=200
 ```
 
@@ -272,7 +272,7 @@ Foundry 内置了专属的 `audit_interceptor` 中间件，具有以下企业级
 
 1. **智能识别写操作**：
    - 自动拦截所有 `POST`、`PUT`、`PATCH`、`DELETE` 请求。
-   - 自动拦截 `/api/v1/admin/auth/login` 等关键鉴权入口。
+   - 自动拦截 `/api/admin/auth/login` 等关键鉴权入口。
    - 对幂等的 `GET` 请求自动放行，杜绝无谓的数据库写入压力。
 2. **多租户与操作者自动提取**：
    - 从 `AdminClaims` 中提取管理员 ID 与账号名。
@@ -293,7 +293,7 @@ pub struct AuditLogEntity {
     pub admin_username: Option<String>,  // 管理员用户名
     pub system_slug: Option<String>,     // 关联的业务子系统标识
     pub method: String,                  // HTTP 动词 (POST, PUT, DELETE 等)
-    pub path: String,                    // 请求完整路径 (/api/v1/s/shop/orders)
+    pub path: String,                    // 请求完整路径 (/api/s/shop/orders)
     pub action_name: Option<String>,     // 人类可读的操作描述 (如 "创建业务记录", "管理员登录")
     pub headers: serde_json::Value,      // 脱敏后的请求头 JSON
     pub query_params: Option<String>,    // Query 查询字符串
@@ -311,7 +311,7 @@ pub struct AuditLogEntity {
 Foundry 提供了开箱即用的审计日志管理 API（需具备管理员鉴权）：
 
 ```http
-GET /api/v1/admin/audit-logs?page=1&page_size=20&system_slug=shop&admin_username=admin
+GET /api/admin/audit-logs?page=1&page_size=20&system_slug=shop&admin_username=admin
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 ```
 
@@ -328,7 +328,7 @@ Authorization: Bearer <ADMIN_JWT_TOKEN>
         "admin_username": "superadmin",
         "system_slug": "shop",
         "method": "POST",
-        "path": "/api/v1/s/shop/goods",
+        "path": "/api/s/shop/goods",
         "action_name": "新增业务数据记录",
         "ip_address": "127.0.0.1",
         "status_code": 200,

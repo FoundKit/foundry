@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 2. **顶层门面（`foundry`）与公共 API**：直观优雅的 `FoundryApp::builder()` API、类型安全的错误信封（`AppError`、`AppResult`）、统一规范的响应结构体（`ApiResponse`）以及 `foundry::prelude::*` 丰富重导出。
 3. **子系统架构（Subsystem Architecture）**：通过实现 `SubsystemModule` 将业务领域组织为高内聚、自包含的子系统（包含控制器、业务领域服务、数据校验 DTO 与自定义 Admin 管理页面）。
 4. **双模存储与多数据库 SPI**：PostgreSQL 与 MongoDB 原生支持极致 Zero-DDL 免表迁移与 Auto-CRUD；MySQL 与 MariaDB 针对无 GIN 倒排索引物理限制，采用专题专属物理分表 DDL 与延迟关联分页，兼顾敏捷迭代与高并发生产性能。全数据库支持零物理 DELETE 权限安全运行。
-5. **即刻生成的 RESTful Auto-CRUD**：所有动态数据模型自动获得高性能 REST API 接口（`/api/v1/s/{system_slug}/{model_slug}`），在所有适配的数据库上均原生支持分页与检索。
+5. **即刻生成的 RESTful Auto-CRUD**：所有动态数据模型自动获得高性能 REST API 接口（`/api/s/{system_slug}/{model_slug}`），在所有适配的数据库上均原生支持分页与检索。
 6. **解耦的 Admin 控制台外壳与 SDK 桥接**：独立 Admin SPA 前端（`apps/admin`）通过沙箱视图内嵌各子系统的自定义页面（HTML、React、Vue 等），并通过 `postMessage` 协议自动注入 JWT 认证凭据与主题配置。
 7. **分级权限体系（Hierarchical RBAC）**：支持超级管理员（`super_admin`）、平台管理员（`admin`）和专题专属管理员（`topic_admin`）的细粒度角色权限控制。
 8. **生命周期变更钩子（Mutation Hooks）**：通过实现 `MutationHook` 拦截实体数据的完整生命周期事件（`before_create`、`after_create`、`before_update`、`after_update`、`before_delete`、`after_delete`）。
@@ -264,7 +264,7 @@ let record = RecordStore::create(
 let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
 let list = RecordStore::list(&db, &ctx.system_slug, "articles", query).await?;
 ```
-所有动态数据模型将自动挂载 REST API 接入点：`/api/v1/s/{system_slug}/{model_slug}`。
+所有动态数据模型将自动挂载 REST API 接入点：`/api/s/{system_slug}/{model_slug}`。
 
 #### 方式 C：原生 SQL / 脚本逃生通道（特殊触发器、MongoDB 脚本）
 对于无关系型 ORM 的数据库（如 MongoDB）或特殊复杂场景，可通过 `SubsystemModule::migration_ddl` 或 `migrations/` 目录添加自定义原生 SQL 或脚本，同样受 `foundry migrate` 统一管控。

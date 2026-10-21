@@ -17,13 +17,13 @@ A Subsystem is a self-contained business domain living inside your application (
 ```text
 src/systems/blog/
 ├── mod.rs               # SubsystemModule trait implementation
-├── controllers/         # Axum HTTP handlers mounted at /api/v1/s/blog/ext/*
+├── controllers/         # Axum HTTP handlers mounted at /api/admin/ext/blog/*
 │   └── mod.rs
 ├── logic/               # Pure domain services with database access
 │   └── mod.rs
 ├── dto/                 # Request/response structs and validator rules
 │   └── mod.rs
-└── custom_pages/        # Custom Admin UI views (HTML, React, Vue)
+└── custom_pages/        # Custom Admin UI views (mounted at /admin/ext/blog/*)
     └── article_editor.html
 ```
 
@@ -139,15 +139,8 @@ impl SubsystemModule for BlogSubsystem {
         "Article authoring, tag categorization, and publishing pipeline"
     }
 
-    fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(controllers::build_routes());
-
-        // Serve custom Admin UI pages under /custom-pages
-        let custom_dir = PathBuf::from("src/systems/blog/custom_pages");
-        if custom_dir.exists() {
-            r = r.nest_service("/custom-pages", ServeDir::new(custom_dir));
-        }
-        r
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_routes())
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
@@ -156,7 +149,7 @@ impl SubsystemModule for BlogSubsystem {
             title: "Article Studio".to_string(),
             icon: "FileEdit".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+            entry: "/admin/ext/blog/article_editor.html".to_string(),
             required_role: None, // e.g. Some("super_admin".to_string())
         }]
     }

@@ -238,7 +238,7 @@ export function DashboardPage({
                 </div>
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/80">
-                  <span className="font-mono text-[10px] text-slate-400">/api/v1/s/{sys.slug}</span>
+                  <span className="font-mono text-[10px] text-slate-400">/api/s/{sys.slug}</span>
                   <Button
                     size="sm"
                     onClick={() => onNavigateSubsystem(sys.slug, 'overview')}

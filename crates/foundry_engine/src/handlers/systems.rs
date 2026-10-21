@@ -25,7 +25,7 @@ pub struct UpdateSystemRequest {
     pub status: Option<i16>,
 }
 
-/// GET /api/v1/admin/systems (Paginated and filterable list of sub-systems)
+/// GET /api/admin/systems (Paginated and filterable list of sub-systems)
 pub async fn list_systems_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -42,7 +42,7 @@ pub async fn list_systems_handler(
     Ok(Json(ApiResponse::success(result)))
 }
 
-/// GET /api/v1/admin/systems/{id} (Get single sub-system by UUID)
+/// GET /api/admin/systems/{id} (Get single sub-system by UUID)
 pub async fn get_system_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -60,7 +60,7 @@ pub async fn get_system_handler(
     Ok(Json(ApiResponse::success(system)))
 }
 
-/// GET /api/v1/admin/s/{system_slug}/details (Get single sub-system by Slug)
+/// GET /api/admin/s/{system_slug}/details (Get single sub-system by Slug)
 pub async fn get_system_by_slug_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
@@ -69,7 +69,7 @@ pub async fn get_system_by_slug_handler(
     Ok(Json(ApiResponse::success(system)))
 }
 
-/// GET /api/v1/admin/s/{system_slug}/stats (Get detailed statistics for a sub-system)
+/// GET /api/admin/s/{system_slug}/stats (Get detailed statistics for a sub-system)
 pub async fn get_system_stats_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
@@ -78,7 +78,7 @@ pub async fn get_system_stats_handler(
     Ok(Json(ApiResponse::success(stats)))
 }
 
-/// GET /api/v1/admin/platform/summary (Get platform-wide statistics summary)
+/// GET /api/admin/platform/summary (Get platform-wide statistics summary)
 pub async fn get_platform_summary_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -94,7 +94,7 @@ pub async fn get_platform_summary_handler(
     Ok(Json(ApiResponse::success(summary)))
 }
 
-/// POST /api/v1/admin/systems (Create sub-system)
+/// POST /api/admin/systems (Create sub-system)
 pub async fn create_system_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -122,7 +122,7 @@ pub async fn create_system_handler(
     Ok(Json(ApiResponse::success(system)))
 }
 
-/// PUT /api/v1/admin/systems/{id} (Update sub-system)
+/// PUT /api/admin/systems/{id} (Update sub-system)
 pub async fn update_system_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -149,7 +149,7 @@ pub async fn update_system_handler(
     Ok(Json(ApiResponse::success(system)))
 }
 
-/// GET /admin-api/v1/s/{system_slug}/custom-pages (List custom admin pages registered for a sub-system)
+/// GET /api/admin/s/{system_slug}/custom-pages (List custom admin pages registered for a sub-system)
 pub async fn list_subsystem_custom_pages_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,

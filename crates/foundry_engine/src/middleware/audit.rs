@@ -20,10 +20,10 @@ pub fn resolve_action_name(method: &Method, path: &str) -> &'static str {
         ("POST", p) if p.ends_with("/auth/login") => "管理员登录",
         ("POST", p) if p.ends_with("/auth/logout") => "管理员登出",
         ("PUT", p) if p.ends_with("/auth/password") => "修改管理员密码",
-        ("POST", "/api/v1/admin/admins") => "新增管理员",
-        ("PUT", p) if p.starts_with("/api/v1/admin/admins/") => "修改管理员信息",
-        ("POST", "/api/v1/admin/systems") => "创建子系统",
-        ("PUT", p) if p.starts_with("/api/v1/admin/systems/") => "修改子系统配置",
+        ("POST", "/api/admin/admins") => "新增管理员",
+        ("PUT", p) if p.starts_with("/api/admin/admins/") => "修改管理员信息",
+        ("POST", "/api/admin/systems") => "创建子系统",
+        ("PUT", p) if p.starts_with("/api/admin/systems/") => "修改子系统配置",
         ("POST", p) if p.contains("/configs/schema") => "配置专题属性项",
         ("PUT", p) if p.contains("/configs") => "修改专题配置值",
         ("POST", p) if p.contains("/models") => "创建数据模型",
@@ -136,31 +136,31 @@ mod tests {
     #[test]
     fn test_resolve_action_name() {
         assert_eq!(
-            resolve_action_name(&Method::POST, "/api/v1/admin/auth/login"),
+            resolve_action_name(&Method::POST, "/api/admin/auth/login"),
             "管理员登录"
         );
         assert_eq!(
-            resolve_action_name(&Method::PUT, "/api/v1/admin/auth/password"),
+            resolve_action_name(&Method::PUT, "/api/admin/auth/password"),
             "修改管理员密码"
         );
         assert_eq!(
-            resolve_action_name(&Method::POST, "/api/v1/admin/admins"),
+            resolve_action_name(&Method::POST, "/api/admin/admins"),
             "新增管理员"
         );
         assert_eq!(
-            resolve_action_name(&Method::POST, "/api/v1/admin/systems"),
+            resolve_action_name(&Method::POST, "/api/admin/systems"),
             "创建子系统"
         );
         assert_eq!(
-            resolve_action_name(&Method::PUT, "/api/v1/s/carnival_2026/configs"),
+            resolve_action_name(&Method::PUT, "/api/s/carnival_2026/configs"),
             "修改专题配置值"
         );
         assert_eq!(
-            resolve_action_name(&Method::POST, "/api/v1/admin/s/carnival_2026/models"),
+            resolve_action_name(&Method::POST, "/api/admin/s/carnival_2026/models"),
             "创建数据模型"
         );
         assert_eq!(
-            resolve_action_name(&Method::DELETE, "/api/v1/s/carnival_2026/products/1"),
+            resolve_action_name(&Method::DELETE, "/api/s/carnival_2026/products/1"),
             "删除业务数据记录"
         );
     }

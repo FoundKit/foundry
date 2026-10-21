@@ -170,11 +170,11 @@ let record = RecordStore::create(
 ).await?;
 
 // 自动获得 RESTful 端点：
-// POST   /api/v1/s/blog/articles
-// GET    /api/v1/s/blog/articles
-// GET    /api/v1/s/blog/articles/:id
-// PUT    /api/v1/s/blog/articles/:id
-// DELETE /api/v1/s/blog/articles/:id
+// POST   /api/s/blog/articles
+// GET    /api/s/blog/articles
+// GET    /api/s/blog/articles/:id
+// PUT    /api/s/blog/articles/:id
+// DELETE /api/s/blog/articles/:id
 ```
 
 #### C. 生命周期钩子（Mutation Hooks）
@@ -374,7 +374,7 @@ require_super_admin()
 **路由结构：**
 
 ```text
-/api/v1
+/api
   ├── /auth                   # 认证端点
   ├── /systems                # 子系统管理
   ├── /admins                 # 管理员管理
@@ -483,12 +483,12 @@ app.run().await?;  // 绑定端口，开始监听
 
 ### 4.2 请求处理流程（Auto-CRUD 示例）
 
-**场景：** `POST /api/v1/s/blog/articles` 创建文章
+**场景：** `POST /api/s/blog/articles` 创建文章
 
 ```text
 ┌───────────────────────────────────────────────────────────────┐
 │ 1. HTTP 请求到达                                               │
-│    POST /api/v1/s/blog/articles                               │
+│    POST /api/s/blog/articles                               │
 │    Authorization: Bearer <JWT>                                 │
 │    Body: {"title": "Hello", "content": "..."}                 │
 └───────────────────────────────────────────────────────────────┘
@@ -546,7 +546,7 @@ app.run().await?;  // 绑定端口，开始监听
 
 ### 4.3 子系统自定义路由流程
 
-**场景：** `GET /api/v1/s/blog/custom/stats` 获取博客统计
+**场景：** `GET /api/s/blog/custom/stats` 获取博客统计
 
 ```rust
 // BlogSubsystem 实现
@@ -557,7 +557,7 @@ impl SubsystemModule for BlogSubsystem {
 }
 
 // 请求流程：
-// 1. 匹配路由 /api/v1/s/blog/custom/stats
+// 1. 匹配路由 /api/s/blog/custom/stats
 // 2. 执行 handlers::get_blog_stats (自定义逻辑)
 // 3. 返回自定义响应
 ```
@@ -772,11 +772,11 @@ let app = FoundryApp::builder()
 ```rust
 // ❌ 错误：system_slug 和 model_slug 不一致
 RecordStore::create(&db, "blogs", "article", data).await?;
-// API 端点：/api/v1/s/blogs/article
+// API 端点：/api/s/blogs/article
 
 // ✅ 正确：确保一致性
 RecordStore::create(&db, "blog", "articles", data).await?;
-// API 端点：/api/v1/s/blog/articles
+// API 端点：/api/s/blog/articles
 ```
 
 ---

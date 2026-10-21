@@ -9,14 +9,14 @@
       "title": "VIP 运营概览大屏",
       "icon": "Crown",
       "type": "iframe",
-      "entry": "/api/v1/s/vip_mall/ext/custom-pages/overview.html"
+      "entry": "/admin/ext/vip_mall/overview.html"
     },
     {
       "key": "point_grants",
       "title": "会员积分发放规则",
       "icon": "Coins",
       "type": "iframe",
-      "entry": "/api/v1/s/vip_mall/ext/custom-pages/point_grants.html"
+      "entry": "/admin/ext/vip_mall/point_grants.html"
     }
   ]
 }

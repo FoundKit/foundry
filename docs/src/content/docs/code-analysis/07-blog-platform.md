@@ -159,7 +159,7 @@ pub struct BlogSubsystem;
 
 impl SubsystemModule for BlogSubsystem {
     fn slug(&self) -> &'static str {
-        "blog"  // 子系统唯一标识，对应 URL /api/v1/s/blog
+        "blog"  // 子系统唯一标识，对应 URL /api/s/blog
     }
 
     fn display_name(&self) -> &'static str {
@@ -198,7 +198,7 @@ impl SubsystemModule for BlogSubsystem {
             title: "Article Studio".to_string(),
             icon: "FileEdit".to_string(),
             page_type: "iframe".to_string(),  // 嵌入式页面
-            entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+            entry: "/admin/ext/blog/article_editor.html".to_string(),
             required_role: None,  // 无角色限制
         }]
     }
@@ -313,7 +313,7 @@ pub fn build_routes() -> Router {
         .route("/posts/publish", post(handle_publish_post))
 }
 
-// POST /api/v1/s/blog/ext/posts
+// POST /api/s/blog/ext/posts
 pub async fn handle_create_post(
     Extension(ctx): Extension<SystemContext>,  // 从中间件注入
     Json(payload): Json<CreatePostRequest>,
@@ -323,7 +323,7 @@ pub async fn handle_create_post(
     Ok(Json(ApiResponse::success(post)))  // 统一响应格式
 }
 
-// POST /api/v1/s/blog/ext/posts/publish
+// POST /api/s/blog/ext/posts/publish
 pub async fn handle_publish_post(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<PublishPostRequest>,
@@ -389,7 +389,7 @@ pub fn build_routes() -> Router {
     Router::new().route("/subscribe", post(handle_subscribe))
 }
 
-// POST /api/v1/s/newsletter/ext/subscribe
+// POST /api/s/newsletter/ext/subscribe
 pub async fn handle_subscribe(
     Extension(ctx): Extension<SystemContext>,
     Json(payload): Json<SubscribeRequest>,
@@ -430,7 +430,7 @@ impl NewsletterService {
 当启动 `blog_platform` 应用后，完整的路由树为：
 
 ```text
-/api/v1/
+/api/
 ├── auth/                        # 认证路由（Stage 5）
 │   ├── POST /login
 │   └── POST /logout
@@ -487,7 +487,7 @@ impl NewsletterService {
 
 **HTTP 请求**：
 ```bash
-POST /api/v1/s/blog/ext/posts
+POST /api/s/blog/ext/posts
 Authorization: Bearer <jwt_token>
 Content-Type: application/json
 

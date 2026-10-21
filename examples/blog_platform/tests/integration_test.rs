@@ -29,7 +29,7 @@ async fn test_blog_platform_health_check() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/health")
+                .uri("/api/health")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -39,6 +39,76 @@ async fn test_blog_platform_health_check() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = response.into_body().collect().await.unwrap().to_bytes();
     assert_eq!(&body[..], b"OK");
+}
+
+#[tokio::test]
+async fn test_blog_subsystem_admin_create_post_success() {
+    let state = test_app_state();
+    let token = state
+        .jwt
+        .generate_token(
+            uuid::Uuid::new_v4(),
+            "admin",
+            "super_admin",
+            vec!["blog".to_string()],
+        )
+        .unwrap();
+    let app = foundry::engine::build_router(state);
+
+    let payload = serde_json::json!({
+        "title": "Announcing Foundry Framework 2026",
+        "content": "A high-performance modular framework for modern backend architectures.",
+        "author": "dev@foundkit.org",
+        "tags": ["rust", "announcement"]
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/ext/blog/posts")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", token))
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let res: ApiResponse<PostResponse> = serde_json::from_slice(&body).unwrap();
+    assert_eq!(res.code, 0);
+    assert_eq!(res.data.title, "Announcing Foundry Framework 2026");
+    assert_eq!(res.data.author, "dev@foundkit.org");
+    assert_eq!(res.data.tags.len(), 2);
+}
+
+#[tokio::test]
+async fn test_blog_subsystem_admin_requires_auth() {
+    let state = test_app_state();
+    let app = foundry::engine::build_router(state);
+
+    let payload = serde_json::json!({
+        "title": "Unauthenticated Post",
+        "content": "Should be rejected because it lacks an admin token.",
+        "author": "hacker@example.com"
+    });
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/ext/blog/posts")
+                .header("Content-Type", "application/json")
+                .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
@@ -57,7 +127,7 @@ async fn test_blog_subsystem_create_post_success() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/blog/ext/posts")
+                .uri("/api/ext/blog/posts")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -91,7 +161,7 @@ async fn test_blog_subsystem_validation_failure() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/blog/ext/posts")
+                .uri("/api/ext/blog/posts")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -116,7 +186,7 @@ async fn test_newsletter_subsystem_subscribe_success() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/newsletter/ext/subscribe")
+                .uri("/api/ext/newsletter/subscribe")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -146,7 +216,7 @@ async fn test_newsletter_subsystem_invalid_email() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/s/newsletter/ext/subscribe")
+                .uri("/api/ext/newsletter/subscribe")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),

@@ -333,7 +333,7 @@ impl FoundryApp {
     /// Run the application on a specific socket address
     pub async fn serve(self, addr: SocketAddr) -> anyhow::Result<()> {
         info!("🚀 Foundry Application listening on http://{}", addr);
-        info!("📚 REST APIs available at http://{}/api/v1", addr);
+        info!("📚 REST APIs available at http://{}/api", addr);
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, self.router).await?;

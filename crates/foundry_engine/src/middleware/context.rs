@@ -14,19 +14,27 @@ pub async fn extract_system_context(
 ) -> Response {
     let path = req.uri().path().to_string();
 
-    // Check if the path matches `/api/v1/s/{system_slug}/...` or `/api/v1/admin/s/{system_slug}/...`
+    // Check if path matches:
+    // - `/api/admin/ext/{slug}/...`
+    // - `/api/admin/s/{slug}/...`
+    // - `/api/s/{slug}/...`
+    // - `/api/ext/{slug}/...`
+    // - `/admin/ext/{slug}/...`
+    // - `/admin/s/{slug}/...`
     let mut detected_slug = None;
 
     let segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
-    if segments.len() >= 4 && segments[0] == "api" && segments[1] == "v1" && segments[2] == "s" {
-        detected_slug = Some(segments[3].to_string());
-    } else if segments.len() >= 5
+    if segments.len() >= 4
         && segments[0] == "api"
-        && segments[1] == "v1"
-        && segments[2] == "admin"
-        && segments[3] == "s"
+        && segments[1] == "admin"
+        && (segments[2] == "ext" || segments[2] == "s")
     {
-        detected_slug = Some(segments[4].to_string());
+        detected_slug = Some(segments[3].to_string());
+    } else if segments.len() >= 3
+        && ((segments[0] == "api" && (segments[1] == "s" || segments[1] == "ext"))
+            || (segments[0] == "admin" && (segments[1] == "ext" || segments[1] == "s")))
+    {
+        detected_slug = Some(segments[2].to_string());
     }
 
     // Fallback to X-Foundry-System-ID header

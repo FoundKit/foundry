@@ -19,7 +19,7 @@ pub struct UpsertConfigSchemaRequest {
     pub sort_order: Option<i32>,
 }
 
-/// GET /api/v1/s/:system_slug/configs (Aggregated key-value JSON)
+/// GET /api/s/:system_slug/configs (Aggregated key-value JSON)
 pub async fn get_aggregated_configs_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
@@ -28,7 +28,7 @@ pub async fn get_aggregated_configs_handler(
     Ok(Json(ApiResponse::success(configs)))
 }
 
-/// PUT /api/v1/s/:system_slug/configs (Batch update config values)
+/// PUT /api/s/:system_slug/configs (Batch update config values)
 pub async fn update_aggregated_configs_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
@@ -44,7 +44,7 @@ pub async fn update_aggregated_configs_handler(
     Ok(Json(ApiResponse::success(())))
 }
 
-/// GET /api/v1/admin/s/:system_slug/configs/schema (List config item specifications)
+/// GET /api/admin/s/:system_slug/configs/schema (List config item specifications)
 pub async fn list_config_schema_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,
@@ -53,7 +53,7 @@ pub async fn list_config_schema_handler(
     Ok(Json(ApiResponse::success(list)))
 }
 
-/// POST /api/v1/admin/s/:system_slug/configs/schema (Define or update a config item specification)
+/// POST /api/admin/s/:system_slug/configs/schema (Define or update a config item specification)
 pub async fn upsert_config_schema_handler(
     State(state): State<AppState>,
     Path(system_slug): Path<String>,

@@ -59,9 +59,9 @@ sequenceDiagram
     participant Hook as MutationHook Pipeline
     participant DB as Storage (Postgres/MySQL/MariaDB/Mongo/Redis)
 
-    Client->>Server: HTTP Request (POST /api/v1/s/shop/ext/orders)
+    Client->>Server: HTTP Request (POST /api/s/shop/ext/orders)
     Server->>MW: 1. Pass through middleware (extract SystemContext, trace duration)
-    MW->>Router: 2. Match route pattern (/api/v1/s/{subsystem}/ext/*)
+    MW->>Router: 2. Match route pattern (/api/s/{subsystem}/ext/*)
     Router->>Auth: 3. Verify JWT & Topic-scoped RBAC permissions
     Auth-->>Router: Authorized (inject AdminClaims / allow public)
     Router->>Handler: 4. Dispatch to subsystem handler

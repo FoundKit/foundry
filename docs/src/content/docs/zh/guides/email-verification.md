@@ -25,7 +25,7 @@ sequenceDiagram
     participant Redis as Redis / 内存存储
     participant SMTP as SMTP 邮件中继
 
-    User->>Server: 请求发送验证码 (POST /api/v1/s/auth/ext/send-code)
+    User->>Server: 请求发送验证码 (POST /api/s/auth/ext/send-code)
     Server->>VS: 调用 save_code(scope, identifier, code)
     VS->>Redis: 检查 60s 冷却键是否存在？
     alt 处于冷却期内

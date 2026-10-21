@@ -213,7 +213,7 @@ pub struct AuditLogEntity {
     pub admin_username: Option<String>,
     pub system_slug: Option<String>,
     pub method: String,              // GET, POST, PUT, DELETE
-    pub path: String,                 // /api/v1/s/blog/articles
+    pub path: String,                 // /api/s/blog/articles
     pub action_name: Option<String>,  // "create_article"
     pub headers: serde_json::Value,
     pub query_params: Option<String>,
@@ -1134,7 +1134,7 @@ let duration_ms = start_time.elapsed().as_millis() as i32;
 AuditStore::insert(&pool, AuditLogInsert {
     admin_id: Some(admin.id),
     method: "POST".to_string(),
-    path: "/api/v1/s/blog/articles".to_string(),
+    path: "/api/s/blog/articles".to_string(),
     status_code: Some(201),
     duration_ms: Some(duration_ms),
     // ...

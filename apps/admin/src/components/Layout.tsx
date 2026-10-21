@@ -197,7 +197,7 @@ export function Layout({
           </button>
 
           <a
-            href="/api/v1/health"
+            href="/api/health"
             target="_blank"
             rel="noreferrer"
             className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:shadow-none dark:hover:bg-slate-800 dark:hover:text-slate-200 sm:flex"

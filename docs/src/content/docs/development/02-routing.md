@@ -17,30 +17,32 @@ Foundry enforces an unambiguous routing namespace. This architecture guarantees 
 
 ```text
 / (Root)
-├── /health                               # Container liveness health check
-├── /admin/*                              # Embedded React Admin Console SPA
+├── /health                               # Container liveness health check (returns OK)
+├── /admin/                               # Embedded React Admin Console SPA
+│   └── /ext/{subsystem}/*                # Subsystem custom admin pages (static HTML / iframe)
 │
-└── /api/v1/                              # Unified Platform API Space
+└── /api/                                 # Unified Platform API Space
+    ├── /health                           # API health check (returns OK)
     ├── /admin/*                          # Admin & management APIs (auth, audit, systems)
+    │   └── /ext/{subsystem}/*            # Subsystem admin management APIs (via register_admin_routes, protected by auth)
     │
-    └── /s/{subsystem}/                   # Subsystem isolated space (/s/shop/, /s/blog/)
-        ├── /ext/*                        # Subsystem custom API routes (via register_routes)
-        │   ├── /orders                   # e.g., POST /api/v1/s/shop/ext/orders
-        │   └── /orders/{id}              # e.g., GET  /api/v1/s/shop/ext/orders/123
-        │
+    ├── /ext/{subsystem}/*                # Subsystem public extension APIs (via register_routes)
+    │
+    └── /s/{subsystem}/                   # Subsystem Auto-CRUD space (/s/shop/, /s/blog/)
+        ├── /configs                      # Aggregated key-value configs
         └── /{model}                      # Auto-CRUD engine routes (zero code required)
-            ├── GET    /api/v1/s/{subsystem}/{model}      (List & paginate)
-            ├── POST   /api/v1/s/{subsystem}/{model}      (Create entity)
-            ├── GET    /api/v1/s/{subsystem}/{model}/{id} (Get entity)
-            ├── PUT    /api/v1/s/{subsystem}/{model}/{id} (Update entity)
-            └── DELETE /api/v1/s/{subsystem}/{model}/{id} (Delete entity)
+            ├── GET    /api/s/{subsystem}/{model}      (List & paginate)
+            ├── POST   /api/s/{subsystem}/{model}      (Create entity)
+            ├── GET    /api/s/{subsystem}/{model}/{id} (Get entity)
+            ├── PUT    /api/s/{subsystem}/{model}/{id} (Update entity)
+            └── DELETE /api/s/{subsystem}/{model}/{id} (Delete entity)
 ```
 
 ---
 
-## 2. Subsystem Route Registration (`register_routes`)
+## 2. Subsystem Route Registration (`register_admin_routes` & `register_routes`)
 
-Implement `SubsystemModule` in `src/systems/<slug>/mod.rs` and override `register_routes`:
+Implement `SubsystemModule` in `src/systems/<slug>/mod.rs` and override `register_admin_routes` for management endpoints and `register_routes` for public endpoints:
 
 ```rust
 // src/systems/shop/mod.rs
@@ -52,6 +54,22 @@ use axum::Router;
 use foundry::prelude::*;
 
 pub struct ShopSubsystem;
+
+impl SubsystemModule for ShopSubsystem {
+    fn slug(&self) -> &'static str { "shop" }
+    fn display_name(&self) -> &'static str { "E-Commerce Shop" }
+
+    // Mounts admin management handlers under /api/admin/ext/shop/* (protected by admin auth & topic access)
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_admin_routes())
+    }
+
+    // Mounts public handlers under /api/ext/shop/*
+    fn register_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_public_routes())
+    }
+}
+```
 
 impl SubsystemModule for ShopSubsystem {
     fn slug(&self) -> &'static str {
@@ -66,7 +84,7 @@ impl SubsystemModule for ShopSubsystem {
         "Product catalog, checkout, and order lifecycle management"
     }
 
-    // Mounted under /api/v1/s/shop/ext/*
+    // Mounted under /api/s/shop/ext/*
     fn register_routes(&self, router: Router) -> Router {
         router.merge(controllers::build_routes())
     }

@@ -46,7 +46,7 @@ flowchart TD
 
 ### 一、基础与路由
 * 🏗️ **[01. 基础架构与请求生命周期](../../development/01-architecture-lifecycle/)**：平台与应用完全解耦理念、HTTP 全流程时序流转图、`FoundryApp::builder()` 引导流程；
-* 🛣️ **[02. 路由系统与子系统路由](../../development/02-routing/)**：全局统一命名空间规划（`/health`、`/admin/*`、`/api/v1/s/{subsystem}/ext/*`）、路径参数与方法绑定；
+* 🛣️ **[02. 路由系统与子系统路由](../../development/02-routing/)**：全局统一命名空间规划（`/health`、`/admin/*`、`/api/s/{subsystem}/ext/*`）、路径参数与方法绑定；
 
 ### 二、请求处理层
 * 🎮 **[03. 控制器、参数与响应规范](../../development/03-controllers/)**：Axum Handler 设计规范、参数提取器（`Json`、`Query`、`Path`、`Extension`）、`ApiResponse<T>` 统一响应与 `AppError` 错误信封；

@@ -16,8 +16,8 @@ import {
   SystemStats,
 } from '../types';
 
-const ADMIN_API_BASE = '/api/v1/admin';
-const AUTO_API_BASE = '/api/v1';
+const ADMIN_API_BASE = '/api/admin';
+const AUTO_API_BASE = '/api';
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('foundry_token');

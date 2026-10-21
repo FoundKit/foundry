@@ -17,13 +17,13 @@ Foundry 提倡高内聚、低耦合的模块化设计。业务开发者可以将
 ```text
 src/systems/blog/
 ├── mod.rs               # SubsystemModule 特征实现入口
-├── controllers/         # Axum HTTP 控制器 (挂载至 /api/v1/s/blog/ext/*)
+├── controllers/         # Axum HTTP 控制器 (管理接口挂载至 /api/admin/ext/blog/*，公网接口至 /api/ext/blog/*)
 │   └── mod.rs
 ├── logic/               # 纯业务领域服务 (包含数据库读写)
 │   └── mod.rs
 ├── dto/                 # 请求与响应 DTO 结构体及 validator 校验注解
 │   └── mod.rs
-└── custom_pages/        # 自定义 Admin 运营看板 (HTML, React, Vue)
+└── custom_pages/        # 自定义 Admin 运营看板 (挂载至 /admin/ext/blog/*)
     └── article_editor.html
 ```
 
@@ -139,15 +139,8 @@ impl SubsystemModule for BlogSubsystem {
         "文章内容创作、标签分类与发布工作流"
     }
 
-    fn register_routes(&self, router: Router) -> Router {
-        let mut r = router.merge(controllers::build_routes());
-
-        // 挂载自定义 Admin 静态页面
-        let custom_dir = PathBuf::from("src/systems/blog/custom_pages");
-        if custom_dir.exists() {
-            r = r.nest_service("/custom-pages", ServeDir::new(custom_dir));
-        }
-        r
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_routes())
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {
@@ -156,7 +149,7 @@ impl SubsystemModule for BlogSubsystem {
             title: "文章创作工作室".to_string(),
             icon: "FileEdit".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+            entry: "/admin/ext/blog/article_editor.html".to_string(),
             required_role: None, // 如需限制超管可见：Some("super_admin".to_string())
         }]
     }

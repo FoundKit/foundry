@@ -29,7 +29,7 @@ description: Foundry development milestones, completed features, versioning stra
 
 - [x] **1.3 Storage & Admin Control Plane**
   - [x] PostgreSQL Zero-DDL dynamic model schema engine.
-  - [x] Auto-generated RESTful CRUD endpoints (`/api/v1/s/{system_slug}/{model_slug}`).
+  - [x] Auto-generated RESTful CRUD endpoints (`/api/s/{system_slug}/{model_slug}`).
   - [x] Embedded Admin SPA Shell with iframe sandbox bridge (`FoundryBridge`).
 
 - [x] **1.4 Developer CLI Tooling (`foundry-cli`)**

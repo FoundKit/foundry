@@ -203,8 +203,8 @@ export interface RouteState {
 ### 请求封装
 
 ```typescript
-const ADMIN_API_BASE = '/api/v1/admin';
-const AUTO_API_BASE = '/api/v1';
+const ADMIN_API_BASE = '/api/admin';
+const AUTO_API_BASE = '/api';
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('foundry_token');
@@ -1000,7 +1000,7 @@ const handleSubmit = async () => {
 
 **3. HTTP 请求**：
 ```http
-POST /api/v1/s/blog/posts
+POST /api/s/blog/posts
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
@@ -1062,7 +1062,7 @@ setRecords([...records, record]);
 | **Stage 2 (Storage)** | `SystemItem`、`ModelItem`、`ModelRecordItem` 类型映射 |
 | **Stage 3 (Auth)** | JWT 存储（localStorage）、`Authorization` 头注入、角色权限守卫 |
 | **Stage 4 (Extension)** | 创建记录时自动触发 Hook（前端无需感知，后端透明处理） |
-| **Stage 5 (Engine)** | Auto-CRUD API 调用（`/api/v1/s/:slug/:model`）、审计日志查看 |
+| **Stage 5 (Engine)** | Auto-CRUD API 调用（`/api/s/:slug/:model`）、审计日志查看 |
 | **Stage 6 (Foundry)** | 整体集成，前端通过 Vite 代理访问后端 API |
 | **Stage 7 (Blog)** | 在数据浏览器中可操作 `blog` 子系统的 `posts` 模型 |
 | **Stage 8 (Admin)** | 本阶段 - 完整的前端实现 |
@@ -1238,7 +1238,7 @@ if admin_static_path.exists() {
 - `/admin` → 返回 `index.html`
 - `/admin/s/blog/data` → 返回 `index.html`（客户端路由接管）
 - `/admin/assets/index-abc123.js` → 返回静态资源
-- `/api/v1/*` → 后端 API（不受 ServeDir 影响）
+- `/api/*` → 后端 API（不受 ServeDir 影响）
 
 ### Nginx 反向代理（可选）
 

@@ -48,19 +48,19 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
   const configEndpoints = [
     {
       method: 'GET',
-      path: `/api/v1/s/${currentSystem.slug}/configs`,
+      path: `/api/s/${currentSystem.slug}/configs`,
       desc: 'Retrieve aggregated key-value JSON configurations for this sub-system',
       auth: 'Public / Scoped',
     },
     {
       method: 'PUT',
-      path: `/api/v1/s/${currentSystem.slug}/configs`,
+      path: `/api/s/${currentSystem.slug}/configs`,
       desc: 'Batch update sub-system configuration values (Zero-DDL single-row properties)',
       auth: 'Admin RBAC',
     },
     {
       method: 'GET',
-      path: `/api/v1/admin/s/${currentSystem.slug}/configs/schema`,
+      path: `/api/admin/s/${currentSystem.slug}/configs/schema`,
       desc: 'Retrieve metadata definitions and UI widget configurations for all properties',
       auth: 'Admin RBAC',
     },
@@ -72,7 +72,7 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
       ? [
           {
             method: 'POST',
-            path: `/api/v1/s/carnival_demo/participate`,
+            path: `/api/ext/carnival_demo/participate`,
             desc: 'Code-first custom controller endpoint for Carnival activity participation and prize drawing',
             auth: 'Public',
           },
@@ -95,7 +95,7 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
         </div>
 
         <a
-          href="/api/v1/health"
+          href="/api/health"
           target="_blank"
           rel="noreferrer"
           className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -195,8 +195,8 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
         </div>
 
         {models.map((m) => {
-          const listPath = `/api/v1/s/${currentSystem.slug}/${m.slug}`;
-          const itemPath = `/api/v1/s/${currentSystem.slug}/${m.slug}/:id`;
+          const listPath = `/api/s/${currentSystem.slug}/${m.slug}`;
+          const itemPath = `/api/s/${currentSystem.slug}/${m.slug}/:id`;
           return (
             <Card key={m.id} className="space-y-3 p-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">

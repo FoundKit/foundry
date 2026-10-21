@@ -79,7 +79,7 @@ my-app/
 │   └── systems/
 │       ├── mod.rs
 │       └── sample/           # 示例业务子系统
-│           ├── controllers/  # 自定义 Axum 路由 (/api/v1/s/sample/ext/*)
+│           ├── controllers/  # 自定义 Axum 路由 (/api/s/sample/ext/*)
 │           ├── logic/        # 领域业务逻辑
 │           ├── dto/          # 请求参数与 validator 校验
 │           ├── custom_pages/ # 自定义 Admin 运营看板 (HTML / React iframe)
@@ -212,14 +212,14 @@ curl http://localhost:8080/health
 
 #### 2. 超管登录与 JWT 获取：
 ```bash
-curl -X POST http://localhost:8080/api/v1/admin/auth/login \
+curl -X POST http://localhost:8080/api/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "admin", "password": "admin123456"}'
 ```
 
 #### 3. 示例业务子系统接口：
 ```bash
-curl -X POST http://localhost:8080/api/v1/s/sample/ext/greet \
+curl -X POST http://localhost:8080/api/s/sample/ext/greet \
   -H "Content-Type: application/json" \
   -d '{"name": "Alice"}'
 
@@ -290,7 +290,7 @@ pub fn build_routes() -> Router {
 保存后重新执行 `cargo run`，使用 `curl` 即可调用你的新接口：
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/s/sample/ext/calc \
+curl -X POST http://localhost:8080/api/s/sample/ext/calc \
   -H "Content-Type: application/json" \
   -d '{"a": 100, "b": 25, "op": "div"}'
 

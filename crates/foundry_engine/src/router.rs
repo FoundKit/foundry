@@ -12,14 +12,14 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub fn build_router(state: AppState) -> Router {
-    // 1. Admin Control Plane APIs (/api/v1/admin/*)
+    // 1. Admin Control Plane APIs (/api/admin/*)
     let admin_public_routes = Router::new()
         .route("/auth/settings", get(auth::public_auth_settings_handler))
         .route("/auth/login", post(auth::login_handler))
         .route("/auth/email/send-code", post(auth::send_login_code_handler))
         .route("/auth/email/login", post(auth::email_login_handler));
 
-    let admin_protected_routes = Router::new()
+    let mut admin_protected_routes = Router::new()
         .route("/auth/me", get(auth::me_handler))
         .route("/auth/password", put(auth::change_password_handler))
         .route(
@@ -88,11 +88,27 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route_layer(from_fn_with_state(state.clone(), require_admin_auth));
 
+    // Subsystem Admin Management Extension APIs (/api/admin/ext/{slug}/*)
+    for sub in state.subsystems.iter() {
+        tracing::info!(
+            "Mounting custom subsystem admin API: {} ({}) under /api/admin/ext/{}",
+            sub.display_name(),
+            sub.slug(),
+            sub.slug()
+        );
+        let sub_admin_router = sub
+            .register_admin_routes(Router::new())
+            .layer(from_fn_with_state(state.clone(), require_topic_access))
+            .layer(from_fn_with_state(state.clone(), require_admin_auth));
+        admin_protected_routes =
+            admin_protected_routes.nest_service(&format!("/ext/{}", sub.slug()), sub_admin_router);
+    }
+
     let admin_api = Router::new()
         .merge(admin_public_routes)
         .merge(admin_protected_routes);
 
-    // 2. Auto-generated Dynamic REST CRUD APIs (/api/v1/s/{system_slug}/{model_slug})
+    // 2. Auto-generated Dynamic REST CRUD APIs (/api/s/{system_slug}/{model_slug})
     let autocrud_api = Router::new()
         .route(
             "/s/{system_slug}/configs",
@@ -111,36 +127,26 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(autocrud::delete_record_handler),
         );
 
-    // 3. Custom Sub-system Extension APIs (/api/v1/s/{system_slug}/ext/*)
-    let mut custom_ext_api = Router::new();
+    // 3. Custom Sub-system Public Extension APIs (/api/ext/{system_slug}/*)
+    let mut custom_ext_public_api = Router::new();
     for sub in state.subsystems.iter() {
         tracing::info!(
-            "Mounting custom subsystem extension API: {} ({}) under /api/v1/s/{}/ext",
+            "Mounting custom subsystem public extension API: {} ({}) under /api/ext/{}",
             sub.display_name(),
             sub.slug(),
             sub.slug()
         );
-        let mut sub_router = sub.register_routes(Router::new());
-        if let Some(pages_dir) = sub.custom_pages_dir() {
-            tracing::info!(
-                "Mounting custom subsystem admin pages for slug '{}' from {:?}",
-                sub.slug(),
-                pages_dir
-            );
-            sub_router = sub_router.nest_service(
-                "/custom-pages",
-                tower_http::services::ServeDir::new(pages_dir),
-            );
-        }
-        custom_ext_api = custom_ext_api.nest_service(&format!("/s/{}/ext", sub.slug()), sub_router);
+        let sub_router = sub.register_routes(Router::new());
+        custom_ext_public_api =
+            custom_ext_public_api.nest_service(&format!("/{}", sub.slug()), sub_router);
     }
 
-    // Combine into uniform RESTful API tree (/api/v1)
-    let api_v1 = Router::new()
+    // Combine into uniform RESTful API tree (/api)
+    let api = Router::new()
         .route("/health", get(health_check))
         .nest("/admin", admin_api)
         .merge(autocrud_api)
-        .merge(custom_ext_api);
+        .nest_service("/ext", custom_ext_public_api);
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -148,18 +154,38 @@ pub fn build_router(state: AppState) -> Router {
         .allow_headers(Any);
 
     let mut router = Router::new()
-        .nest("/api/v1", api_v1)
+        .nest("/api", api)
         .layer(from_fn_with_state(state.clone(), audit_interceptor))
         .layer(from_fn_with_state(state.clone(), extract_system_context))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .with_state(state.clone());
 
     // Root redirect to Admin UI (/ -> /admin/)
-    router = router.route(
-        "/",
-        get(|| async { axum::response::Redirect::temporary("/admin/") }),
-    );
+    router = router
+        .route(
+            "/",
+            get(|| async { axum::response::Redirect::temporary("/admin/") }),
+        )
+        .route("/health", get(health_check));
+
+    // 4. Subsystem Custom Admin Pages (/admin/ext/{slug}/*)
+    let mut ext_pages_router = Router::new();
+    for sub in state.subsystems.iter() {
+        if let Some(pages_dir) = sub.custom_pages_dir() {
+            tracing::info!(
+                "Mounting custom subsystem admin pages for slug '{}' from {:?}",
+                sub.slug(),
+                pages_dir
+            );
+            let serve_dir = tower_http::services::ServeDir::new(pages_dir)
+                .append_index_html_on_directories(true);
+            ext_pages_router =
+                ext_pages_router.nest_service(&format!("/{}", sub.slug()), serve_dir);
+        }
+    }
+
+    let mut admin_ui_router = Router::new().nest_service("/ext", ext_pages_router);
 
     // If static Admin SPA build exists on disk, serve it under /admin; otherwise fall back to embedded SPA
     let admin_static_dirs = [
@@ -174,8 +200,9 @@ pub fn build_router(state: AppState) -> Router {
             let index_file = dir.join("index.html");
             if index_file.exists() {
                 let serve_dir = tower_http::services::ServeDir::new(dir.clone())
+                    .append_index_html_on_directories(true)
                     .not_found_service(tower_http::services::ServeFile::new(index_file));
-                router = router.nest_service("/admin", serve_dir);
+                admin_ui_router = admin_ui_router.fallback_service(serve_dir);
                 mounted_disk_admin = true;
                 break;
             }
@@ -184,14 +211,10 @@ pub fn build_router(state: AppState) -> Router {
 
     if !mounted_disk_admin {
         tracing::info!("Mounting embedded Admin UI SPA assets under /admin");
-        router = router
-            .route(
-                "/admin",
-                get(|| async { axum::response::Redirect::temporary("/admin/") }),
-            )
-            .route("/admin/", get(admin_embedded_handler))
-            .route("/admin/{*path}", get(admin_embedded_handler));
+        admin_ui_router = admin_ui_router.fallback(admin_embedded_handler);
     }
+
+    router = router.nest_service("/admin", admin_ui_router);
 
     // Also mount /assets fallback for direct asset requests
     router = router.route("/assets/{*path}", get(assets_embedded_handler));

@@ -99,7 +99,7 @@ fn to_admin_profile(admin: &foundry_storage::AdminEntity) -> AdminProfile {
     }
 }
 
-/// GET /api/v1/admin/auth/settings (Public auth configuration: which login methods are enabled and whether initial admin hint should be shown)
+/// GET /api/admin/auth/settings (Public auth configuration: which login methods are enabled and whether initial admin hint should be shown)
 pub async fn public_auth_settings_handler(
     State(state): State<AppState>,
 ) -> AppResult<Json<ApiResponse<PublicAuthSettingsResponse>>> {
@@ -125,7 +125,7 @@ pub async fn public_auth_settings_handler(
     })))
 }
 
-/// POST /api/v1/admin/auth/login (Account and password login)
+/// POST /api/admin/auth/login (Account and password login)
 pub async fn login_handler(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
@@ -177,7 +177,7 @@ pub async fn login_handler(
     })))
 }
 
-/// POST /api/v1/admin/auth/email/send-code (Public: send verification code for login)
+/// POST /api/admin/auth/email/send-code (Public: send verification code for login)
 pub async fn send_login_code_handler(
     State(state): State<AppState>,
     Json(payload): Json<SendLoginCodeRequest>,
@@ -225,7 +225,7 @@ pub async fn send_login_code_handler(
     }))))
 }
 
-/// POST /api/v1/admin/auth/email/login (Public: login using email verification code)
+/// POST /api/admin/auth/email/login (Public: login using email verification code)
 pub async fn email_login_handler(
     State(state): State<AppState>,
     Json(payload): Json<EmailLoginRequest>,
@@ -282,7 +282,7 @@ pub async fn email_login_handler(
     })))
 }
 
-/// POST /api/v1/admin/auth/bind-email/send-code (Protected: send code to bind email)
+/// POST /api/admin/auth/bind-email/send-code (Protected: send code to bind email)
 pub async fn send_bind_email_code_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -327,7 +327,7 @@ pub async fn send_bind_email_code_handler(
     }))))
 }
 
-/// POST /api/v1/admin/auth/bind-email/verify (Protected: verify code and bind email)
+/// POST /api/admin/auth/bind-email/verify (Protected: verify code and bind email)
 pub async fn verify_bind_email_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -367,7 +367,7 @@ pub async fn verify_bind_email_handler(
     Ok(Json(ApiResponse::success(to_admin_profile(&admin))))
 }
 
-/// GET /api/v1/admin/platform/login-settings (Protected: Super Admin view platform login settings)
+/// GET /api/admin/platform/login-settings (Protected: Super Admin view platform login settings)
 pub async fn get_login_settings_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -383,7 +383,7 @@ pub async fn get_login_settings_handler(
     Ok(Json(ApiResponse::success(settings)))
 }
 
-/// PUT /api/v1/admin/platform/login-settings (Protected: Super Admin update platform login settings)
+/// PUT /api/admin/platform/login-settings (Protected: Super Admin update platform login settings)
 pub async fn update_login_settings_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -402,7 +402,7 @@ pub async fn update_login_settings_handler(
     Ok(Json(ApiResponse::success(resp)))
 }
 
-/// GET /api/v1/admin/auth/me (Protected: get current admin profile)
+/// GET /api/admin/auth/me (Protected: get current admin profile)
 pub async fn me_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,
@@ -411,7 +411,7 @@ pub async fn me_handler(
     Ok(Json(ApiResponse::success(to_admin_profile(&admin))))
 }
 
-/// PUT /api/v1/admin/auth/password (Protected: current administrator changes own password)
+/// PUT /api/admin/auth/password (Protected: current administrator changes own password)
 pub async fn change_password_handler(
     State(state): State<AppState>,
     Extension(claims): Extension<AdminClaims>,

@@ -42,8 +42,8 @@ impl SubsystemModule for ShopSubsystem {
                 title: "订单运营大屏".to_string(),
                 icon: "ShoppingCart".to_string(), // Lucide 图标名称
                 page_type: "iframe".to_string(),
-                // 页面静态资源挂载路径
-                entry: "/api/v1/s/shop/ext/custom-pages/order_studio.html".to_string(),
+                // 页面静态资源挂载路径 (位于 /admin/ext/{slug}/* 命名空间下)
+                entry: "/admin/ext/shop/order_studio.html".to_string(),
                 required_role: None, // None 表示继承子系统权限；亦可设为 Some("super_admin")
             }
         ]
@@ -53,7 +53,7 @@ impl SubsystemModule for ShopSubsystem {
 
 > [!TIP]
 > **静态页面自动发现与托管**：
-> 只需将 HTML 文件放入 `src/systems/<slug>/custom_pages/` 目录下（如 `src/systems/shop/custom_pages/order_studio.html`），Foundry 引擎启动时会自动检测并将其挂载到 `/api/v1/s/<slug>/ext/custom-pages/*`，无需手动配置静态文件服务！
+> 只需将 HTML 文件放入 `src/systems/<slug>/custom_pages/` 目录下（如 `src/systems/shop/custom_pages/order_studio.html`），Foundry 引擎启动时会自动检测并将其挂载到 `/admin/ext/<slug>/*`，与管理后台统一网络边界，便于网关安全隔离与内网保护！
 
 ---
 
@@ -124,7 +124,7 @@ impl SubsystemModule for ShopSubsystem {
             if (!currentAuthToken) return;
 
             try {
-                const res = await fetch('/api/v1/s/shop/ext/orders', {
+                const res = await fetch('/api/admin/ext/shop/orders', {
                     headers: {
                         'Authorization': `Bearer ${currentAuthToken}`,
                         'Content-Type': 'application/json'
@@ -155,6 +155,6 @@ impl SubsystemModule for ShopSubsystem {
 > 页面应该在内存变量中保存 `currentAuthToken`。当父级 Admin 控制台刷新或退出登录时，token 会自动失效，避免 XSS 窃取。
 > 
 > **2. 相对路径与挂载路径**：
-> 在 `custom_admin_pages` 中声明的 `entry` 必须是以 `/api/v1/s/<slug>/ext/custom-pages/` 开头的完整路径。
+> 在 `custom_admin_pages` 中声明的 `entry` 必须是以 `/admin/ext/<slug>/` 开头的完整路径。
 
 下一节：[10. 综合实战：从零构建电商系统](./10-walkthrough-shop/)

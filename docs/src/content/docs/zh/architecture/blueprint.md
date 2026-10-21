@@ -50,7 +50,7 @@ flowchart TD
 | 维度 | Foundry Platform / Framework 负责 | User Application 业务应用负责 |
 |---|---|---|
 | **运行时与网络** | Axum 服务引擎、TCP Listener、优雅停机、CORS、跟踪 | 端口/主机配置、实际业务流量接入 |
-| **路由体系** | `/api/v1` 统一路由树、Admin API、Auto-CRUD、子系统 `/ext/*` 挂载 | 自定义业务路由处理函数、业务专属中间件 |
+| **路由体系** | `/api` 统一路由树、Admin API (`/api/admin`)、Auto-CRUD (`/api/s`)、子系统 `/ext/*` 挂载 | 自定义业务路由处理函数、业务专属中间件 |
 | **存储基础设施** | 多数据库 SPI 驱动管理、Redis 租户隔离缓存、Zero-DDL 动态模型引擎 | 业务数据模型定义、业务复杂事务与查询 |
 | **身份与权限** | Argon2id 哈希、JWT 签发校验、三级 RBAC（超管/普通/专题管理员） | 业务域账号体系、专题管理员分配 |
 | **Admin 控制台** | React Admin SPA 仪表盘、动态模型配置器、iframe 安全沙箱 Bridge | 自定义子系统运营大屏（HTML/React/Vue） |
@@ -82,8 +82,8 @@ impl SubsystemModule for BlogSubsystem {
         "文章内容管理、发布工作流与订阅中心"
     }
 
-    fn register_routes(&self, router: Router) -> Router {
-        // 自定义路由挂载于 /api/v1/s/blog/ext/*
+    fn register_admin_routes(&self, router: Router) -> Router {
+        // 自定义管理路由挂载于 /api/admin/ext/blog/*
         router.merge(controllers::build_routes())
     }
 
@@ -94,7 +94,7 @@ impl SubsystemModule for BlogSubsystem {
                 title: "文章创作工作室".to_string(),
                 icon: "FileEdit".to_string(),
                 page_type: "iframe".to_string(),
-                entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+                entry: "/admin/ext/blog/article_editor.html".to_string(),
                 required_role: None,
             }
         ]

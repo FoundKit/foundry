@@ -38,9 +38,9 @@ flowchart TD
     end
 
     subgraph Resources["Protected APIs"]
-        AdminAPI["Platform Admin API (/api/v1/admin/*)"]
-        TopicAdminAPI["Topic Admin API (/api/v1/admin/s/{slug}/*)"]
-        CustomExtAPI["Custom Subsystem API (/api/v1/s/{slug}/ext/*)"]
+        AdminAPI["Platform Admin API (/api/admin/*)"]
+        TopicAdminAPI["Topic Admin API (/api/admin/s/{slug}/*)"]
+        CustomExtAPI["Custom Subsystem API (/api/s/{slug}/ext/*)"]
     end
 
     AuthMethods --> JWT
@@ -121,13 +121,13 @@ sequenceDiagram
     participant SMTP as SMTP Mail Relay (lettre)
     participant Store as Database / Cache
     
-    Admin->>API: POST /api/v1/admin/auth/email/send-code\n{ "email": "admin@company.com" }
+    Admin->>API: POST /api/admin/auth/email/send-code\n{ "email": "admin@company.com" }
     Note over API: 1. Locate admin bound to email<br/>2. Enforce 60s cooldown limit<br/>3. Generate 6-digit numeric verification code
     API->>Store: Store code (5-minute TTL)
     API->>SMTP: Dispatch security code email
     SMTP-->>Admin: "Your Foundry login code is: 839201"
     
-    Admin->>API: POST /api/v1/admin/auth/email/login\n{ "email": "admin@company.com", "code": "839201" }
+    Admin->>API: POST /api/admin/auth/email/login\n{ "email": "admin@company.com", "code": "839201" }
     Note over API: Verify code match and timestamp validity
     API->>Store: Invalidate used code (Prevent replay)
     API-->>Admin: Returns JWT token and admin profile
@@ -137,10 +137,10 @@ sequenceDiagram
 
 | Endpoint | Method | Auth Required | Purpose |
 |---|---|---|---|
-| `/api/v1/admin/auth/email/send-code` | `POST` | Public | Sends a 6-digit login verification code to target email |
-| `/api/v1/admin/auth/email/login` | `POST` | Public | Authenticates via email + verification code, returns JWT |
-| `/api/v1/admin/auth/bind-email/send-code` | `POST` | Admin | Sends confirmation code to a new email address |
-| `/api/v1/admin/auth/bind-email/verify` | `POST` | Admin | Completes binding of administrator account to verified email |
+| `/api/admin/auth/email/send-code` | `POST` | Public | Sends a 6-digit login verification code to target email |
+| `/api/admin/auth/email/login` | `POST` | Public | Authenticates via email + verification code, returns JWT |
+| `/api/admin/auth/bind-email/send-code` | `POST` | Admin | Sends confirmation code to a new email address |
+| `/api/admin/auth/bind-email/verify` | `POST` | Admin | Completes binding of administrator account to verified email |
 
 ---
 

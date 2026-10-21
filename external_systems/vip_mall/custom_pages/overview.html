@@ -64,7 +64,7 @@
       <h2 class="text-sm font-bold text-slate-700 dark:text-slate-200">调用 Foundry 主系统 API 功能</h2>
       <div class="flex flex-wrap gap-3">
         <button onclick="testFetchConfigs()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium rounded-lg transition-colors">
-          ⚙️ 获取系统 Aggregated Configs (/api/v1/s/vip_mall/configs)
+          ⚙️ 获取系统 Aggregated Configs (/api/s/vip_mall/configs)
         </button>
         <button onclick="triggerToast()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium rounded-lg transition-colors">
           🔔 触发主系统 Toast 通知
@@ -94,9 +94,9 @@
 
     async function testFetchConfigs() {
       const output = document.getElementById('api-output');
-      output.innerText = 'Requesting /api/v1/s/vip_mall/configs ...';
+      output.innerText = 'Requesting /api/s/vip_mall/configs ...';
       try {
-        const res = await fetch('/api/v1/s/vip_mall/configs');
+        const res = await fetch('/api/s/vip_mall/configs');
         const data = await res.json();
         output.innerText = JSON.stringify(data, null, 2);
       } catch (err) {

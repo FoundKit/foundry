@@ -53,7 +53,7 @@ system_id (UUID):
 
 system_slug (String):
   - URL 友好的字符串标识
-  - 用于路由匹配（/api/v1/s/blog/...）
+  - 用于路由匹配（/api/s/blog/...）
   - 用户可读（日志、调试）
   - 必需（唯一标识符）
 ```
@@ -500,7 +500,7 @@ pub struct BlogSubsystem;
 
 impl SubsystemModule for BlogSubsystem {
     fn slug(&self) -> &'static str {
-        "blog"  // ← URL 路径：/api/v1/s/blog/...
+        "blog"  // ← URL 路径：/api/s/blog/...
     }
 
     fn display_name(&self) -> &'static str {
@@ -515,7 +515,7 @@ impl SubsystemModule for BlogSubsystem {
         router
             .route("/stats", get(handlers::get_stats))
             .route("/trending", get(handlers::get_trending))
-        // 路由会被挂载到：/api/v1/s/blog/custom/stats
+        // 路由会被挂载到：/api/s/blog/custom/stats
     }
 
     fn custom_admin_pages(&self) -> Vec<CustomAdminPageSpec> {

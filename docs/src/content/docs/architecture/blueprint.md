@@ -50,7 +50,7 @@ flowchart TD
 | Dimension | Foundry Platform / Framework | User Application |
 |---|---|---|
 | **Runtime & HTTP** | Axum server engine, TCP listener, graceful shutdown, CORS | Port/host binding configuration, endpoint consumption |
-| **Routing** | Unified `/api/v1` tree, Admin APIs, Auto-CRUD, `/ext/*` subsystem mounting | Custom route handlers, middleware integration |
+| **Routing** | Unified `/api` tree, Admin APIs (`/api/admin`), Auto-CRUD (`/api/s`), Extension APIs (`/api/admin/ext`, `/api/ext`) | Custom route handlers, middleware integration |
 | **Storage Engine** | Multi-DB SPI driver management, Redis cache namespace isolation, Zero-DDL dynamic model schema | Business entity definitions, custom domain queries |
 | **Authentication & RBAC** | Argon2id hashing, JWT validation, Super/Platform/Topic Admin role verification | User domain auth logic, topic assignment |
 | **Admin Control Plane** | React Admin Shell SPA, model explorer, config forms, iframe sandbox bridge | Custom subsystem operational views (HTML, React, Vue) |
@@ -82,8 +82,8 @@ impl SubsystemModule for BlogSubsystem {
         "Articles, publishing workflow, and audience engagement"
     }
 
-    fn register_routes(&self, router: Router) -> Router {
-        // Mounts custom handlers under /api/v1/s/blog/ext/*
+    fn register_admin_routes(&self, router: Router) -> Router {
+        // Mounts custom admin handlers under /api/admin/ext/blog/*
         router.merge(controllers::build_routes())
     }
 
@@ -94,7 +94,7 @@ impl SubsystemModule for BlogSubsystem {
                 title: "Article Studio".to_string(),
                 icon: "FileEdit".to_string(),
                 page_type: "iframe".to_string(),
-                entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+                entry: "/admin/ext/blog/article_editor.html".to_string(),
                 required_role: None,
             }
         ]

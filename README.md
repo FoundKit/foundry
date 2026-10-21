@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 2. **High-Level Facade (`foundry`) & Public APIs**: Intuitive `FoundryApp::builder()` API, type-safe error envelopes (`AppError`, `AppResult`), standardized response wrappers (`ApiResponse`), and rich re-exports in `foundry::prelude::*`.
 3. **Subsystem Architecture**: Organize business domains into self-contained subsystems implementing `SubsystemModule` (controllers, logic services, validation DTOs, and custom admin views).
 4. **Dual-Tier Storage & Multi-Database SPI**: Native Zero-DDL dynamic models & Auto-CRUD for PostgreSQL/MongoDB; isolated subsystem DDL tables & deferred joins for MySQL/MariaDB. Built-in pluggable support for PostgreSQL, MySQL 8.0+, MariaDB 10.5+, and MongoDB 6.0+ with zero physical DELETE privilege requirements.
-5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/v1/s/{system_slug}/{model_slug}`) with pagination and search across all supported databases.
+5. **Instant RESTful Auto-CRUD**: Dynamic data models automatically receive REST endpoints (`/api/s/{system_slug}/{model_slug}`) with pagination and search across all supported databases.
 6. **Decoupled Admin Shell & SDK Bridge**: The Admin SPA (`apps/admin`) embeds subsystem custom pages (HTML, React, Vue) inside sandboxed views, injecting JWT authentication and theme settings automatically via `postMessage` protocol.
 7. **Hierarchical RBAC**: Fine-grained role-based access control with Super Admins (`super_admin`), Platform Admins (`admin`), and Topic-Scoped Admins (`topic_admin`).
 8. **Lifecycle Mutation Hooks**: Intercept entity lifecycle events (`before_create`, `after_create`, `before_update`, `after_update`, `before_delete`, `after_delete`) using `MutationHook`.
@@ -264,7 +264,7 @@ let record = RecordStore::create(
 let item = RecordStore::get_by_id(&db, &ctx.system_slug, "articles", record.id).await?;
 let list = RecordStore::list(&db, &ctx.system_slug, "articles", query).await?;
 ```
-Dynamic models automatically receive REST endpoints at `/api/v1/s/{system_slug}/{model_slug}`.
+Dynamic models automatically receive REST endpoints at `/api/s/{system_slug}/{model_slug}`.
 
 #### Option C: Native SQL / Script Escape Hatch (Special Triggers, MongoDB Scripts)
 For databases without relational ORM support (such as MongoDB) or specialized SQL needs, write custom scripts via `SubsystemModule::migration_ddl` or under `migrations/`.

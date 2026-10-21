@@ -13,12 +13,12 @@ blog_platform/
 │   ├── hooks.rs              # Custom mutation lifecycle hooks
 │   └── systems/
 │       ├── blog/             # Blog & Content Management Subsystem
-│       │   ├── controllers/  # Axum HTTP handlers mounted at /api/v1/s/blog/ext/*
+│       │   ├── controllers/  # Axum HTTP handlers mounted at /api/admin/ext/blog/*
 │       │   ├── logic/        # Domain business services
 │       │   ├── dto/          # DTO schemas & field validators
-│       │   └── custom_pages/ # Custom Admin UI Extension Studio
+│       │   └── custom_pages/ # Custom Admin UI Extension Studio (/admin/ext/blog/*)
 │       └── newsletter/       # Audience & Newsletter Subsystem
-│           ├── controllers/  # Mounted at /api/v1/s/newsletter/ext/*
+│           ├── controllers/  # Mounted at /api/ext/newsletter/*
 │           ├── logic/
 │           ├── dto/
 │           └── custom_pages/

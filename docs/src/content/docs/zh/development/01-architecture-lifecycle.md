@@ -61,9 +61,9 @@ sequenceDiagram
     participant Hook as 生命周期钩子 (MutationHook)
     participant DB as 数据存储 (Postgres/MySQL/MariaDB/Mongo/Redis)
 
-    Client->>Server: HTTP 请求 (POST /api/v1/s/shop/ext/orders)
+    Client->>Server: HTTP 请求 (POST /api/s/shop/ext/orders)
     Server->>MW: 1. 进入全局中间件管道 (Trace 计时、注入 SystemContext)
-    MW->>Router: 2. 路由匹配解析 (/api/v1/s/{subsystem}/ext/*)
+    MW->>Router: 2. 路由匹配解析 (/api/s/{subsystem}/ext/*)
     Router->>Auth: 3. 检测是否携带 JWT 并校验 RBAC 权限
     Auth-->>Router: 鉴权通过 (注入 AdminClaims / 允许匿名访问)
     Router->>Handler: 4. 分发至目标 Controller Handler

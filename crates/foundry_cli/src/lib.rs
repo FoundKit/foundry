@@ -702,6 +702,10 @@ impl SubsystemModule for SampleSubsystem {
         "A starter sample subsystem demonstrating routes, services, and admin extensions"
     }
 
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_routes())
+    }
+
     fn register_routes(&self, router: Router) -> Router {
         router.merge(controllers::build_routes())
     }
@@ -712,7 +716,7 @@ impl SubsystemModule for SampleSubsystem {
             title: "Sample Overview".to_string(),
             icon: "LayoutDashboard".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/sample/ext/custom-pages/overview.html".to_string(),
+            entry: "/admin/ext/sample/overview.html".to_string(),
             required_role: None,
         }]
     }
@@ -885,8 +889,8 @@ cargo run
 | :--- | :--- | :--- |
 | **管理后台** | `http://localhost:8080/admin/` | 内置开箱即用 React 控制台（访问 `/` 自动重定向） |
 | **超管凭证** | `admin` / `admin123456` | 默认系统管理员账号与初始密码 |
-| **健康检查** | `GET http://localhost:8080/api/v1/health` | 状态探针（健康返回 `OK`） |
-| **API 根路径** | `http://localhost:8080/api/v1` | 业务子系统 RESTful API 入口 |
+| **健康检查** | `GET http://localhost:8080/api/health` | 状态探针（健康返回 `OK`） |
+| **API 根路径** | `http://localhost:8080/api` | 业务子系统 RESTful API 入口 |
 
 ---
 
@@ -896,7 +900,7 @@ cargo run
 
 Foundry 采用**单体模块化**架构，所有子系统（Subsystem）均为工程内部独立的业务领域模块：
 * **单二进制与同一进程**：所有子系统随应用统一编译为一个二进制程序，共享数据库连接池与 Redis 实例，监听统一端口，**无需拆分微服务，绝不需要单独部署**。
-* **统一自动路由**：子系统注册后，框架自动将其 API 挂载至 `/api/v1/s/{{system_slug}}/ext/*`，并自动将自定义管理看板嵌入管理后台侧边栏。
+* **统一自动路由**：子系统注册后，框架自动将其管理接口挂载至 `/api/admin/ext/{{system_slug}}/*`（公网接口挂载至 `/api/ext/{{system_slug}}/*`），并自动将自定义管理看板（`/admin/ext/{{system_slug}}/*`）嵌入管理后台侧边栏。
 * **数据逻辑隔离**：Zero-DDL 动态模型与数据均以 `system_slug` 自动划分逻辑边界，既保证业务自治高内聚，又保持单体应用极简的开发和运维体验。
 
 ---
@@ -1002,8 +1006,8 @@ let record = RecordStore::create(&db, &ctx.system_slug, "articles", json!({{
 }})).await?;
 
 // 自动生成 RESTful 接口：
-// GET/POST       /api/v1/s/{{system_slug}}/{{model_slug}}
-// GET/PUT/DELETE /api/v1/s/{{system_slug}}/{{model_slug}}/{{id}}
+// GET/POST       /api/s/{{system_slug}}/{{model_slug}}
+// GET/PUT/DELETE /api/s/{{system_slug}}/{{model_slug}}/{{id}}
 ```
 *提示：可在管理后台（`/admin`）可视化添加模型定义与动态字段。*
 
@@ -1528,6 +1532,10 @@ impl SubsystemModule for {struct_name} {{
         "{display_name}"
     }}
 
+    fn register_admin_routes(&self, router: Router) -> Router {{
+        router.merge(controllers::build_routes())
+    }}
+
     fn register_routes(&self, router: Router) -> Router {{
         router.merge(controllers::build_routes())
     }}
@@ -1539,7 +1547,7 @@ impl SubsystemModule for {struct_name} {{
                 title: "{display_name} Overview".to_string(),
                 icon: "LayoutDashboard".to_string(),
                 page_type: "iframe".to_string(),
-                entry: "/api/v1/s/{slug}/ext/custom-pages/overview.html".to_string(),
+                entry: "/admin/ext/{slug}/overview.html".to_string(),
                 required_role: None,
             }},
         ]
@@ -1753,6 +1761,10 @@ impl SubsystemModule for {struct_name} {{
         "{display_name}"
     }}
 
+    fn register_admin_routes(&self, router: Router) -> Router {{
+        router.merge(controllers::build_routes())
+    }}
+
     fn register_routes(&self, router: Router) -> Router {{
         router.merge(controllers::build_routes())
     }}
@@ -1764,7 +1776,7 @@ impl SubsystemModule for {struct_name} {{
                 title: "{display_name} Overview".to_string(),
                 icon: "LayoutDashboard".to_string(),
                 page_type: "iframe".to_string(),
-                entry: "/api/v1/s/{slug}/ext/custom-pages/overview.html".to_string(),
+                entry: "/admin/ext/{slug}/overview.html".to_string(),
                 required_role: None,
             }},
         ]

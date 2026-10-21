@@ -40,9 +40,9 @@ flowchart TD
     end
 
     subgraph Resources["受保护资源与业务 API"]
-        AdminAPI["平台管理 API (/api/v1/admin/*)"]
-        TopicAdminAPI["专题管理 API (/api/v1/admin/s/{slug}/*)"]
-        CustomExtAPI["自定义业务扩展 API (/api/v1/s/{slug}/ext/*)"]
+        AdminAPI["平台管理 API (/api/admin/*)"]
+        TopicAdminAPI["专题管理 API (/api/admin/s/{slug}/*)"]
+        CustomExtAPI["自定义业务扩展 API (/api/s/{slug}/ext/*)"]
     end
 
     AuthMethods --> JWT
@@ -125,13 +125,13 @@ sequenceDiagram
     participant SMTP as SMTP 邮件中继 (lettre)
     participant Store as 数据库 / 缓存
     
-    Admin->>API: POST /api/v1/admin/auth/email/send-code\n{ "email": "admin@company.com" }
+    Admin->>API: POST /api/admin/auth/email/send-code\n{ "email": "admin@company.com" }
     Note over API: 1. 检索绑定该邮箱的管理员账号<br/>2. 校验 60s 发送冷却频率<br/>3. 生成 6 位高强度数字验证码
     API->>Store: 存储验证码 (有效期 5 分钟)
     API->>SMTP: 发送包含验证码的安全通知邮件
     SMTP-->>Admin: 收到邮件: "【Foundry】您的登录验证码为: 839201"
     
-    Admin->>API: POST /api/v1/admin/auth/email/login\n{ "email": "admin@company.com", "code": "839201" }
+    Admin->>API: POST /api/admin/auth/email/login\n{ "email": "admin@company.com", "code": "839201" }
     Note over API: 核对验证码一致性与时效性
     API->>Store: 作废已使用的验证码 (防重放)
     API-->>Admin: 返回 JWT Token 与管理员信息
@@ -141,10 +141,10 @@ sequenceDiagram
 
 | 接口地址 | 请求方法 | 鉴权要求 | 说明 |
 |---|---|---|---|
-| `/api/v1/admin/auth/email/send-code` | `POST` | 公开 | 请求向指定邮箱发送登录 6 位验证码 |
-| `/api/v1/admin/auth/email/login` | `POST` | 公开 | 提交邮箱与验证码完成登录并换取 JWT |
-| `/api/v1/admin/auth/bind-email/send-code` | `POST` | 需管理员登录 | 请求向待绑定的新邮箱发送确认验证码 |
-| `/api/v1/admin/auth/bind-email/verify` | `POST` | 需管理员登录 | 提交验证码，完成管理员账号与该邮箱的绑定 |
+| `/api/admin/auth/email/send-code` | `POST` | 公开 | 请求向指定邮箱发送登录 6 位验证码 |
+| `/api/admin/auth/email/login` | `POST` | 公开 | 提交邮箱与验证码完成登录并换取 JWT |
+| `/api/admin/auth/bind-email/send-code` | `POST` | 需管理员登录 | 请求向待绑定的新邮箱发送确认验证码 |
+| `/api/admin/auth/bind-email/verify` | `POST` | 需管理员登录 | 提交验证码，完成管理员账号与该邮箱的绑定 |
 
 ---
 
@@ -177,7 +177,7 @@ async fn export_report_handler(
 
 ### 5.2 多租户/专题隔离中间件 (`require_topic_access`)
 
-对于管理特定子系统（如 `/api/v1/admin/s/{system_slug}/*`）的路由，仅核验证书有效性还不够，必须确保该管理员有权操作当前 `system_slug` 所属的数据。
+对于管理特定子系统（如 `/api/admin/s/{system_slug}/*`）的路由，仅核验证书有效性还不够，必须确保该管理员有权操作当前 `system_slug` 所属的数据。
 
 `require_topic_access` 中间件的判定规则如下：
 1. 若 `claims.role == "super_admin"`：直接放行（超级管理员拥有全系统管辖权）；
@@ -207,7 +207,7 @@ impl SubsystemModule for ShopSubsystem {
             .route("/goods", get(list_public_goods));
 
         // 2. 商家管理接口（必须具备管理员凭证且拥有本子系统权限）
-        // 该路由被挂载到: /api/v1/s/shop/ext/manage/*
+        // 该路由被挂载到: /api/s/shop/ext/manage/*
         let protected_manage_routes = Router::new()
             .route("/manage/orders/ship", post(ship_order_handler))
             .route("/manage/stats", get(get_sales_stats_handler));

@@ -152,7 +152,7 @@ Foundry 提供了 **动态专题配置中心 (Dynamic Subsystem Configs)**：
 管理员可通过 API 或管理后台定义子系统的配置规格：
 
 ```http
-POST /api/v1/admin/s/{system_slug}/configs/schema
+POST /api/admin/s/{system_slug}/configs/schema
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 Content-Type: application/json
 
@@ -200,7 +200,7 @@ pub async fn check_order_timeout(ctx: &SystemContext, db: &Database) -> AppResul
 
 #### 获取当前子系统全部生效配置
 ```http
-GET /api/v1/s/{system_slug}/configs
+GET /api/s/{system_slug}/configs
 ```
 响应示例：
 ```json
@@ -220,7 +220,7 @@ GET /api/v1/s/{system_slug}/configs
 
 #### 批量更新子系统配置值（需要管理员鉴权）
 ```http
-PUT /api/v1/s/{system_slug}/configs
+PUT /api/s/{system_slug}/configs
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 Content-Type: application/json
 

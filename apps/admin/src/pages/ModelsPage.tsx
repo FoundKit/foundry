@@ -266,7 +266,7 @@ export function ModelsPage({
                   <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400">
                     Endpoint:{' '}
                     <code className="text-emerald-600 dark:text-emerald-400">
-                      /api/v1/s/{currentSystem.slug}/{selectedModel.slug}
+                      /api/s/{currentSystem.slug}/{selectedModel.slug}
                     </code>
                   </p>
                 </div>

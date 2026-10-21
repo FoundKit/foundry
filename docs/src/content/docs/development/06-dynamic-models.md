@@ -13,7 +13,7 @@ This chapter covers:
 
 ## 1. Zero-DDL Philosophy
 
-Unlike traditional frameworks where every new table requires SQL DDL migrations, Foundry allows dynamic model definition via the Admin Console with instant REST API generation under `/api/v1/s/{subsystem}/{model}`:
+Unlike traditional frameworks where every new table requires SQL DDL migrations, Foundry allows dynamic model definition via the Admin Console with instant REST API generation under `/api/s/{subsystem}/{model}`:
 
 ```rust
 use foundry::prelude::*;
@@ -36,10 +36,10 @@ let record = state.db.records().create(
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/v1/s/{subsystem}/{model}` | Paginated list with search |
-| `POST` | `/api/v1/s/{subsystem}/{model}` | Create record |
-| `GET` | `/api/v1/s/{subsystem}/{model}/{id}` | Get record |
-| `PUT` | `/api/v1/s/{subsystem}/{model}/{id}` | Update record |
-| `DELETE` | `/api/v1/s/{subsystem}/{model}/{id}` | Delete record |
+| `GET` | `/api/s/{subsystem}/{model}` | Paginated list with search |
+| `POST` | `/api/s/{subsystem}/{model}` | Create record |
+| `GET` | `/api/s/{subsystem}/{model}/{id}` | Get record |
+| `PUT` | `/api/s/{subsystem}/{model}/{id}` | Update record |
+| `DELETE` | `/api/s/{subsystem}/{model}/{id}` | Delete record |
 
 Next chapter: [Authentication & Hierarchical RBAC](./07-auth-security/)

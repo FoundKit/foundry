@@ -236,7 +236,7 @@ mod mariadb_tests {
                 admin_username: Some(admin.username.clone()),
                 system_slug: Some(sys_slug.clone()),
                 method: "POST".to_string(),
-                path: format!("/api/v1/s/{sys_slug}/products"),
+                path: format!("/api/s/{sys_slug}/products"),
                 action_name: Some("CREATE_RECORD".to_string()),
                 headers: serde_json::json!({"user-agent": "Foundry-Test-Agent"}),
                 query_params: None,
@@ -276,7 +276,7 @@ mod mariadb_tests {
         let app = build_router(app_state);
 
         let health_req = Request::builder()
-            .uri("/api/v1/health")
+            .uri("/api/health")
             .method("GET")
             .body(Body::empty())
             .unwrap();
@@ -286,7 +286,7 @@ mod mariadb_tests {
 
         // Test Admin Systems Endpoint with JWT token
         let systems_req = Request::builder()
-            .uri("/api/v1/admin/systems")
+            .uri("/api/admin/systems")
             .method("GET")
             .header("Authorization", format!("Bearer {}", token))
             .body(Body::empty())

@@ -36,7 +36,7 @@ my-app/
       "title": "Traffic Monitor",
       "icon": "BarChart3",
       "page_type": "iframe",
-      "entry": "/api/v1/s/analytics/ext/custom-pages/dashboard.html",
+      "entry": "/admin/ext/analytics/dashboard.html",
       "required_role": null
     }
   ]

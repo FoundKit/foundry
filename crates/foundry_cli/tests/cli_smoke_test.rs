@@ -36,7 +36,7 @@ fn test_cli_new_project_compilation_smoke_test() {
     assert!(readme.contains("RecordStore"));
     assert!(readme.contains("单体模块化"));
     assert!(readme.contains("数据库初始化与管控说明"));
-    assert!(readme.contains("GET http://localhost:8080/api/v1/health"));
+    assert!(readme.contains("GET http://localhost:8080/api/health"));
     assert!(temp_dir.join("src/systems/sample/mod.rs").exists());
 
     // Verify .env and .env.example contain SMTP configuration variables

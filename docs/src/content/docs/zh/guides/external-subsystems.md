@@ -62,7 +62,7 @@ my-app/
       "title": "实时流量大屏",
       "icon": "BarChart3",
       "page_type": "iframe",
-      "entry": "/api/v1/s/analytics/ext/custom-pages/dashboard.html",
+      "entry": "/admin/ext/analytics/dashboard.html",
       "required_role": null
     },
     {
@@ -70,7 +70,7 @@ my-app/
       "title": "异常监控看板",
       "icon": "Activity",
       "page_type": "iframe",
-      "entry": "/api/v1/s/analytics/ext/custom-pages/realtime.html",
+      "entry": "/admin/ext/analytics/realtime.html",
       "required_role": "super_admin"
     }
   ]
@@ -136,7 +136,7 @@ window.addEventListener('message', async (event) => {
         console.log('外部插件已通过 Admin 外壳鉴权:', user);
 
         // 调用该系统的 Auto-CRUD 动态模型接口或公共 API
-        const res = await fetch('/api/v1/s/analytics/events', {
+        const res = await fetch('/api/s/analytics/events', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

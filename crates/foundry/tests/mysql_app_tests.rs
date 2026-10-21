@@ -59,7 +59,7 @@ mod tests {
         // 1. Verify health endpoint
         let router = app.router();
         let health_req = Request::builder()
-            .uri("/api/v1/health")
+            .uri("/api/health")
             .body(Body::empty())
             .unwrap();
         let health_res = router.clone().oneshot(health_req).await.unwrap();
@@ -67,7 +67,7 @@ mod tests {
 
         // 2. Verify registered subsystem route
         let sub_req = Request::builder()
-            .uri("/api/v1/s/demo/ext/ping")
+            .uri("/api/ext/demo/ping")
             .body(Body::empty())
             .unwrap();
         let sub_res = router.clone().oneshot(sub_req).await.unwrap();

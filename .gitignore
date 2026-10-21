@@ -1,35 +1,67 @@
-# Rust
-/target
+# Rust / Cargo
+/target/
 **/*.rs.bk
 *.pdb
 
-# Node / Frontend
+# Node / Frontend Build Outputs
 node_modules/
-/dist/
-docs/dist/
-!apps/admin/dist/**
+dist/
+dist-ssr/
 .astro/
+.vite/
+.turbo/
+.parcel-cache/
+
+# Frontend Caches & Temp Files
 *.tsbuildinfo
+.eslintcache
 .prettiercache
-.env
-.env.local
-.env.*.local
+
+# Logs
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
 
 # IDE & OS
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 .DS_Store
 Thumbs.db
-.agents
+Desktop.ini
+.agents/
+.gemini/
+.claude/
 
-# Database / Local volumes
+# Database / Local volumes & Persistent Data
 postgres_data/
 redis_data/
+mysql_data/
+mariadb_data/
+mongo_data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Temporary & Testing Directories
 tmp/
+temp/
 scratch/
+*.tmp
+coverage/
+*.lcov
+tarpaulin-report.html

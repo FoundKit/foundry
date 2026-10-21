@@ -162,7 +162,7 @@ impl SubsystemModule for ShopSubsystem {
 ## 5. Verification with curl
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/v1/s/shop/ext/orders \
+curl -X POST http://127.0.0.1:8080/api/s/shop/ext/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customer_name": "Alice",

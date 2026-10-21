@@ -203,7 +203,7 @@ mod postgres_tests {
                 admin_username: Some(admin.username.clone()),
                 system_slug: Some(sys_slug.clone()),
                 method: "POST".to_string(),
-                path: format!("/api/v1/s/{sys_slug}/products"),
+                path: format!("/api/s/{sys_slug}/products"),
                 action_name: Some("CREATE_RECORD".to_string()),
                 headers: serde_json::json!({ "user-agent": "PostgreSQL-E2E-Tester" }),
                 query_params: None,

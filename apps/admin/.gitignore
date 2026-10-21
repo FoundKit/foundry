@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+dist-ssr/
+
+# Caches
+*.tsbuildinfo
+.eslintcache
+.prettiercache
+
+# Env
+.env
+.env.*
+!.env.example

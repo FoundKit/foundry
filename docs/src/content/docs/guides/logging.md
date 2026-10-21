@@ -20,7 +20,7 @@ Foundry's observability system is cleanly segmented into three distinct architec
 ```mermaid
 flowchart TD
     subgraph Client["Client Traffic"]
-        Req["HTTP Request /api/v1/..."]
+        Req["HTTP Request /api/..."]
     end
 
     subgraph Layer1["1. HTTP Middleware Telemetry Layer (TraceLayer)"]
@@ -249,7 +249,7 @@ Foundry integrates Axum's `tower_http::trace::TraceLayer::new_for_http()` into t
 Every incoming HTTP request prints an automated telemetry trace:
 
 ```text
-2026-10-14T10:20:00.102Z  INFO tower_http::trace::on_request: started processing request method=GET uri=/api/v1/s/blog/posts version=HTTP/1.1
+2026-10-14T10:20:00.102Z  INFO tower_http::trace::on_request: started processing request method=GET uri=/api/s/blog/posts version=HTTP/1.1
 2026-10-14T10:20:00.115Z  INFO tower_http::trace::on_response: finished processing request latency=13ms status=200
 ```
 
@@ -269,7 +269,7 @@ Foundry's built-in `audit_interceptor` features:
 
 1. **Mutation Detection**:
    - Automatically intercepts mutating methods: `POST`, `PUT`, `PATCH`, `DELETE`.
-   - Automatically intercepts authentication endpoints like `/api/v1/admin/auth/login`.
+   - Automatically intercepts authentication endpoints like `/api/admin/auth/login`.
    - Completely bypasses read-only `GET` requests to avoid unnecessary database writes.
 2. **Context Resolution**:
    - Extracts admin credentials from `AdminClaims` (`admin_id`, `admin_username`).
@@ -288,7 +288,7 @@ pub struct AuditLogEntity {
     pub admin_username: Option<String>,  // Operator username
     pub system_slug: Option<String>,     // Target subsystem slug
     pub method: String,                  // HTTP verb (POST, PUT, DELETE, etc.)
-    pub path: String,                    // Request path (/api/v1/s/shop/orders)
+    pub path: String,                    // Request path (/api/s/shop/orders)
     pub action_name: Option<String>,     // Human-readable description (e.g. "Create business record")
     pub headers: serde_json::Value,      // Redacted request headers as JSON
     pub query_params: Option<String>,    // Query string parameters
@@ -306,7 +306,7 @@ pub struct AuditLogEntity {
 Foundry provides a paginated Admin API:
 
 ```http
-GET /api/v1/admin/audit-logs?page=1&page_size=20&system_slug=shop&admin_username=admin
+GET /api/admin/audit-logs?page=1&page_size=20&system_slug=shop&admin_username=admin
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 ```
 
@@ -323,7 +323,7 @@ Sample JSON response:
         "admin_username": "superadmin",
         "system_slug": "shop",
         "method": "POST",
-        "path": "/api/v1/s/shop/goods",
+        "path": "/api/s/shop/goods",
         "action_name": "新增业务数据记录",
         "ip_address": "127.0.0.1",
         "status_code": 200,

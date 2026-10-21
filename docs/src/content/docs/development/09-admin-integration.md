@@ -29,7 +29,7 @@ impl SubsystemModule for ShopSubsystem {
                 title: "Order Operations Studio".to_string(),
                 icon: "ShoppingCart".to_string(),
                 page_type: "iframe".to_string(),
-                entry: "/api/v1/s/shop/ext/custom-pages/order_studio.html".to_string(),
+                entry: "/admin/ext/shop/order_studio.html".to_string(),
                 required_role: None,
             }
         ]
@@ -38,7 +38,7 @@ impl SubsystemModule for ShopSubsystem {
 ```
 
 > [!TIP]
-> Place files in `src/systems/<slug>/custom_pages/` (e.g. `order_studio.html`). The engine serves them automatically under `/api/v1/s/<slug>/ext/custom-pages/*`.
+> Place files in `src/systems/<slug>/custom_pages/` (e.g. `order_studio.html`). The engine serves them automatically under `/admin/ext/<slug>/*`.
 
 ---
 

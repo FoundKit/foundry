@@ -269,7 +269,7 @@ mod mysql_tests {
                 admin_username: Some(admin.username.clone()),
                 system_slug: Some(sys_slug.clone()),
                 method: "POST".to_string(),
-                path: format!("/api/v1/s/{sys_slug}/products"),
+                path: format!("/api/s/{sys_slug}/products"),
                 action_name: Some("CREATE_RECORD".to_string()),
                 headers: serde_json::json!({ "user-agent": "MySQL-E2E-Tester" }),
                 query_params: None,
@@ -312,18 +312,18 @@ mod mysql_tests {
         let app_state = AppState::new(db.clone(), None, jwt, HookPipeline::new(), vec![]);
         let app = build_router(app_state);
 
-        // Test GET /api/v1/health
+        // Test GET /api/health
         let health_req = Request::builder()
-            .uri("/api/v1/health")
+            .uri("/api/health")
             .method("GET")
             .body(Body::empty())
             .unwrap();
         let health_res = app.clone().oneshot(health_req).await.unwrap();
         assert_eq!(health_res.status(), StatusCode::OK);
 
-        // Test authenticated GET /api/v1/admin/systems
+        // Test authenticated GET /api/admin/systems
         let systems_req = Request::builder()
-            .uri("/api/v1/admin/systems")
+            .uri("/api/admin/systems")
             .method("GET")
             .header("Authorization", format!("Bearer {}", token))
             .body(Body::empty())
@@ -335,9 +335,9 @@ mod mysql_tests {
         let resp_json: ApiResponse<Value> = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(resp_json.code, 0);
 
-        // Test AutoCRUD GET /api/v1/s/:system_slug/:model_slug
+        // Test AutoCRUD GET /api/s/:system_slug/:model_slug
         let records_req = Request::builder()
-            .uri(format!("/api/v1/s/{sys_slug}/products"))
+            .uri(format!("/api/s/{sys_slug}/products"))
             .method("GET")
             .body(Body::empty())
             .unwrap();

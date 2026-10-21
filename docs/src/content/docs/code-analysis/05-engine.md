@@ -163,7 +163,7 @@ let state = AppState::new(
 ├── /__health                    → Health check
 ├── /admin/*                     → Admin UI (SPA)
 ├── /assets/*                    → Embedded assets
-└── /api/v1/
+└── /api/
     ├── /admin/                  → Admin Control Plane
     │   ├── /auth/login          → 登录（公开）
     │   ├── /auth/me             → 当前用户（需认证）
@@ -235,7 +235,7 @@ pub fn build_router(state: AppState) -> Router {
 
     // 5. 应用全局中间件
     let router = Router::new()
-        .nest("/api/v1", api_v1)
+        .nest("/api", api_v1)
         .layer(from_fn_with_state(state.clone(), audit_interceptor))    // 审计
         .layer(from_fn_with_state(state.clone(), extract_system_context)) // 上下文
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any))   // CORS
@@ -293,13 +293,13 @@ pub async fn extract_system_context(
     let mut detected_slug = None;
     let segments: Vec<&str> = path.trim_start_matches('/').split('/').collect();
     
-    // 匹配 /api/v1/s/{system_slug}/*
+    // 匹配 /api/s/{system_slug}/*
     if segments.len() >= 4 && segments[0] == "api" 
        && segments[1] == "v1" && segments[2] == "s" {
         detected_slug = Some(segments[3].to_string());
     }
     
-    // 匹配 /api/v1/admin/s/{system_slug}/*
+    // 匹配 /api/admin/s/{system_slug}/*
     else if segments.len() >= 5 && segments[0] == "api" 
             && segments[1] == "v1" && segments[2] == "admin" 
             && segments[3] == "s" {
@@ -362,7 +362,7 @@ pub async fn extract_system_context(
 ```
 
 **提取优先级：**
-1. URL 路径（`/api/v1/s/{slug}`）
+1. URL 路径（`/api/s/{slug}`）
 2. HTTP Header（`X-Foundry-System-ID`）
 3. 默认值（`"default"`）
 
@@ -499,13 +499,13 @@ pub async fn audit_interceptor(
 ```text
 定义模型
     ↓
-POST /api/v1/admin/s/blog/models
+POST /api/admin/s/blog/models
 {
   "slug": "articles",
   "name": "文章"
 }
     ↓
-POST /api/v1/admin/s/blog/models/1/fields
+POST /api/admin/s/blog/models/1/fields
 {
   "name": "title",
   "field_type": "string",
@@ -513,11 +513,11 @@ POST /api/v1/admin/s/blog/models/1/fields
 }
     ↓
 自动生成 5 个 API：
-GET    /api/v1/s/blog/articles           (列表)
-POST   /api/v1/s/blog/articles           (创建)
-GET    /api/v1/s/blog/articles/:id       (查询)
-PUT    /api/v1/s/blog/articles/:id       (更新)
-DELETE /api/v1/s/blog/articles/:id       (删除)
+GET    /api/s/blog/articles           (列表)
+POST   /api/s/blog/articles           (创建)
+GET    /api/s/blog/articles/:id       (查询)
+PUT    /api/s/blog/articles/:id       (更新)
+DELETE /api/s/blog/articles/:id       (删除)
 ```
 
 ### 4.2 创建记录（POST）
@@ -559,7 +559,7 @@ pub async fn create_record_handler(
 **完整流程图：**
 
 ```text
-HTTP POST /api/v1/s/blog/articles
+HTTP POST /api/s/blog/articles
     ↓
 [extract_system_context]       ← 提取 SystemContext
     ↓
@@ -656,7 +656,7 @@ pub async fn list_records_handler(
 
 **请求示例：**
 ```bash
-GET /api/v1/s/blog/articles?page=1&page_size=20&sort_by=created_at
+GET /api/s/blog/articles?page=1&page_size=20&sort_by=created_at
 ```
 
 **响应：**
@@ -788,9 +788,9 @@ async fn handler(
 ### 6.3 约定优于配置（Convention over Configuration）
 
 ```text
-模型定义：/api/v1/admin/s/:slug/models
+模型定义：/api/admin/s/:slug/models
          ↓ 自动生成
-CRUD API：/api/v1/s/:slug/:model
+CRUD API：/api/s/:slug/:model
 ```
 
 无需手动编写路由和处理器。

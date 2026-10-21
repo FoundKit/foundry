@@ -73,7 +73,7 @@ flowchart TD
 | 通用 Web 架构概念 | Foundry (Rust) 实现 | 优势与设计考量 |
 |---|---|---|
 | **业务应用模块 (Module)** | **`src/systems/<slug>/` 子系统** | 领域高内聚，子系统间强隔离，可插拔管理 |
-| **模块路由注册 (Route Registration)** | **`SubsystemModule::register_routes`** | 自动加上 `/api/v1/s/<slug>/ext/` 命名空间前缀 |
+| **模块路由注册 (Route Registration)** | **`SubsystemModule::register_routes`** | 自动加上 `/api/s/<slug>/ext/` 命名空间前缀 |
 | **控制器与操作 (Controller Handler)** | **Axum Handler 异步函数** | 无畏并发、零对象分配开销、强类型提取 |
 | **请求参数提取 (Input Extraction)** | **`Query` / `Json` / `Path` 提取器** | 编译期强类型反序列化，非法格式自动拦截 |
 | **参数验证器 (Validator DTO)** | **`#[derive(Validate)]` DTO** | 编译期验证注解，在 Handler 顶层直接校验 |

@@ -142,7 +142,7 @@ Foundry provides the **Dynamic Subsystem Configuration Center**:
 ### 4.1 Schema Definition via API
 
 ```http
-POST /api/v1/admin/s/{system_slug}/configs/schema
+POST /api/admin/s/{system_slug}/configs/schema
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 Content-Type: application/json
 
@@ -182,12 +182,12 @@ pub async fn check_order_timeout(ctx: &SystemContext, db: &Database) -> AppResul
 
 #### Read Active Configurations
 ```http
-GET /api/v1/s/{system_slug}/configs
+GET /api/s/{system_slug}/configs
 ```
 
 #### Batch Update Configurations (Admin Protected)
 ```http
-PUT /api/v1/s/{system_slug}/configs
+PUT /api/s/{system_slug}/configs
 Authorization: Bearer <ADMIN_JWT_TOKEN>
 Content-Type: application/json
 

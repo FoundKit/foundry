@@ -28,7 +28,7 @@ async fn test_public_auth_settings_endpoint_default() {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/v1/admin/auth/settings")
+                .uri("/api/admin/auth/settings")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -56,7 +56,7 @@ async fn test_email_login_disabled_by_default() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/admin/auth/email/send-code")
+                .uri("/api/admin/auth/email/send-code")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -206,7 +206,7 @@ async fn test_bind_email_send_code_intercepted_when_smtp_not_configured() {
         .oneshot(
             Request::builder()
                 .method("POST")
-                .uri("/api/v1/admin/auth/bind-email/send-code")
+                .uri("/api/admin/auth/bind-email/send-code")
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
@@ -273,7 +273,7 @@ async fn test_change_password_endpoint_auth_required() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/api/v1/admin/auth/password")
+                .uri("/api/admin/auth/password")
                 .header("Content-Type", "application/json")
                 .body(Body::from(serde_json::to_vec(&payload).unwrap()))
                 .unwrap(),
@@ -310,7 +310,7 @@ async fn test_change_password_endpoint_validation_rules() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/api/v1/admin/auth/password")
+                .uri("/api/admin/auth/password")
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::from(serde_json::to_vec(&payload_short).unwrap()))
@@ -330,7 +330,7 @@ async fn test_change_password_endpoint_validation_rules() {
         .oneshot(
             Request::builder()
                 .method("PUT")
-                .uri("/api/v1/admin/auth/password")
+                .uri("/api/admin/auth/password")
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", token))
                 .body(Body::from(serde_json::to_vec(&payload_same).unwrap()))

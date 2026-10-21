@@ -17,7 +17,7 @@ description: 掌握 Foundry 独创的 Zero-DDL 免建表动态数据模型、Rec
 
 Foundry 引入了 **Zero-DDL 动态数据模型引擎**：
 * **免去 SQL DDL**：在可视化 Admin 控制台中直接点击创建数据模型，底层基于统一的 JSONB / 文档存储与动态倒排索引；
-* **即刻生成 RESTful API**：模型一旦保存，框架引擎自动在 `/api/v1/s/{system_slug}/{model_slug}` 路径暴露全套增删改查 REST 接口；
+* **即刻生成 RESTful API**：模型一旦保存，框架引擎自动在 `/api/s/{system_slug}/{model_slug}` 路径暴露全套增删改查 REST 接口；
 * **自动租户隔离**：所有动态记录在物理存储层自动打上 `system_slug` 标签，天然支持多系统安全隔离。
 
 ---
@@ -91,11 +91,11 @@ pub async fn handle_feedback(state: &AppState, ctx: &SystemContext) -> AppResult
 
 | HTTP 方法 | 路径 | 描述 | 请求参数 / 请求体 |
 |---|---|---|---|
-| `GET` | `/api/v1/s/{subsystem}/{model}` | 分页获取记录列表 | `?page=1&limit=20&search=关键词` |
-| `POST` | `/api/v1/s/{subsystem}/{model}` | 创建新记录 | 传入满足校验规则的 JSON 数据 |
-| `GET` | `/api/v1/s/{subsystem}/{model}/{id}` | 获取单条记录详情 | 路径中的数字 ID |
-| `PUT` | `/api/v1/s/{subsystem}/{model}/{id}` | 更新指定记录 | 传入需要更新的 JSON 字段 |
-| `DELETE` | `/api/v1/s/{subsystem}/{model}/{id}` | 删除指定记录 | 路径中的数字 ID |
+| `GET` | `/api/s/{subsystem}/{model}` | 分页获取记录列表 | `?page=1&limit=20&search=关键词` |
+| `POST` | `/api/s/{subsystem}/{model}` | 创建新记录 | 传入满足校验规则的 JSON 数据 |
+| `GET` | `/api/s/{subsystem}/{model}/{id}` | 获取单条记录详情 | 路径中的数字 ID |
+| `PUT` | `/api/s/{subsystem}/{model}/{id}` | 更新指定记录 | 传入需要更新的 JSON 字段 |
+| `DELETE` | `/api/s/{subsystem}/{model}/{id}` | 删除指定记录 | 路径中的数字 ID |
 
 ### 响应数据格式示例
 

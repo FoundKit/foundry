@@ -454,7 +454,7 @@ impl FoundryApp {
 impl FoundryApp {
     pub async fn serve(self, addr: SocketAddr) -> anyhow::Result<()> {
         info!("🚀 Foundry Application listening on http://{}", addr);
-        info!("📚 REST APIs available at http://{}/api/v1", addr);
+        info!("📚 REST APIs available at http://{}/api", addr);
 
         let listener = tokio::net::TcpListener::bind(addr).await?;
         axum::serve(listener, self.router).await?;
@@ -618,7 +618,7 @@ async fn test_health_check() {
     let router = app.into_router();
 
     let response = router
-        .oneshot(Request::builder().uri("/api/v1/health").body(Body::empty()).unwrap())
+        .oneshot(Request::builder().uri("/api/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

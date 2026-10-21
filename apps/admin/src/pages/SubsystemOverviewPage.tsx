@@ -56,11 +56,11 @@ export function SubsystemOverviewPage({ currentSystem, onNavigate }: SubsystemOv
     };
   }, [currentSystem]);
 
-  const curlExample = `curl -X GET "http://localhost:8080/api/v1/s/${currentSystem.slug}/configs" \\
+  const curlExample = `curl -X GET "http://localhost:8080/api/s/${currentSystem.slug}/configs" \\
   -H "Accept: application/json"`;
 
   const fetchExample = `// Fetch topic configurations
-const res = await fetch('/api/v1/s/${currentSystem.slug}/configs');
+const res = await fetch('/api/s/${currentSystem.slug}/configs');
 const { data } = await res.json();
 console.log('Configs:', data);`;
 
@@ -212,7 +212,7 @@ console.log('Configs:', data);`;
                 Base Subsystem Route Prefix:
               </div>
               <code className="block font-mono text-emerald-600 dark:text-emerald-400">
-                /api/v1/s/{currentSystem.slug}
+                /api/s/{currentSystem.slug}
               </code>
             </div>
 
@@ -221,7 +221,7 @@ console.log('Configs:', data);`;
                 Topic Configs Aggregation:
               </div>
               <code className="block font-mono text-slate-600 dark:text-slate-400">
-                GET /api/v1/s/{currentSystem.slug}/configs
+                GET /api/s/{currentSystem.slug}/configs
               </code>
             </div>
 
@@ -230,14 +230,14 @@ console.log('Configs:', data);`;
                 Auto-CRUD Dynamic Models:
               </div>
               <code className="block font-mono text-slate-600 dark:text-slate-400">
-                GET /api/v1/s/{currentSystem.slug}/&#123;model_slug&#125;
+                GET /api/s/{currentSystem.slug}/&#123;model_slug&#125;
               </code>
             </div>
           </div>
 
           <div className="pt-2">
             <a
-              href="/api/v1/health"
+              href="/api/health"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-400"

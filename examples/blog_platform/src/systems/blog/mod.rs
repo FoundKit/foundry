@@ -19,6 +19,10 @@ impl SubsystemModule for BlogSubsystem {
         "Articles, publishing workflow, and content management"
     }
 
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_routes())
+    }
+
     fn register_routes(&self, router: Router) -> Router {
         router.merge(controllers::build_routes())
     }
@@ -29,7 +33,7 @@ impl SubsystemModule for BlogSubsystem {
             title: "Article Studio".to_string(),
             icon: "FileEdit".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/blog/ext/custom-pages/article_editor.html".to_string(),
+            entry: "/admin/ext/blog/article_editor.html".to_string(),
             required_role: None,
         }]
     }

@@ -19,6 +19,10 @@ impl SubsystemModule for NewsletterSubsystem {
         "Audience management, subscriber opt-ins, and broadcast campaigns"
     }
 
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_routes())
+    }
+
     fn register_routes(&self, router: Router) -> Router {
         router.merge(controllers::build_routes())
     }
@@ -29,7 +33,7 @@ impl SubsystemModule for NewsletterSubsystem {
             title: "Audience Dashboard".to_string(),
             icon: "Users".to_string(),
             page_type: "iframe".to_string(),
-            entry: "/api/v1/s/newsletter/ext/custom-pages/subscribers.html".to_string(),
+            entry: "/admin/ext/newsletter/subscribers.html".to_string(),
             required_role: None,
         }]
     }

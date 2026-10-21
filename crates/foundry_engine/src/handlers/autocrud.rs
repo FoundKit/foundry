@@ -9,7 +9,7 @@ use foundry_core::response::{ApiResponse, PaginatedData};
 use foundry_storage::{ModelRecordEntity, RecordQuery, validate_record};
 use serde_json::Value;
 
-/// GET /api/v1/s/:system_slug/:model_slug (List records with pagination and filters)
+/// GET /api/s/:system_slug/:model_slug (List records with pagination and filters)
 pub async fn list_records_handler(
     State(state): State<AppState>,
     Path((system_slug, model_slug)): Path<(String, String)>,
@@ -30,7 +30,7 @@ pub async fn list_records_handler(
     Ok(Json(ApiResponse::success(records)))
 }
 
-/// GET /api/v1/s/:system_slug/:model_slug/:id (Get single record)
+/// GET /api/s/:system_slug/:model_slug/:id (Get single record)
 pub async fn get_record_handler(
     State(state): State<AppState>,
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
@@ -48,7 +48,7 @@ pub async fn get_record_handler(
     Ok(Json(ApiResponse::success(record)))
 }
 
-/// POST /api/v1/s/:system_slug/:model_slug (Create record with schema validation & hooks)
+/// POST /api/s/:system_slug/:model_slug (Create record with schema validation & hooks)
 pub async fn create_record_handler(
     State(state): State<AppState>,
     Extension(ctx): Extension<SystemContext>,
@@ -86,7 +86,7 @@ pub async fn create_record_handler(
     Ok(Json(ApiResponse::success(record)))
 }
 
-/// PUT /api/v1/s/:system_slug/:model_slug/:id (Update record with schema validation & hooks)
+/// PUT /api/s/:system_slug/:model_slug/:id (Update record with schema validation & hooks)
 pub async fn update_record_handler(
     State(state): State<AppState>,
     Extension(ctx): Extension<SystemContext>,
@@ -124,7 +124,7 @@ pub async fn update_record_handler(
     Ok(Json(ApiResponse::success(record)))
 }
 
-/// DELETE /api/v1/s/:system_slug/:model_slug/:id (Delete record with hooks)
+/// DELETE /api/s/:system_slug/:model_slug/:id (Delete record with hooks)
 pub async fn delete_record_handler(
     State(state): State<AppState>,
     Extension(ctx): Extension<SystemContext>,

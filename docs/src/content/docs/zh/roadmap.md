@@ -29,7 +29,7 @@ description: Foundry 平台与框架的开发里程碑、已实现特性、版�
 
 - [x] **1.3 存储与 Admin 控制台**
   - [x] PostgreSQL Zero-DDL 动态数据模型存储引擎。
-  - [x] 自动生成高可用 RESTful CRUD 接口 (`/api/v1/s/{system_slug}/{model_slug}`)。
+  - [x] 自动生成高可用 RESTful CRUD 接口 (`/api/s/{system_slug}/{model_slug}`)。
   - [x] 内嵌 React Admin SPA 外壳与沙箱通信 Bridge (`FoundryBridge`)。
 
 - [x] **1.4 开发者 CLI 工具 (`foundry-cli`)**

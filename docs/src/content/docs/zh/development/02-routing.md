@@ -17,40 +17,48 @@ Foundry 在框架引擎层面规定了高度统一的全局路由命名空间。
 
 ```text
 / (根路径)
-├── /health                               # 容器健康检查存活探针
-├── /admin/*                              # 内置 React Admin 可视化管理后台
+├── /health                               # 容器健康检查存活探针 (返回 OK)
+├── /admin/                               # 内置 React Admin 可视化管理后台控制台
+│   └── /ext/{subsystem}/*                # 子系统自定义后台扩展页面 (静态 HTML / 独立前端)
 │
-└── /api/v1/                              # 平台统一 API v1 空间
-    ├── /admin/*                          # 平台与控制台管理 API (登录/子系统/审计/管理员)
+└── /api/                                 # 平台统一 API 空间
+    ├── /health                           # API 健康探针 (返回 OK)
+    ├── /admin/*                          # 平台管理 API (登录/子系统/审计/管理员)
+    │   └── /ext/{subsystem}/*            # 子系统管理扩展接口 (由 register_admin_routes 挂载，需管理员鉴权)
     │
-    └── /s/{subsystem}/                   # 业务子系统隔离空间 (如 /s/shop/ 或 /s/blog/)
-        ├── /ext/*                        # 子系统自定义业务扩展 API (由 register_routes 挂载)
-        │   ├── /orders                   # 例：POST /api/v1/s/shop/ext/orders
-        │   └── /orders/{id}              # 例：GET  /api/v1/s/shop/ext/orders/123
-        │
+    ├── /ext/{subsystem}/*                # 子系统公网扩展接口 (由 register_routes 挂载，对外开放)
+    │
+    └── /s/{subsystem}/                   # 业务子系统 Auto-CRUD 空间 (如 /s/shop/ 或 /s/blog/)
+        ├── /configs                      # 专题配置读写聚合接口
         └── /{model}                      # Auto-CRUD 引擎路由 (免写代码自动生成的 RESTful API)
-            ├── GET    /api/v1/s/{subsystem}/{model}      (分页列表)
-            ├── POST   /api/v1/s/{subsystem}/{model}      (创建实体)
-            ├── GET    /api/v1/s/{subsystem}/{model}/{id} (实体详情)
-            ├── PUT    /api/v1/s/{subsystem}/{model}/{id} (更新实体)
-            └── DELETE /api/v1/s/{subsystem}/{model}/{id} (删除实体)
+            ├── GET    /api/s/{subsystem}/{model}      (分页列表)
+            ├── POST   /api/s/{subsystem}/{model}      (创建实体)
+            ├── GET    /api/s/{subsystem}/{model}/{id} (实体详情)
+            ├── PUT    /api/s/{subsystem}/{model}/{id} (更新实体)
+            └── DELETE /api/s/{subsystem}/{model}/{id} (删除实体)
 ```
 
-### 路由空间速查表
+### 路由空间速查表与安全隔离设计
 
-| 路由前缀 | 用途 | 编写方式 |
-|---|---|---|
-| `/health` | 服务探针 | 系统内置，返回 `OK` |
-| `/api/v1/admin/*` | 平台运营控制台接口 | 系统内置（管理员账号管理、全局审计日志等） |
-| `/api/v1/s/{subsystem}/ext/*` | **业务子系统自定义接口** | **开发者在 `register_routes` 中编写控制器并挂载** |
-| `/api/v1/s/{subsystem}/{model}`| **Zero-DDL 动态模型接口** | **引擎自动按模型名生成，无需写任何代码** |
-| `/admin/*` | 运营后台控制台 UI | 内置 React SPA 产物（或自定义静态单页） |
+统一部署架构下，后台与接口按前缀清晰划分，极大便利了网关（Nginx / K8s Ingress）做安全隔离（如限制管理面仅内网/VPN访问）：
+
+| 路由前缀 | 用途 | 访问控制 | 编写方式 |
+|---|---|---|---|
+| `/health` / `/api/health` | 服务探针 | 公开 | 系统内置，返回 `OK` |
+| `/admin/*` | 管理后台控制台 UI | 建议仅内网/白名单 | 内置 React SPA 产物（或自定义静态单页） |
+| `/admin/ext/{subsystem}/*` | **子系统后台扩展页面** | 建议仅内网/白名单 | **放置在 `custom_pages/` 目录中，自动挂载** |
+| `/api/admin/*` | 平台运营控制台接口 | 建议仅内网/白名单 + JWT | 系统内置（管理员账号管理、全局审计日志等） |
+| `/api/admin/ext/{subsystem}/*` | **子系统管理接口** | 建议仅内网/白名单 + JWT | **开发者在 `register_admin_routes` 中挂载** |
+| `/api/ext/{subsystem}/*` | **子系统公网业务接口** | 允许公网访问 | **开发者在 `register_routes` 中编写控制器并挂载** |
+| `/api/s/{subsystem}/{model}` | **Zero-DDL 动态模型接口** | 视业务场景配置 | **引擎自动按模型名生成，无需写任何代码** |
 
 ---
 
-## 2. 子系统路由注册 (`register_routes`)
+## 2. 子系统路由注册 (`register_admin_routes` 与 `register_routes`)
 
-每个业务子系统都是一个实现了 `SubsystemModule` 的结构体。在 `src/systems/<slug>/mod.rs` 中重写 `register_routes` 方法即可挂载你的业务路由：
+每个业务子系统都是一个实现了 `SubsystemModule` 的结构体。在 `src/systems/<slug>/mod.rs` 中重写对应的方法即可挂载你的业务路由：
+- **管理扩展接口**：重写 `register_admin_routes`，自动挂载至 `/api/admin/ext/{slug}/*`，由框架统一保护；
+- **公网扩展接口**：重写 `register_routes`，自动挂载至 `/api/ext/{slug}/*`，对外公开提供服务。
 
 ```rust
 // src/systems/shop/mod.rs
@@ -76,17 +84,21 @@ impl SubsystemModule for ShopSubsystem {
         "商品目录、购物车、结算与订单全流程管理"
     }
 
-    // 挂载当前子系统的扩展路由
-    // 最终访问路径为：/api/v1/s/shop/ext/*
+    // 挂载当前子系统的后台管理接口 (自动挂载至 /api/admin/ext/shop/*)
+    fn register_admin_routes(&self, router: Router) -> Router {
+        router.merge(controllers::build_admin_routes())
+    }
+
+    // 挂载当前子系统的公网业务接口 (自动挂载至 /api/ext/shop/*)
     fn register_routes(&self, router: Router) -> Router {
-        router.merge(controllers::build_routes())
+        router.merge(controllers::build_public_routes())
     }
 }
 ```
 
 > [!NOTE]
 > **自动命名空间注入**：
-> 在 `controllers::build_routes()` 中声明的相对路径（如 `/orders`），挂载后最终的完整访问 URL 自动为 `/api/v1/s/shop/ext/orders`。子系统开发者完全无需手动拼接前缀，框架保证了不同子系统之间的绝对隔离。
+> 在 `controllers` 中声明的相对路径（如 `/orders`），挂载后最终的完整访问 URL 自动为 `/api/admin/ext/shop/orders`（管理路由）或 `/api/ext/shop/orders`（公网路由）。子系统开发者完全无需手动拼接前缀，框架保证了不同子系统之间的绝对隔离。
 
 ---
 
