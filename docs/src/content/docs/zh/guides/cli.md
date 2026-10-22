@@ -104,6 +104,19 @@ foundry system new billing --with-table --db all --ddl-dir migrations/
 * `migrations/mysql/billing.sql` / `migrations/mariadb/billing.sql`（生成的 DDL 迁移文件，头部附带生产环境 DBA 审计与手动执行指南）
 * `src/systems/billing/custom_pages/`（嵌入管理后台的专属运营前端看板）
 
+#### 💡 开发者高频细节与后续工作流指引
+
+1. **表名智能推断与默认规则**：
+   * **未指定 `--table-name` 时**：表名默认命名为 **`{slug}_items`**，对应的 Rust 结构体命名为 **`{Slug}Item`**（例如子系统 `shop` 默认生成 `shop_items` 与 `ShopItem`）；
+   * **显式指定 `--table-name <NAME>` 时**：直接使用你指定的表名（如 `--table-name shop_orders`）；且**只要传入了 `--table-name`，即便漏传 `--with-table` 参数，CLI 也会智能开启独立表生成模式**。
+2. **生成的表字段是否固定？**
+   * **绝不固定！** 生成的代码仅仅是开箱即用的标准起步脚手架。生成后你可以完全自由地增减字段（同步修改 `orm_models()`、`models/mod.rs` 和 `dto/mod.rs`）。
+3. **多表与后期加表：不需要再次运行 CLI**：
+   * 许多开发者会疑惑：*“如果一个子系统需要多张表，或者系统运行很久后需要追加新表，CLI 支持吗？”*
+   * **完全不需要重新执行 CLI！** 在代码层面，`SubsystemModule::orm_models(&self) -> Vec<EntitySchema>` 返回动态数组 `Vec`：
+     * **一个专题多张表**：直接在 `vec![]` 中声明多张表（如 orders, order_items, products）；
+     * **后期随时加表**：系统运行数月后，直接在 `vec![]` 中追加新表。在 `AUTO_MIGRATE=true` 下，应用重新启动时会自动检测并增量创建新表，无需手工执行 DDL。
+
 ### 查看已注册子系统: `foundry system list`
 
 扫描并列出工程内所有代码内聚子系统：

@@ -80,7 +80,55 @@ impl SubsystemModule for ShopSubsystem {
 
 > [!TIP]
 > **脚手架一键生成**：
-> 执行 `foundry system new <slug> --with-table`，CLI 将自动为你生成包含 `deleted_at` 软删除、ORM 实体定义以及全套 CRUD 控制器的完整子系统模板！
+> 执行 `foundry system new <slug> --with-table --table-name <表名>`，CLI 将自动为你生成包含 `deleted_at` 软删除、ORM 实体定义、DTO、Service 以及全套 CRUD 控制器的完整子系统模板！
+
+### 2.1 单子系统多表支持与后期平滑追加新表
+
+很多开发者会问：*“一个子系统只能建一张表吗？如果业务运行很久后才需要新建表怎么办？”*
+
+答案是：**天然支持任意多张表，且支持运行时后期随时追加新表！**
+
+* `SubsystemModule::orm_models(&self) -> Vec<EntitySchema>` 返回的是动态数组 `Vec`，你可以在一个子系统里声明 1 张、5 张甚至几十张关联物理表（如订单主表、订单明细表、库存流水表等）。
+* **后期平滑加表**：当子系统上线运行了数月后，若需要追加一张退款表 `shop_refunds`，直接在 `orm_models()` 的 `vec![]` 中追加一个新的 `EntitySchema::new("shop_refunds")...`。
+* **开发环境自动同步**：在 `.env` 中开启 `AUTO_MIGRATE=true`，应用重新启动时，框架的库表核验机制会自动比对数据库，检测到缺失 `shop_refunds` 后会**自动执行 `CREATE TABLE IF NOT EXISTS` 完成无缝热建表**，无需任何手工干预！
+
+### 2.2 字段增减与混合模式最佳实践 (Hybrid Schema)
+
+CLI 或示例中生成的字段（如 `title`, `content`）仅仅是起步脚手架示范，**表的字段绝对不是固定的，你可以随时自由增减**：
+
+1. **代码三步同步**：
+   * 在 `orm_models()` 中增减 `.column(...)` 声明；
+   * 在 `models/mod.rs` 实体结构体中同步增减强类型字段；
+   * 在 `dto/mod.rs` 中增减接口入参/出参字段。
+2. **混合模式最佳实践（Hybrid Schema）**：
+   对于既想要独立物理表的高性能与严格约束，又希望部分字段能像动态模型一样灵活扩展的业务，推荐采用**“核心物理列 + 扩展 JSON 列”**模式：
+   ```rust
+   EntitySchema::new("shop_orders")
+       // 核心高频检索与对账字段 -> 强类型物理列 + B+Tree 索引
+       .column(ColumnDef::bigint("id").primary_key().auto_increment())
+       .column(ColumnDef::varchar("order_no", 64).not_null().unique())
+       .column(ColumnDef::decimal("total_amount", 12, 2).not_null())
+       .column(ColumnDef::varchar("status", 24).not_null())
+       .index(IndexDef::new("idx_orders_status", &["status", "created_at"]))
+       // 未来随时可能变动的自定义属性 -> 预留一个 JSON 扩展列
+       .column(ColumnDef::json("extra_metadata").default_empty_json())
+       .column(ColumnDef::datetime("deleted_at").nullable())
+   ```
+   * 状态流转、订单检索、财务结算走物理列，享受极速索引；
+   * 渠道标签、用户定制备注等临时属性存入 `extra_metadata`，随时写入任意新属性而无需改动表结构。
+
+### 2.3 导出包含自定义业务实体的全量 DDL
+
+全局命令 `foundry ddl -d mysql` 导出的是平台 7 张内置核心表。如果你在子系统代码中通过 `orm_models()` 声明了自定义物理表，有以下两种方式导出 DDL：
+
+1. **通过 CLI 脚手架生成（推荐）**：执行 `foundry system new <slug> --with-table --db mysql` 时，CLI 会自动将该表的建表 SQL 编译输出到 `migrations/mysql/<slug>.sql`。
+2. **应用内一键导出（包含核心表 + 所有子系统表）**：
+   在应用中注册子系统后，调用 `compile_all_ddl` 即可导出完整合集 DDL：
+   ```rust
+   // 注册所有子系统后，一键导出完整方言 DDL (适用于 CI/CD 自动生成上线 SQL)
+   let full_mysql_ddl = foundry_storage::compile_all_ddl(foundry_storage::Dialect::MySql);
+   println!("{}", full_mysql_ddl);
+   ```
 
 ---
 

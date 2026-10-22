@@ -20,6 +20,17 @@ Foundry 引入了 **Zero-DDL 动态数据模型引擎**：
 * **即刻生成 RESTful API**：模型一旦保存，框架引擎自动在 `/api/s/{system_slug}/{model_slug}` 路径暴露全套增删改查 REST 接口；
 * **自动租户隔离**：所有动态记录在物理存储层自动打上 `system_slug` 标签，天然支持多系统安全隔离。
 
+### 1.1 底层存储模型澄清：每条数据独占一行
+
+很多初学者容易产生一个误解：*“动态模型是不是把整个模型的所有数据都打包塞在一条记录的一个大 JSON 数组里？”*
+
+**并不是！**
+* **模型（Model）等同于一张逻辑表**：其元数据（名称、标识、权限）记录在 `models` 表中（占 1 行）。
+* **每一条业务实体（如一条具体评价、一篇文章）**：对应 `model_records` 表中的**独立一行（Row）**，在 MongoDB 中对应一个**独立的 BSON Document**。
+* 每条记录拥有专属的自增 `id`、创建时间 `created_at` 与软删除标记 `deleted_at`，业务字段存放在该行的 `data` (JSON) 字段中。
+
+这样设计彻底规避了“无界数组（Unbounded Arrays）”导致的行大小超限（如 MongoDB 单文档 16MB 限制）与写入排他锁并发瓶颈。
+
 ---
 
 ## 2. 选型对比：Code-First ORM vs Zero-DDL 动态模型
@@ -27,10 +38,21 @@ Foundry 引入了 **Zero-DDL 动态数据模型引擎**：
 | 维度 | Code-First ORM 实体 (范式 A) | Zero-DDL 动态模型 (范式 B) |
 |---|---|---|
 | **定义方式** | 在 Rust 代码中通过 `EntitySchema` 声明 | 在 Admin 控制台可视化界面动态定义 |
-| **底层存储** | 关系型独立物理表 (`shop_orders`) | 统一聚合存储表（Postgres JSONB / Mongo 文档） |
+| **底层存储** | 关系型独立物理表 (`shop_orders`) | 统一聚合存储表（Postgres JSONB / Mongo 文档 / MySQL 单表） |
 | **API 编写** | 自定义编写 Controller 与 Route | **自动生成，0 行代码即可对外提供 REST API** |
 | **性能表现** | 极高（原生物理列与复合索引） | 很高（支持 GIN 倒排索引与 MongoDB Wildcard 索引） |
 | **适用场景** | 核心交易、结算账单、高并发严谨业务 | **快速原型、运营配置、内容发布、工单收集、动态表单** |
+
+### 2.1 数据库引擎特性与性能选型深析
+
+为什么在 MySQL / MariaDB 下，核心业务我们强烈推荐使用 Code-First ORM 独立物理表？
+
+1. **PostgreSQL 的优势**：拥有原生 `JSONB` 与 `GIN(data)` 倒排索引，即便在动态单表模式下，对 JSON 内部的任意嵌套字段过滤也能毫秒级命中索引。
+2. **MongoDB 的优势**：原生文档型数据库，自带通配符索引（Wildcard Index `data.$**`），天然适配海量动态属性检索。
+3. **MySQL / MariaDB 的权衡**：
+   * **普通分页极快**：依靠覆盖索引 `(model_id, deleted_at, created_at DESC)` 与延迟关联，按模型做常规列表分页查询非常高效；
+   * **JSON 内部属性过滤受限**：由于缺乏全局倒排索引，若要频繁对 JSON 内部的动态字段进行复杂过滤或范围排序（如 `WHERE data->>'$.amount' > 100`），MySQL 必须反序列化每一行的 JSON 内容进行扫描，在百万级数据量下性能开销明显。
+   * **结论**：在 MySQL / MariaDB 上，轻量表单、运营活动配置继续使用动态模型；涉及海量订单、高频复杂过滤的核心业务，务必使用 [Code-First ORM 独立物理表](./05-database-orm/)。
 
 ---
 

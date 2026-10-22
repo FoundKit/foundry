@@ -104,6 +104,19 @@ foundry system new billing --with-table --db all --ddl-dir migrations/
 * `migrations/mysql/billing.sql` / `migrations/mariadb/billing.sql` (Exported DDL migration scripts with production DBA instructions)
 * `src/systems/billing/custom_pages/` (Custom admin UI views)
 
+#### 💡 Developer FAQs & Post-Scaffold Workflow
+
+1. **Table Naming Rules**:
+   * **When `--table-name` is omitted**: Defaults to **`{slug}_items`**, and the typed Rust struct defaults to **`{Slug}Item`** (e.g. subsystem `shop` defaults to `shop_items` and `ShopItem`);
+   * **When `--table-name <NAME>` is specified**: Uses your exact table name (e.g. `--table-name shop_orders`); **specifying `--table-name` automatically implies `--with-table`**, even if omitted.
+2. **Are generated fields fixed?**
+   * **Never fixed!** The generated fields (`title`, `content`) are purely an initial scaffold. You can freely add or remove fields across `orm_models()`, `models/mod.rs`, and `dto/mod.rs`.
+3. **Multiple Tables & Post-Launch Additions**:
+   * Developers often ask: *“What if a subsystem needs multiple tables, or needs a new table months after launch?”*
+   * **No need to re-run the CLI!** In code, `SubsystemModule::orm_models(&self) -> Vec<EntitySchema>` returns a dynamic `Vec`:
+     * **Multiple tables**: Simply declare multiple `EntitySchema` definitions in `vec![]` (e.g. orders, order_items, products);
+     * **Adding tables later**: Simply append a new `EntitySchema` to `vec![]`. With `AUTO_MIGRATE=true`, the server automatically creates missing tables upon startup without manual DDL executions.
+
 ### Listing Subsystems: `foundry system list`
 
 Scans and lists all registered subsystems:
