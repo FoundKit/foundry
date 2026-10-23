@@ -11,8 +11,8 @@ workspace = true
 [features]
 default = ["postgres"]
 postgres = ["sqlx/postgres"]
-mysql = ["sqlx/mysql"]
-mariadb = ["sqlx/mysql"]
+mysql = ["sqlx/mysql", "sqlx/mysql-rsa"]
+mariadb = ["sqlx/mysql", "sqlx/mysql-rsa"]
 mongodb = ["dep:mongodb"]
 
 [dependencies]

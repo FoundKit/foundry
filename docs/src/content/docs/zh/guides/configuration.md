@@ -20,6 +20,8 @@ Foundry 秉持 **“约定优于配置，极简且高可控”** 的设计哲学
 | `HOST` | String | `0.0.0.0` | HTTP 服务监听的本地网卡 IP 地址。本地测试可设为 `127.0.0.1`，容器内应保持 `0.0.0.0`。 |
 | `PORT` | u16 | `8080` | HTTP 服务绑定的监听端口。 |
 | `DATABASE_URL` | String | `postgres://postgres:postgrespassword@localhost:5432/foundry` | 底层数据库连接 URL。系统根据协议前缀（`postgres://`、`mysql://`、`mariadb://`、`mongodb://`）自动激活对应 SPI 驱动。 |
+| `DATABASE_TYPE` | String | *(空 / 自动探测)* | 显式指定数据库方言类型（`postgres`、`mysql`、`mariadb`、`mongodb`），优先级高于 URL 前缀。 |
+| `DATABASE_SSL_MODE` | String | `preferred` | 数据库 SSL/TLS 握手模式（支持 `disabled`、`preferred`、`required`、`verify_ca`、`verify_identity`）。在内网自签名证书场景下可设为 `disabled`。 |
 | `REDIS_URL` | String | *(空 / 可选)* | Redis 缓存服务连接 URL（如 `redis://127.0.0.1:6379`）。若不配置，系统将优雅降级为无缓存模式运行。 |
 | `JWT_SECRET` | String | `foundry_super_secret_jwt_key_2026_change_in_production` | 管理员 JWT Token 签名秘钥。**⚠️ 生产环境中必须设置为高强度随机字符串！** |
 | `AUTO_MIGRATE` | bool | `true` | 服务启动时是否自动执行基线数据库初始化与增量迁移（支持 `true`、`1`、`false`、`0`）。 |
@@ -54,6 +56,8 @@ DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 # DATABASE_URL=mariadb://root:root@localhost:3307/foundry
 # MongoDB (6.0+):
 # DATABASE_URL=mongodb://127.0.0.1:27017/foundry
+# 可选 SSL/TLS 模式 (disabled | preferred | required | verify_ca | verify_identity)
+# DATABASE_SSL_MODE=preferred
 
 # 3. 自动迁移开关 (首次运行建议开启自动建表)
 AUTO_MIGRATE=true

@@ -92,10 +92,19 @@ AUTO_MIGRATE=true
 ```bash
 DATABASE_URL=mysql://root:root@localhost:3306/foundry_dev
 DATABASE_TYPE=mysql
+# Optional: explicitly specify SSL/TLS mode (disabled | preferred | required | verify_ca | verify_identity)
+# DATABASE_SSL_MODE=preferred
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
+
+> [!NOTE]
+> **MySQL 8.0+ Authentication Plugins & TLS Resilience**:
+> - **Comprehensive Auth Support**: Foundry incorporates built-in `mysql-rsa` support. Whether your server uses traditional `mysql_native_password` or MySQL 8.0/8.4 default `caching_sha2_password` and `sha256_password`, connections authenticate seamlessly over both TLS and non-TLS channels out of the box.
+> - **Legacy Self-Signed Certificate Smart Fallback**: Many private VPC or legacy MySQL instances generate X.509 v1 self-signed certificates. In the default `preferred` mode, when `rustls` encounters an obsolete certificate format (`UnsupportedCertVersion`), Foundry **automatically logs a diagnostic warning and falls back to an unencrypted connection**, preventing service initialization panics.
+> - **Explicit SSL Disabling**: When running in private container networks without encryption requirements, append `?ssl-mode=disabled` to the connection string or set `DATABASE_SSL_MODE=disabled`.
+> - **Strict Production Verification**: For enterprise environments mandating TLS encryption, set `DATABASE_SSL_MODE=required` or `verify_ca` to enforce strict certificate verification.
 
 #### For MariaDB:
 ```bash

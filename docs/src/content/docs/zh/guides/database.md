@@ -92,10 +92,19 @@ AUTO_MIGRATE=true
 ```bash
 DATABASE_URL=mysql://root:root@localhost:3306/foundry_dev
 DATABASE_TYPE=mysql
+# 可选：显式指定 SSL/TLS 模式 (disabled | preferred | required | verify_ca | verify_identity)
+# DATABASE_SSL_MODE=preferred
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=super_secret_jwt_key_change_in_production
 AUTO_MIGRATE=true
 ```
+
+> [!NOTE]
+> **MySQL 8.0+ 认证插件与 TLS 弹性自愈**：
+> - **全面认证支持**：Foundry 内置了 `mysql-rsa` 算法扩展，无论是传统的 `mysql_native_password`，还是 MySQL 8.0/8.4 默认的 `caching_sha2_password` 与 `sha256_password`，在 TLS 加密或非 TLS 明文通道下均可**开箱即用自动完成握手**。
+> - **老旧自签名证书智能自愈 (Smart Fallback)**：许多私有内网或旧版 MySQL 实例默认生成了 X.509 v1 证书。在默认的 `preferred` 模式下，底层 `rustls` 遇到不兼容的证书版本时，Foundry 会**自动打印警告日志并无缝回退（Fallback）至明文安全连接**，杜绝因证书解析失败导致服务启动中断。
+> - **显式禁用 SSL**：若在内网或 Docker 容器网络中无需 TLS，可在连接串追加 `?ssl-mode=disabled`，或配置系统环境变量 `DATABASE_SSL_MODE=disabled`。
+> - **生产严格校验**：若生产环境强制要求 TLS 加密通道，可设置 `DATABASE_SSL_MODE=required` 或 `verify_ca`，若证书不合规系统将严格拦截。
 
 #### 使用 MariaDB：
 ```bash

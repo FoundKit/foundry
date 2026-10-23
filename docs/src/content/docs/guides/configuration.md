@@ -20,6 +20,8 @@ Here is the complete reference table of supported environment variables:
 | `HOST` | String | `0.0.0.0` | Network interface IP address to listen on. Use `127.0.0.1` for local development; keep `0.0.0.0` in containers. |
 | `PORT` | u16 | `8080` | TCP port to bind the HTTP server to. |
 | `DATABASE_URL` | String | `postgres://postgres:postgrespassword@localhost:5432/foundry` | Storage connection string. Automatically activates the appropriate SPI driver based on protocol prefix (`postgres://`, `mysql://`, `mariadb://`, `mongodb://`). |
+| `DATABASE_TYPE` | String | *(None / Auto-detected)* | Explicit database dialect override (`postgres`, `mysql`, `mariadb`, `mongodb`), takes precedence over URL prefix. |
+| `DATABASE_SSL_MODE` | String | `preferred` | Database SSL/TLS handshake mode (`disabled`, `preferred`, `required`, `verify_ca`, `verify_identity`). Set to `disabled` in private VPC networks with legacy self-signed certificates. |
 | `REDIS_URL` | String | *(None / Optional)* | Redis cache connection string (e.g., `redis://127.0.0.1:6379`). If unset, the server gracefully runs in cacheless mode. |
 | `JWT_SECRET` | String | `foundry_super_secret_jwt_key_2026_change_in_production` | Secret key for signing admin JWT tokens. **⚠️ Must be replaced with a strong random secret in production!** |
 | `AUTO_MIGRATE` | bool | `true` | Whether to automatically run baseline schema migrations upon server startup (`true`, `1`, `false`, `0`). |
@@ -54,6 +56,8 @@ DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/foundry
 # DATABASE_URL=mariadb://root:root@localhost:3307/foundry
 # MongoDB (6.0+):
 # DATABASE_URL=mongodb://127.0.0.1:27017/foundry
+# Optional SSL/TLS Mode (disabled | preferred | required | verify_ca | verify_identity)
+# DATABASE_SSL_MODE=preferred
 
 # 3. Auto-run migrations on startup
 AUTO_MIGRATE=true
