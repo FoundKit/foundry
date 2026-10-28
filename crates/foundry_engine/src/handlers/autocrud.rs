@@ -65,6 +65,13 @@ pub async fn create_record_handler(
     // In-memory schema validation
     validate_record(&fields, &payload)?;
 
+    // Retain only fields declared in the model schema
+    let active_field_names: std::collections::HashSet<&str> =
+        fields.iter().map(|f| f.name.as_str()).collect();
+    if let Some(obj) = payload.as_object_mut() {
+        obj.retain(|k, _| active_field_names.contains(k.as_str()));
+    }
+
     // Execute before_create mutation hooks
     state
         .hooks
@@ -102,6 +109,13 @@ pub async fn update_record_handler(
 
     // In-memory schema validation
     validate_record(&fields, &payload)?;
+
+    // Retain only fields declared in the model schema, purging obsolete/removed fields
+    let active_field_names: std::collections::HashSet<&str> =
+        fields.iter().map(|f| f.name.as_str()).collect();
+    if let Some(obj) = payload.as_object_mut() {
+        obj.retain(|k, _| active_field_names.contains(k.as_str()));
+    }
 
     // Execute before_update mutation hooks
     state

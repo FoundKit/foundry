@@ -64,6 +64,38 @@ impl ModelStoreEngine for MongoModelEngine {
         Ok(models)
     }
 
+    async fn list_deleted_models(&self, system_slug: &str) -> AppResult<Vec<ModelEntity>> {
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+        let filter = doc! {
+            "system_id": system_slug,
+            "deleted_at": { "$ne": null },
+        };
+        let find_opts = mongodb::options::FindOptions::builder()
+            .sort(doc! { "deleted_at": -1 })
+            .build();
+
+        let mut cursor = coll
+            .find(filter)
+            .with_options(find_opts)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to list deleted models: {}", e)))?;
+
+        let mut models = Vec::new();
+        while cursor
+            .advance()
+            .await
+            .map_err(|e| AppError::Database(format!("Cursor error: {}", e)))?
+        {
+            let doc = cursor
+                .deserialize_current()
+                .map_err(|e| AppError::Database(format!("Failed to deserialize model: {}", e)))?;
+            let model: ModelEntity = mongodb::bson::from_document(doc)
+                .map_err(|e| AppError::Database(format!("Model mapping error: {}", e)))?;
+            models.push(model);
+        }
+        Ok(models)
+    }
+
     async fn get_model(&self, system_slug: &str, model_slug: &str) -> AppResult<ModelEntity> {
         let coll = self.db.collection::<mongodb::bson::Document>("models");
         let filter = doc! {
@@ -81,6 +113,19 @@ impl ModelStoreEngine for MongoModelEngine {
                     model_slug, system_slug
                 ))
             })?;
+
+        mongodb::bson::from_document(doc)
+            .map_err(|e| AppError::Database(format!("Model mapping error: {}", e)))
+    }
+
+    async fn get_model_by_id(&self, model_id: i64) -> AppResult<ModelEntity> {
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+        let filter = doc! { "id": model_id };
+        let doc = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to get model by id: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Model #{} not found", model_id)))?;
 
         mongodb::bson::from_document(doc)
             .map_err(|e| AppError::Database(format!("Model mapping error: {}", e)))
@@ -129,11 +174,97 @@ impl ModelStoreEngine for MongoModelEngine {
         Ok(entity)
     }
 
+    async fn update_model(
+        &self,
+        model_id: i64,
+        slug: &str,
+        name: &str,
+        description: Option<&str>,
+        permissions: Option<Value>,
+    ) -> AppResult<ModelEntity> {
+        let current = self.get_model_by_id(model_id).await?;
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+
+        // If slug changed, ensure no other active model conflicts with the new slug
+        if current.slug != slug {
+            let conflict_filter = doc! {
+                "system_id": &current.system_id,
+                "slug": slug,
+                "id": { "$ne": model_id },
+                "deleted_at": null,
+            };
+            let conflict = coll.find_one(conflict_filter).await.map_err(|e| {
+                AppError::Database(format!("Failed to check slug uniqueness: {}", e))
+            })?;
+
+            if conflict.is_some() {
+                return Err(AppError::Validation(format!(
+                    "A model with slug '{}' already exists in system '{}'",
+                    slug, current.system_id
+                )));
+            }
+        }
+
+        let now = Utc::now();
+        let now_bson = mongodb::bson::DateTime::from_millis(now.timestamp_millis());
+
+        let mut set_doc = doc! {
+            "slug": slug,
+            "name": name,
+            "updated_at": now_bson,
+        };
+
+        if let Some(desc) = description {
+            set_doc.insert("description", desc);
+        } else {
+            set_doc.insert("description", mongodb::bson::Bson::Null);
+        }
+
+        if let Some(perms) = permissions {
+            let perms_bson = mongodb::bson::to_bson(&perms).map_err(|e| {
+                AppError::Database(format!("Failed to serialize permissions: {}", e))
+            })?;
+            set_doc.insert("permissions", perms_bson);
+        }
+
+        let filter = doc! { "id": model_id };
+        let update = doc! { "$set": set_doc };
+
+        coll.update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to update model: {}", e)))?;
+
+        // If slug changed, update model_records so existing data is preserved under the new slug
+        if current.slug != slug {
+            let records_coll = self
+                .db
+                .collection::<mongodb::bson::Document>("model_records");
+            let rec_filter = doc! {
+                "system_id": &current.system_id,
+                "model_slug": &current.slug,
+            };
+            let rec_update = doc! {
+                "$set": { "model_slug": slug, "updated_at": now_bson }
+            };
+            records_coll
+                .update_many(rec_filter, rec_update)
+                .await
+                .map_err(|e| {
+                    AppError::Database(format!(
+                        "Failed to migrate records to new model slug: {}",
+                        e
+                    ))
+                })?;
+        }
+
+        self.get_model_by_id(model_id).await
+    }
+
     async fn list_fields(&self, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
         let coll = self
             .db
             .collection::<mongodb::bson::Document>("model_fields");
-        let filter = doc! { "model_id": model_id };
+        let filter = doc! { "model_id": model_id, "deleted_at": null };
         let find_opts = mongodb::options::FindOptions::builder()
             .sort(doc! { "sort_order": 1, "id": 1 })
             .build();
@@ -158,6 +289,21 @@ impl ModelStoreEngine for MongoModelEngine {
             fields.push(field);
         }
         Ok(fields)
+    }
+
+    async fn get_field(&self, field_id: i64) -> AppResult<ModelFieldEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
+        let filter = doc! { "id": field_id, "deleted_at": null };
+        let doc = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to get field: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Field #{} not found", field_id)))?;
+
+        mongodb::bson::from_document(doc)
+            .map_err(|e| AppError::Database(format!("Field mapping error: {}", e)))
     }
 
     async fn add_field(
@@ -203,6 +349,82 @@ impl ModelStoreEngine for MongoModelEngine {
         Ok(entity)
     }
 
+    async fn update_field(
+        &self,
+        field_id: i64,
+        name: &str,
+        label: &str,
+        field_type: &str,
+        is_required: bool,
+        default_value: Option<Value>,
+        options: Option<Value>,
+        sort_order: i32,
+    ) -> AppResult<ModelFieldEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
+        let now = Utc::now();
+        let now_bson = mongodb::bson::DateTime::from_millis(now.timestamp_millis());
+        let opts = options.unwrap_or_else(|| serde_json::json!({}));
+        let opts_bson = mongodb::bson::to_bson(&opts)
+            .map_err(|e| AppError::Database(format!("Failed to serialize options: {}", e)))?;
+
+        let default_val_bson = match default_value {
+            Some(v) => mongodb::bson::to_bson(&v).map_err(|e| {
+                AppError::Database(format!("Failed to serialize default_value: {}", e))
+            })?,
+            None => mongodb::bson::Bson::Null,
+        };
+
+        let filter = doc! { "id": field_id, "deleted_at": null };
+        let update = doc! {
+            "$set": {
+                "name": name,
+                "label": label,
+                "field_type": field_type,
+                "is_required": is_required,
+                "default_value": default_val_bson,
+                "options": opts_bson,
+                "sort_order": sort_order,
+                "updated_at": now_bson,
+            }
+        };
+
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to update field: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!("Field #{} not found", field_id)));
+        }
+
+        self.get_field(field_id).await
+    }
+
+    async fn delete_field(&self, field_id: i64) -> AppResult<()> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
+        let filter = doc! { "id": field_id, "deleted_at": null };
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::DateTime::from_millis(Utc::now().timestamp_millis()),
+            }
+        };
+
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to soft delete field: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!("Field #{} not found", field_id)));
+        }
+
+        Ok(())
+    }
+
     async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
         let coll = self.db.collection::<mongodb::bson::Document>("models");
         let filter = doc! {
@@ -226,7 +448,71 @@ impl ModelStoreEngine for MongoModelEngine {
                 model_slug, system_slug
             )));
         }
+
         Ok(())
+    }
+
+    async fn delete_model_by_id(&self, model_id: i64) -> AppResult<()> {
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+        let filter = doc! { "id": model_id, "deleted_at": null };
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::DateTime::from_millis(chrono::Utc::now().timestamp_millis()),
+            }
+        };
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Soft delete model failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!("Model #{} not found", model_id)));
+        }
+
+        Ok(())
+    }
+
+    async fn restore_model(&self, model_id: i64) -> AppResult<ModelEntity> {
+        let model = self.get_model_by_id(model_id).await?;
+        if model.deleted_at.is_none() {
+            return Ok(model);
+        }
+
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+
+        // Check if another active model exists with the same slug
+        let conflict_filter = doc! {
+            "system_id": &model.system_id,
+            "slug": &model.slug,
+            "id": { "$ne": model_id },
+            "deleted_at": null,
+        };
+        let conflict = coll.find_one(conflict_filter).await.map_err(|e| {
+            AppError::Database(format!("Failed to check slug uniqueness on restore: {}", e))
+        })?;
+
+        if conflict.is_some() {
+            return Err(AppError::Validation(format!(
+                "Cannot restore model: another active model with slug '{}' already exists in system '{}'",
+                model.slug, model.system_id
+            )));
+        }
+
+        let filter = doc! { "id": model_id };
+        let now = Utc::now();
+        let now_bson = mongodb::bson::DateTime::from_millis(now.timestamp_millis());
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::Bson::Null,
+                "updated_at": now_bson,
+            }
+        };
+
+        coll.update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to restore model: {}", e)))?;
+
+        self.get_model_by_id(model_id).await
     }
 }
 

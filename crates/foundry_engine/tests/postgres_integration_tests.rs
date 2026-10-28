@@ -1,6 +1,18 @@
 #[cfg(feature = "postgres")]
 mod postgres_tests {
-    use foundry_storage::{AuditLogInsert, AuditLogQuery, Database, RecordQuery};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use foundry_auth::JwtService;
+    use foundry_core::response::ApiResponse;
+    use foundry_engine::{AppState, build_router};
+    use foundry_extension::HookPipeline;
+    use foundry_storage::{
+        AuditLogInsert, AuditLogQuery, Database, ModelRecordEntity, RecordQuery,
+    };
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
 
     fn get_postgres_url() -> String {
         std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -195,6 +207,117 @@ mod postgres_tests {
         assert_eq!(page_after_delete.pagination.total, 1);
         assert_eq!(page_after_delete.items[0].id, record2.id);
 
+        // 5.1 Test Model Modification (Renaming slug from products -> product_items)
+        println!("Testing Model Modification (Renaming slug from products to product_items)...");
+        let updated_model = db
+            .models()
+            .update_model(
+                model.id,
+                "product_items",
+                "Product Catalog Updated",
+                Some("Updated description"),
+                None,
+            )
+            .await
+            .expect("Failed to update model");
+        assert_eq!(updated_model.slug, "product_items");
+        assert_eq!(updated_model.name, "Product Catalog Updated");
+
+        // Verify existing records are preserved and migrated to the new slug!
+        let records_under_new_slug = db
+            .records()
+            .list(&sys_slug, "product_items", RecordQuery::default())
+            .await
+            .expect("Failed to list records under new slug");
+        assert_eq!(records_under_new_slug.pagination.total, 1);
+        assert_eq!(records_under_new_slug.items[0].id, record2.id);
+
+        // 5.2 Test Field CRUD
+        println!("Testing Field CRUD (Add, Update, Delete)...");
+        let f_desc = db
+            .models()
+            .add_field(
+                model.id,
+                "description",
+                "Product Description",
+                "string",
+                false,
+                None,
+                None,
+                2,
+            )
+            .await
+            .expect("Failed to add description field");
+        assert_eq!(f_desc.name, "description");
+
+        let f_desc_updated = db
+            .models()
+            .update_field(
+                f_desc.id,
+                "description",
+                "Full Product Description",
+                "richtext",
+                true,
+                None,
+                None,
+                2,
+            )
+            .await
+            .expect("Failed to update description field");
+        assert_eq!(f_desc_updated.label, "Full Product Description");
+        assert_eq!(f_desc_updated.field_type, "richtext");
+
+        db.models()
+            .delete_field(f_desc.id)
+            .await
+            .expect("Failed to soft delete field");
+
+        let active_fields = db
+            .models()
+            .list_fields(model.id)
+            .await
+            .expect("Failed to list active fields");
+        assert_eq!(active_fields.len(), 1);
+        assert_eq!(active_fields[0].name, "title");
+
+        // 5.3 Test Model Deletion & Trash Bin (Soft Delete & Restore)
+        println!("Testing Model Deletion & Trash Bin...");
+        db.models()
+            .delete_model_by_id(model.id)
+            .await
+            .expect("Failed to soft delete model by id");
+
+        let active_models = db
+            .models()
+            .list_models(&sys_slug)
+            .await
+            .expect("Failed to list models");
+        assert!(active_models.is_empty());
+
+        let deleted_models = db
+            .models()
+            .list_deleted_models(&sys_slug)
+            .await
+            .expect("Failed to list deleted models");
+        assert_eq!(deleted_models.len(), 1);
+        assert_eq!(deleted_models[0].id, model.id);
+
+        let restored_model = db
+            .models()
+            .restore_model(model.id)
+            .await
+            .expect("Failed to restore model");
+        assert_eq!(restored_model.id, model.id);
+        assert!(restored_model.deleted_at.is_none());
+
+        let active_models_after_restore = db
+            .models()
+            .list_models(&sys_slug)
+            .await
+            .expect("Failed to list models after restore");
+        assert_eq!(active_models_after_restore.len(), 1);
+        assert_eq!(active_models_after_restore[0].id, model.id);
+
         // 6. Audit Log Recording & Querying
         println!("Testing Audit log recording...");
         db.audit()
@@ -225,6 +348,236 @@ mod postgres_tests {
             .await
             .expect("Failed to query audit logs");
         assert_eq!(audit_logs.pagination.total, 1);
+
+        // 7. Full HTTP End-to-End Test for Model Rename, Trash, Restore, and Obsolete Data Purging
+        println!("Testing HTTP routes for Model Rename, Trash, Restore, and Data Purging...");
+        let jwt = JwtService::new("test_secret_key_1234567890", 24);
+        let token = jwt
+            .generate_token(
+                admin.id,
+                &admin.username,
+                "super_admin",
+                vec!["*".to_string()],
+            )
+            .unwrap();
+        let app_state = AppState::new(db.clone(), None, jwt, HookPipeline::new(), vec![]);
+        let app = build_router(app_state);
+
+        // 7.1 Create model 'tool' via HTTP POST /api/admin/s/:system_slug/models
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "tool",
+                    "name": "Tool Model",
+                    "description": "Initial tool model"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ModelEntity> = serde_json::from_slice(&body).unwrap();
+        let tool_model = res.data;
+        assert_eq!(tool_model.slug, "tool");
+
+        // 7.2 Add field 'name' and field 'des'
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}/fields",
+                sys_slug, tool_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "name",
+                    "label": "Tool Name",
+                    "field_type": "string",
+                    "is_required": true
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}/fields",
+                sys_slug, tool_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "des",
+                    "label": "Description",
+                    "field_type": "string",
+                    "is_required": false
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ModelFieldEntity> =
+            serde_json::from_slice(&body).unwrap();
+        let des_field = res.data;
+
+        // 7.3 Create a record under 'tool': {"name": "Hammer", "des": "For nails"}
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/s/{}/tool", sys_slug))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "Hammer",
+                    "des": "For nails"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<ModelRecordEntity> = serde_json::from_slice(&body).unwrap();
+        let record = res.data;
+        assert_eq!(record.data["name"], "Hammer");
+        assert_eq!(record.data["des"], "For nails");
+
+        // 7.4 User renames model from 'tool' to 'tools'
+        let req = Request::builder()
+            .method("PUT")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}",
+                sys_slug, tool_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "tools",
+                    "name": "Tools Collection",
+                    "description": "Renamed to plural tools"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify the record can now be read under new slug '/api/s/:system_slug/tools/:id'
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/tools/{}", sys_slug, record.id))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<ModelRecordEntity> = serde_json::from_slice(&body).unwrap();
+        assert_eq!(res.data.id, record.id);
+        assert_eq!(res.data.data["name"], "Hammer");
+
+        // 7.5 User deletes field 'des' from model fields
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}/fields/{}",
+                sys_slug, tool_model.id, des_field.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // 7.6 User updates the record: new value generated, 'des' is purged while 'name' is updated
+        let req = Request::builder()
+            .method("PUT")
+            .uri(format!("/api/s/{}/tools/{}", sys_slug, record.id))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "Heavy Hammer",
+                    "des": "Old obsolete des value"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<ModelRecordEntity> = serde_json::from_slice(&body).unwrap();
+        let updated_record = res.data;
+        assert_eq!(updated_record.data["name"], "Heavy Hammer");
+        assert_eq!(
+            updated_record.data.get("des"),
+            None,
+            "Obsolete field 'des' must be purged on update"
+        );
+
+        // 7.7 Soft delete model -> check trash -> restore model
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}",
+                sys_slug, tool_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify model is in trash
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/admin/s/{}/models/trash", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<Vec<foundry_storage::ModelEntity>> =
+            serde_json::from_slice(&body).unwrap();
+        assert!(res.data.iter().any(|m| m.id == tool_model.id));
+
+        // Restore model
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}/restore",
+                sys_slug, tool_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify model is restored to active list
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<Vec<foundry_storage::ModelEntity>> =
+            serde_json::from_slice(&body).unwrap();
+        assert!(res.data.iter().any(|m| m.id == tool_model.id));
 
         println!("PostgreSQL Universal Single-Table E2E integration test succeeded perfectly!");
     }

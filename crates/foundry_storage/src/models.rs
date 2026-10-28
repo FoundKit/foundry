@@ -12,12 +12,23 @@ impl ModelStore {
         db.models().list_models(system_slug).await
     }
 
+    pub async fn list_deleted_models(
+        db: &Database,
+        system_slug: &str,
+    ) -> AppResult<Vec<ModelEntity>> {
+        db.models().list_deleted_models(system_slug).await
+    }
+
     pub async fn get_model(
         db: &Database,
         system_slug: &str,
         model_slug: &str,
     ) -> AppResult<ModelEntity> {
         db.models().get_model(system_slug, model_slug).await
+    }
+
+    pub async fn get_model_by_id(db: &Database, model_id: i64) -> AppResult<ModelEntity> {
+        db.models().get_model_by_id(model_id).await
     }
 
     pub async fn create_model(
@@ -33,8 +44,37 @@ impl ModelStore {
             .await
     }
 
+    pub async fn update_model(
+        db: &Database,
+        model_id: i64,
+        slug: &str,
+        name: &str,
+        description: Option<&str>,
+        permissions: Option<Value>,
+    ) -> AppResult<ModelEntity> {
+        db.models()
+            .update_model(model_id, slug, name, description, permissions)
+            .await
+    }
+
+    pub async fn delete_model(db: &Database, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        db.models().delete_model(system_slug, model_slug).await
+    }
+
+    pub async fn delete_model_by_id(db: &Database, model_id: i64) -> AppResult<()> {
+        db.models().delete_model_by_id(model_id).await
+    }
+
+    pub async fn restore_model(db: &Database, model_id: i64) -> AppResult<ModelEntity> {
+        db.models().restore_model(model_id).await
+    }
+
     pub async fn list_fields(db: &Database, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
         db.models().list_fields(model_id).await
+    }
+
+    pub async fn get_field(db: &Database, field_id: i64) -> AppResult<ModelFieldEntity> {
+        db.models().get_field(field_id).await
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -61,6 +101,36 @@ impl ModelStore {
                 sort_order,
             )
             .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_field(
+        db: &Database,
+        field_id: i64,
+        name: &str,
+        label: &str,
+        field_type: &str,
+        is_required: bool,
+        default_value: Option<Value>,
+        options: Option<Value>,
+        sort_order: i32,
+    ) -> AppResult<ModelFieldEntity> {
+        db.models()
+            .update_field(
+                field_id,
+                name,
+                label,
+                field_type,
+                is_required,
+                default_value,
+                options,
+                sort_order,
+            )
+            .await
+    }
+
+    pub async fn delete_field(db: &Database, field_id: i64) -> AppResult<()> {
+        db.models().delete_field(field_id).await
     }
 }
 

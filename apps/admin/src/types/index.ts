@@ -123,6 +123,8 @@ export interface ModelItem {
   status: number;
   permissions: Record<string, boolean>;
   created_at: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export interface ModelFieldItem {
@@ -135,6 +137,9 @@ export interface ModelFieldItem {
   default_value?: any;
   options: Record<string, any>;
   sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export interface ModelRecordItem {

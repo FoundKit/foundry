@@ -147,10 +147,25 @@ export const api = {
   // Models & Fields
   listModels: (systemSlug: string) =>
     request<ModelItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models`),
+  listDeletedModels: (systemSlug: string) =>
+    request<ModelItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models/trash`),
   createModel: (systemSlug: string, data: any) =>
     request<ModelItem>(ADMIN_API_BASE, `/s/${systemSlug}/models`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  updateModel: (systemSlug: string, modelId: number, data: any) =>
+    request<ModelItem>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteModel: (systemSlug: string, modelId: number) =>
+    request<void>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}`, {
+      method: 'DELETE',
+    }),
+  restoreModel: (systemSlug: string, modelId: number) =>
+    request<ModelItem>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/restore`, {
+      method: 'POST',
     }),
   listModelFields: (systemSlug: string, modelId: number) =>
     request<ModelFieldItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/fields`),
@@ -158,6 +173,19 @@ export const api = {
     request<ModelFieldItem>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/fields`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  updateModelField: (systemSlug: string, modelId: number, fieldId: number, data: any) =>
+    request<ModelFieldItem>(
+      ADMIN_API_BASE,
+      `/s/${systemSlug}/models/${modelId}/fields/${fieldId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+    ),
+  deleteModelField: (systemSlug: string, modelId: number, fieldId: number) =>
+    request<void>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/fields/${fieldId}`, {
+      method: 'DELETE',
     }),
 
   // Dynamic Records Auto-CRUD

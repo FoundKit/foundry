@@ -108,4 +108,28 @@ pub async fn handle_feedback(state: &AppState, ctx: &SystemContext) -> AppResult
 | `PUT` | `/api/s/{subsystem}/{model}/{id}` | Update record |
 | `DELETE` | `/api/s/{subsystem}/{model}/{id}` | Soft-delete record |
 
+---
+
+## 5. Model & Field Schema Lifecycle Management
+
+### 5.1 Model Renaming & Modification
+* Modify model names, descriptions, and slugs dynamically.
+* **Automatic Record Migration**: When changing slug (e.g. `tool` -> `tools`), the engine automatically updates the `model_slug` of all existing records in the database with zero downtime.
+
+### 5.2 Soft-Delete & Trash Bin Restoration
+* Deleting a model marks `deleted_at = NOW()`, preserving all underlying records safely.
+* Deleted models are archived in the **Trash Bin**, where administrators can restore them with automatic conflict detection.
+
+### 5.3 Field CRUD & Smooth Data Evolution
+* Add, edit, or soft-delete fields at any time.
+* **Preserved Raw Data**: Unchanged records retain all historical JSON attributes in storage.
+* **Adaptive Display**: Tables only show current active fields.
+* **Automatic Field Purging**: Re-saving or updating existing records automatically purges obsolete keys (such as removed fields `name` or `des`), keeping data tidy and conformant.
+
+### 5.4 Relation Field Type
+* Reference foreign records across models using `relation` type fields.
+* Specify `target_model` in field options. Visual Data Explorer displays intuitive ID-binding dropdown pickers and relation badges.
+
+---
+
 Next chapter: [Authentication & Hierarchical RBAC](./07-auth-security/)

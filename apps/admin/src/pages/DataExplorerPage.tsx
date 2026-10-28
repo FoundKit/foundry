@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, Edit2, Database, Layers, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Database,
+  Layers,
+  AlertTriangle,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { Card, Button, Input, Modal, Badge, Pagination } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { ModelFieldItem, ModelItem, ModelRecordItem, SystemItem } from '../types';
@@ -25,6 +33,9 @@ export function DataExplorerPage({
   const [records, setRecords] = useState<ModelRecordItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+
+  // Cache of target model records for relation fields: { [target_model_slug]: ModelRecordItem[] }
+  const [relationRecords, setRelationRecords] = useState<Record<string, ModelRecordItem[]>>({});
 
   const currentPage = Number(queryParams?.page) || 1;
   const currentPageSize = Number(queryParams?.page_size) || 15;
@@ -59,6 +70,26 @@ export function DataExplorerPage({
     }
   };
 
+  const loadRelationRecords = async (systemSlug: string, modelFields: ModelFieldItem[]) => {
+    const targetSlugs = Array.from(
+      new Set(
+        modelFields
+          .filter((f) => f.field_type === 'relation' && f.options?.target_model)
+          .map((f) => f.options.target_model as string),
+      ),
+    );
+
+    for (const tm of targetSlugs) {
+      if (!tm) continue;
+      try {
+        const res = await api.listRecords(systemSlug, tm, { page: 1, page_size: 100 });
+        setRelationRecords((prev) => ({ ...prev, [tm]: res.items }));
+      } catch (err) {
+        console.error(`Failed to prefetch relation records for model ${tm}:`, err);
+      }
+    }
+  };
+
   const loadRecords = async (slug: string, model: ModelItem, page: number, pageSize: number) => {
     setLoading(true);
     try {
@@ -69,6 +100,9 @@ export function DataExplorerPage({
       setFields(f);
       setRecords(recs.items);
       setTotal(recs.pagination.total);
+
+      // Pre-load relation target records for intuitive ID selection & display
+      loadRelationRecords(slug, f);
     } catch (err) {
       console.error(err);
       setFields([]);
@@ -137,7 +171,8 @@ export function DataExplorerPage({
     setEditingRecord(null);
     const initial: Record<string, any> = {};
     fields.forEach((f) => {
-      initial[f.name] = f.default_value !== undefined ? f.default_value : '';
+      initial[f.name] =
+        f.default_value !== undefined ? f.default_value : f.field_type === 'boolean' ? false : '';
     });
     setFormData(initial);
     setIsRecordModalOpen(true);
@@ -145,7 +180,20 @@ export function DataExplorerPage({
 
   const openEditModal = (rec: ModelRecordItem) => {
     setEditingRecord(rec);
-    setFormData({ ...rec.data });
+    // Initialize formData strictly using current active schema fields.
+    // Any obsolete/deleted fields present in rec.data are intentionally omitted so they are purged upon save.
+    const initial: Record<string, any> = {};
+    fields.forEach((f) => {
+      initial[f.name] =
+        rec.data[f.name] !== undefined
+          ? rec.data[f.name]
+          : f.default_value !== undefined
+            ? f.default_value
+            : f.field_type === 'boolean'
+              ? false
+              : '';
+    });
+    setFormData(initial);
     setIsRecordModalOpen(true);
   };
 
@@ -164,10 +212,22 @@ export function DataExplorerPage({
     e.preventDefault();
     if (!currentSystem?.slug || !selectedModel) return;
     try {
+      // Filter payload strictly to active fields to ensure removed fields are deleted from record
+      const payload: Record<string, any> = {};
+      fields.forEach((f) => {
+        if (formData[f.name] !== undefined && formData[f.name] !== '') {
+          payload[f.name] = formData[f.name];
+        } else if (f.field_type === 'boolean') {
+          payload[f.name] = !!formData[f.name];
+        } else if (formData[f.name] === '' && !f.is_required) {
+          payload[f.name] = null;
+        }
+      });
+
       if (editingRecord) {
-        await api.updateRecord(currentSystem.slug, selectedModel.slug, editingRecord.id, formData);
+        await api.updateRecord(currentSystem.slug, selectedModel.slug, editingRecord.id, payload);
       } else {
-        await api.createRecord(currentSystem.slug, selectedModel.slug, formData);
+        await api.createRecord(currentSystem.slug, selectedModel.slug, payload);
       }
       setIsRecordModalOpen(false);
       loadRecords(currentSystem.slug, selectedModel, currentPage, currentPageSize);
@@ -300,7 +360,7 @@ export function DataExplorerPage({
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
               <tr>
                 <th className="w-16 px-5 py-3">ID</th>
-                {fields.slice(0, 5).map((f) => (
+                {fields.map((f) => (
                   <th key={f.id} className="px-5 py-3">
                     {f.label}{' '}
                     <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
@@ -321,10 +381,49 @@ export function DataExplorerPage({
                   <td className="px-5 py-3 font-mono text-slate-400 dark:text-slate-500">
                     #{rec.id}
                   </td>
-                  {fields.slice(0, 5).map((f) => {
+                  {fields.map((f) => {
                     const val = rec.data[f.name];
-                    const displayVal =
-                      typeof val === 'object' ? JSON.stringify(val) : String(val ?? '-');
+                    if (val === undefined || val === null || val === '') {
+                      return (
+                        <td
+                          key={f.id}
+                          className="max-w-xs truncate px-5 py-3 text-slate-400 dark:text-slate-500"
+                        >
+                          -
+                        </td>
+                      );
+                    }
+
+                    if (f.field_type === 'relation') {
+                      const targetModel = f.options?.target_model;
+                      const targetRecord = relationRecords[targetModel]?.find(
+                        (r) => r.id === Number(val),
+                      );
+                      const targetLabel = targetRecord
+                        ? targetRecord.data.title ||
+                          targetRecord.data.name ||
+                          targetRecord.data.slug ||
+                          `#${val}`
+                        : null;
+
+                      return (
+                        <td key={f.id} className="max-w-xs truncate px-5 py-3">
+                          <span
+                            className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-mono text-xs font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
+                            title={targetModel ? `Relation to ${targetModel}` : undefined}
+                          >
+                            <LinkIcon className="h-3 w-3" />#{val}
+                            {targetLabel && (
+                              <span className="font-sans font-normal text-slate-500">
+                                ({String(targetLabel).slice(0, 15)})
+                              </span>
+                            )}
+                          </span>
+                        </td>
+                      );
+                    }
+
+                    const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
                     return (
                       <td
                         key={f.id}
@@ -358,7 +457,7 @@ export function DataExplorerPage({
               {records.length === 0 && (
                 <tr>
                   <td
-                    colSpan={fields.length + 2}
+                    colSpan={fields.length + 3}
                     className="py-12 text-center text-slate-500 dark:text-slate-400"
                   >
                     {loading ? t('common.loading') : t('explorer.no_records')}
@@ -394,6 +493,7 @@ export function DataExplorerPage({
                 <span className="font-mono text-slate-400 dark:text-slate-500">({f.name})</span>
                 {f.is_required && <span className="ml-1 text-rose-600 dark:text-rose-400">*</span>}
               </label>
+
               {f.field_type === 'boolean' ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -413,17 +513,63 @@ export function DataExplorerPage({
                   value={formData[f.name] || ''}
                   onChange={(e) => setFormData({ ...formData, [f.name]: e.target.value })}
                 />
+              ) : f.field_type === 'relation' && f.options?.target_model ? (
+                <div>
+                  <select
+                    required={f.is_required}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    value={
+                      formData[f.name] !== undefined && formData[f.name] !== null
+                        ? String(formData[f.name])
+                        : ''
+                    }
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [f.name]: e.target.value ? Number(e.target.value) : '',
+                      })
+                    }
+                  >
+                    <option value="">{t('explorer.select_relation_record')}</option>
+                    {(relationRecords[f.options.target_model] || []).map((relRec) => {
+                      const label =
+                        relRec.data.title ||
+                        relRec.data.name ||
+                        relRec.data.slug ||
+                        Object.values(relRec.data)[0] ||
+                        `Record #${relRec.id}`;
+                      return (
+                        <option key={relRec.id} value={relRec.id}>
+                          #{relRec.id} - {String(label).slice(0, 45)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400">
+                    Target model: {f.options.target_model} (bound by ID)
+                  </p>
+                </div>
               ) : (
                 <Input
                   required={f.is_required}
-                  type={f.field_type === 'integer' || f.field_type === 'number' ? 'number' : 'text'}
+                  type={
+                    f.field_type === 'integer' ||
+                    f.field_type === 'number' ||
+                    f.field_type === 'relation'
+                      ? 'number'
+                      : 'text'
+                  }
                   value={formData[f.name] !== undefined ? formData[f.name] : ''}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
                       [f.name]:
-                        f.field_type === 'integer' || f.field_type === 'number'
-                          ? Number(e.target.value)
+                        f.field_type === 'integer' ||
+                        f.field_type === 'number' ||
+                        f.field_type === 'relation'
+                          ? e.target.value === ''
+                            ? ''
+                            : Number(e.target.value)
                           : e.target.value,
                     })
                   }

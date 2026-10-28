@@ -46,6 +46,23 @@ impl ModelStoreEngine for MySqlModelEngine {
         Ok(rows)
     }
 
+    async fn list_deleted_models(&self, system_slug: &str) -> AppResult<Vec<ModelEntity>> {
+        let rows = sqlx::query_as::<_, ModelEntity>(
+            r#"
+            SELECT id, system_id, slug, name, description, is_system, status, permissions, created_at, updated_at, deleted_at
+            FROM models
+            WHERE system_id = ? AND deleted_at IS NOT NULL
+            ORDER BY deleted_at DESC
+            "#,
+        )
+        .bind(system_slug)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to list deleted models: {}", e)))?;
+
+        Ok(rows)
+    }
+
     async fn get_model(&self, system_slug: &str, model_slug: &str) -> AppResult<ModelEntity> {
         let row = sqlx::query_as::<_, ModelEntity>(
             r#"
@@ -65,6 +82,23 @@ impl ModelStoreEngine for MySqlModelEngine {
                 model_slug, system_slug
             ))
         })?;
+
+        Ok(row)
+    }
+
+    async fn get_model_by_id(&self, model_id: i64) -> AppResult<ModelEntity> {
+        let row = sqlx::query_as::<_, ModelEntity>(
+            r#"
+            SELECT id, system_id, slug, name, description, is_system, status, permissions, created_at, updated_at, deleted_at
+            FROM models
+            WHERE id = ?
+            "#,
+        )
+        .bind(model_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to get model by id: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Model #{} not found", model_id)))?;
 
         Ok(row)
     }
@@ -127,6 +161,102 @@ impl ModelStoreEngine for MySqlModelEngine {
         Ok(row)
     }
 
+    async fn update_model(
+        &self,
+        model_id: i64,
+        slug: &str,
+        name: &str,
+        description: Option<&str>,
+        permissions: Option<Value>,
+    ) -> AppResult<ModelEntity> {
+        let current = self.get_model_by_id(model_id).await?;
+
+        // If slug changed, ensure no other active model conflicts with the new slug
+        if current.slug != slug {
+            let conflict: Option<(i64,)> = sqlx::query_as(
+                r#"
+                SELECT id FROM models
+                WHERE system_id = ? AND slug = ? AND id != ? AND deleted_at IS NULL
+                "#,
+            )
+            .bind(&current.system_id)
+            .bind(slug)
+            .bind(model_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to check slug uniqueness: {}", e)))?;
+
+            if conflict.is_some() {
+                return Err(AppError::Validation(format!(
+                    "A model with slug '{}' already exists in system '{}'",
+                    slug, current.system_id
+                )));
+            }
+        }
+
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to begin transaction: {}", e)))?;
+
+        sqlx::query(
+            r#"
+            UPDATE models
+            SET slug = ?, name = ?, description = ?, permissions = COALESCE(?, permissions), updated_at = NOW(6)
+            WHERE id = ?
+            "#,
+        )
+        .bind(slug)
+        .bind(name)
+        .bind(description)
+        .bind(&permissions)
+        .bind(model_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to update model: {}", e)))?;
+
+        // If slug changed, update model_records so existing data is preserved under the new slug
+        if current.slug != slug {
+            sqlx::query(
+                r#"
+                UPDATE model_records
+                SET model_slug = ?, updated_at = NOW(6)
+                WHERE system_id = ? AND model_slug = ?
+                "#,
+            )
+            .bind(slug)
+            .bind(&current.system_id)
+            .bind(&current.slug)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                AppError::Database(format!(
+                    "Failed to migrate records to new model slug: {}",
+                    e
+                ))
+            })?;
+        }
+
+        let row = sqlx::query_as::<_, ModelEntity>(
+            r#"
+            SELECT id, system_id, slug, name, description, is_system, status, permissions, created_at, updated_at, deleted_at
+            FROM models
+            WHERE id = ?
+            "#,
+        )
+        .bind(model_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to fetch updated model: {}", e)))?;
+
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to commit transaction: {}", e)))?;
+
+        Ok(row)
+    }
+
     async fn list_fields(&self, model_id: i64) -> AppResult<Vec<ModelFieldEntity>> {
         let rows = sqlx::query_as::<_, ModelFieldEntity>(
             r#"
@@ -142,6 +272,23 @@ impl ModelStoreEngine for MySqlModelEngine {
         .map_err(|e| AppError::Database(format!("Failed to list fields: {}", e)))?;
 
         Ok(rows)
+    }
+
+    async fn get_field(&self, field_id: i64) -> AppResult<ModelFieldEntity> {
+        let row = sqlx::query_as::<_, ModelFieldEntity>(
+            r#"
+            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
+            FROM model_fields
+            WHERE id = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(field_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to get field: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Field #{} not found", field_id)))?;
+
+        Ok(row)
     }
 
     async fn add_field(
@@ -185,7 +332,7 @@ impl ModelStoreEngine for MySqlModelEngine {
 
         let row = sqlx::query_as::<_, ModelFieldEntity>(
             r#"
-            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at
+            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
             FROM model_fields
             WHERE id = ?
             "#,
@@ -202,11 +349,92 @@ impl ModelStoreEngine for MySqlModelEngine {
         Ok(row)
     }
 
+    async fn update_field(
+        &self,
+        field_id: i64,
+        name: &str,
+        label: &str,
+        field_type: &str,
+        is_required: bool,
+        default_value: Option<Value>,
+        options: Option<Value>,
+        sort_order: i32,
+    ) -> AppResult<ModelFieldEntity> {
+        let opts = options.unwrap_or_else(|| serde_json::json!({}));
+
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to begin transaction: {}", e)))?;
+
+        let res = sqlx::query(
+            r#"
+            UPDATE model_fields
+            SET name = ?, label = ?, field_type = ?, is_required = ?, default_value = ?, options = ?, sort_order = ?, updated_at = NOW(6)
+            WHERE id = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(name)
+        .bind(label)
+        .bind(field_type)
+        .bind(is_required)
+        .bind(&default_value)
+        .bind(&opts)
+        .bind(sort_order)
+        .bind(field_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to update model field: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!("Field #{} not found", field_id)));
+        }
+
+        let row = sqlx::query_as::<_, ModelFieldEntity>(
+            r#"
+            SELECT id, model_id, name, label, field_type, is_required, default_value, options, sort_order, created_at, updated_at, deleted_at
+            FROM model_fields
+            WHERE id = ?
+            "#,
+        )
+        .bind(field_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to fetch updated field: {}", e)))?;
+
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to commit transaction: {}", e)))?;
+
+        Ok(row)
+    }
+
+    async fn delete_field(&self, field_id: i64) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE model_fields
+            SET deleted_at = NOW(6), updated_at = NOW(6)
+            WHERE id = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(field_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete field: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!("Field #{} not found", field_id)));
+        }
+
+        Ok(())
+    }
+
     async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
         let res = sqlx::query(
             r#"
             UPDATE models
-            SET deleted_at = NOW(6)
+            SET deleted_at = NOW(6), updated_at = NOW(6)
             WHERE system_id = ? AND slug = ? AND deleted_at IS NULL
             "#,
         )
@@ -224,6 +452,92 @@ impl ModelStoreEngine for MySqlModelEngine {
         }
 
         Ok(())
+    }
+
+    async fn delete_model_by_id(&self, model_id: i64) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE models
+            SET deleted_at = NOW(6), updated_at = NOW(6)
+            WHERE id = ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(model_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to soft delete model: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!("Model #{} not found", model_id)));
+        }
+
+        Ok(())
+    }
+
+    async fn restore_model(&self, model_id: i64) -> AppResult<ModelEntity> {
+        let model = self.get_model_by_id(model_id).await?;
+        if model.deleted_at.is_none() {
+            return Ok(model);
+        }
+
+        // Check if another active model exists with the same slug
+        let conflict: Option<(i64,)> = sqlx::query_as(
+            r#"
+            SELECT id FROM models
+            WHERE system_id = ? AND slug = ? AND id != ? AND deleted_at IS NULL
+            "#,
+        )
+        .bind(&model.system_id)
+        .bind(&model.slug)
+        .bind(model_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| {
+            AppError::Database(format!("Failed to check slug uniqueness on restore: {}", e))
+        })?;
+
+        if conflict.is_some() {
+            return Err(AppError::Validation(format!(
+                "Cannot restore model: another active model with slug '{}' already exists in system '{}'",
+                model.slug, model.system_id
+            )));
+        }
+
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to begin transaction: {}", e)))?;
+
+        sqlx::query(
+            r#"
+            UPDATE models
+            SET deleted_at = NULL, updated_at = NOW(6)
+            WHERE id = ?
+            "#,
+        )
+        .bind(model_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to restore model: {}", e)))?;
+
+        let restored = sqlx::query_as::<_, ModelEntity>(
+            r#"
+            SELECT id, system_id, slug, name, description, is_system, status, permissions, created_at, updated_at, deleted_at
+            FROM models
+            WHERE id = ?
+            "#,
+        )
+        .bind(model_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to fetch restored model: {}", e)))?;
+
+        tx.commit()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to commit transaction: {}", e)))?;
+
+        Ok(restored)
     }
 }
 

@@ -76,9 +76,31 @@ pub fn build_router(state: AppState) -> Router {
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
         )
         .route(
+            "/s/{system_slug}/models/trash",
+            get(models::list_deleted_models_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models/{id}",
+            put(models::update_model_handler)
+                .delete(models::delete_model_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models/{id}/restore",
+            post(models::restore_model_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
             "/s/{system_slug}/models/{id}/fields",
             get(models::list_model_fields_handler)
                 .post(models::add_model_field_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models/{id}/fields/{field_id}",
+            put(models::update_model_field_handler)
+                .delete(models::delete_model_field_handler)
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
         )
         .route(

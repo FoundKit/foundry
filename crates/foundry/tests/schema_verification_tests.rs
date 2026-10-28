@@ -24,7 +24,7 @@ impl SubsystemModule for CustomBillingSubsystem {
 #[tokio::test]
 async fn test_schema_verification_fails_when_tables_missing_mysql() {
     let mysql_url = std::env::var("MYSQL_URL")
-        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_dev".to_string());
+        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_empty_dev".to_string());
 
     // Check if MySQL is accessible
     if sqlx::MySqlPool::connect(&mysql_url).await.is_err() {
@@ -32,7 +32,7 @@ async fn test_schema_verification_fails_when_tables_missing_mysql() {
         return;
     }
 
-    // foundry_dev in MySQL is unmigrated (0 tables), so startup with auto_migrate=false must fail
+    // foundry_empty_dev in MySQL is unmigrated (0 tables), so startup with auto_migrate=false must fail
     let result = FoundryApp::builder()
         .database_url(&mysql_url)
         .auto_migrate(false)
@@ -103,7 +103,7 @@ async fn test_schema_verification_succeeds_when_complete_postgres() {
 #[tokio::test]
 async fn test_skip_schema_validation_escape_hatch() {
     let mysql_url = std::env::var("MYSQL_URL")
-        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_dev".to_string());
+        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_empty_dev".to_string());
 
     if sqlx::MySqlPool::connect(&mysql_url).await.is_err() {
         eprintln!("Skipping test: MySQL not accessible at {}", mysql_url);
@@ -172,7 +172,7 @@ async fn test_custom_subsystem_orm_model_missing_detected() {
 #[tokio::test]
 async fn test_direct_verify_schema_api() {
     let mysql_url = std::env::var("MYSQL_URL")
-        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_dev".to_string());
+        .unwrap_or_else(|_| "mysql://root:root@127.0.0.1:3306/foundry_empty_dev".to_string());
 
     if sqlx::MySqlPool::connect(&mysql_url).await.is_err() {
         eprintln!("Skipping test: MySQL not accessible at {}", mysql_url);

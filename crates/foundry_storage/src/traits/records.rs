@@ -75,7 +75,22 @@ pub fn validate_record(fields: &[ModelFieldEntity], data: &Value) -> AppResult<(
                         )));
                     }
                 }
-                FieldType::Datetime | FieldType::Relation => {
+                FieldType::Relation => {
+                    let is_valid_id = if val.is_i64() || val.is_u64() {
+                        true
+                    } else if let Some(s) = val.as_str() {
+                        s.trim().parse::<i64>().is_ok()
+                    } else {
+                        false
+                    };
+                    if !is_valid_id {
+                        return Err(AppError::Validation(format!(
+                            "Field '{}' ({}) must be a valid target record ID",
+                            field.name, field.label
+                        )));
+                    }
+                }
+                FieldType::Datetime => {
                     // Strings or numbers accepted
                 }
             }
