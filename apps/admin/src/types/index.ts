@@ -85,7 +85,7 @@ export interface PlatformLoginSettings {
 
 export interface RouteState {
   mode: 'platform' | 'subsystem';
-  platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs' | 'settings';
+  platformTab: 'dashboard' | 'systems' | 'apps' | 'admins' | 'audit_logs' | 'settings';
   subsystemSlug: string | null;
   subsystemTab:
     | 'overview'

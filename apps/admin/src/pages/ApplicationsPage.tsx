@@ -27,10 +27,16 @@ import {
 } from '../types';
 
 interface ApplicationsPageProps {
-  currentSystem: SystemItem;
+  currentSystem: SystemItem | null;
+  systems?: SystemItem[];
+  onSelectSystem?: (system: SystemItem) => void;
 }
 
-export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
+export function ApplicationsPage({
+  currentSystem,
+  systems,
+  onSelectSystem,
+}: ApplicationsPageProps) {
   const { t } = useTranslation();
   const [apps, setApps] = useState<ApplicationItem[]>([]);
   const [models, setModels] = useState<ModelItem[]>([]);
@@ -61,6 +67,11 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
   const [createdCredential, setCreatedCredential] = useState<ApplicationItem | null>(null);
 
   const loadData = async () => {
+    if (!currentSystem?.slug) {
+      setApps([]);
+      setModels([]);
+      return;
+    }
     setLoading(true);
     try {
       const [appList, modelList] = await Promise.all([
@@ -80,7 +91,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
 
   useEffect(() => {
     loadData();
-  }, [currentSystem.slug]);
+  }, [currentSystem?.slug]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -216,6 +227,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentSystem) return;
     if (!appName.trim()) {
       setFormError(t('apps.name_required') || '请输入应用名称');
       return;
@@ -241,7 +253,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingApp) return;
+    if (!currentSystem || !editingApp) return;
     if (!appName.trim()) {
       setFormError(t('apps.name_required') || '请输入应用名称');
       return;
@@ -267,6 +279,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
   };
 
   const handleRegenerateSecret = async (app: ApplicationItem) => {
+    if (!currentSystem) return;
     if (
       !confirm(
         t('apps.regenerate_confirm') ||
@@ -285,6 +298,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
   };
 
   const handleDeleteApp = async (app: ApplicationItem) => {
+    if (!currentSystem) return;
     if (
       !confirm(
         t('apps.delete_confirm') ||
@@ -301,20 +315,69 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
     }
   };
 
+  if (!currentSystem) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+              {t('apps.title') || '应用接入与权限管理'}
+            </h1>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {t('apps.desc') ||
+                '配置接入该后端的客户端应用（如 Next.js SSR），分配独立的 Bearer Token（Authorization 鉴权），控制对系统基础接口及各数据模型的增删改查权限。'}
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-12 text-center">
+          <KeyRound className="mx-auto mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">
+            {t('apps.no_system_selected') || '未选择或暂无子系统/专题'}
+          </h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            应用接入与 Token 鉴权是按子系统维度隔离的。请先在【专题管理】中创建一个子系统。
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               {t('apps.title') || '应用接入与权限管理'}
             </h1>
             <Badge variant="success">/{currentSystem.slug}</Badge>
+
+            {/* Subsystem Switcher if in platform mode with multiple systems */}
+            {systems && systems.length > 1 && onSelectSystem && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-[11px] text-slate-400">所属专题:</span>
+                <select
+                  value={currentSystem.slug}
+                  onChange={(e) => {
+                    const matched = systems.find((s) => s.slug === e.target.value);
+                    if (matched) onSelectSystem(matched);
+                  }}
+                  className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none dark:text-slate-200"
+                >
+                  {systems.map((s) => (
+                    <option key={s.id} value={s.slug}>
+                      {s.name} (/{s.slug})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {t('apps.desc') ||
-              '配置接入该后端的客户端应用（如 Next.js SSR），控制对系统基础接口及各数据模型的增删改查权限。'}
+              '配置接入该后端的客户端应用（如 Next.js SSR），分配独立的 Bearer Token（Authorization 鉴权），控制对系统基础接口及各数据模型的增删改查权限。'}
           </p>
         </div>
 
@@ -332,7 +395,7 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
               <tr>
                 <th className="px-5 py-3">{t('apps.app_name') || '应用名称 / 描述'}</th>
                 <th className="px-5 py-3">
-                  {t('apps.app_credentials') || '应用凭据 (App Key & Secret)'}
+                  {t('apps.app_credentials') || '应用凭据 (App Key & Secret / Bearer Token)'}
                 </th>
                 <th className="px-5 py-3">{t('apps.status') || '状态'}</th>
                 <th className="px-5 py-3">{t('apps.permissions_summary') || '已授权接口范围'}</th>
@@ -774,10 +837,13 @@ export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
                 {t('apps.credential_notice') || '请及时复制并妥善保管您的 App Secret 凭证！'}
               </p>
               <p className="mt-1">
-                接入端应用（如 Next.js SSR 服务器）向该后端发送请求时，请在请求头部携带：
+                接入端应用（如 Next.js SSR 服务器、API 客户端）向该后端发送请求时，在请求头中携带该 Secret 凭证即可完成 Authorization 鉴权：
                 <code className="ml-1 rounded bg-emerald-100 px-1 py-0.5 font-mono text-[11px] text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
                   Authorization: Bearer &lt;App Secret&gt;
                 </code>
+                <span className="ml-1 text-[11px] text-emerald-700 dark:text-emerald-300">
+                  （系统支持 <code>Authorization: Bearer &lt;Token&gt;</code> 或直接 <code>Authorization: &lt;Token&gt;</code>）
+                </span>
               </p>
             </div>
 

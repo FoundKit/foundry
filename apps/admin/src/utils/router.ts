@@ -29,6 +29,7 @@ export function parseRoute(pathname: string, search: string): RouteState {
     else if (subPath === 'models') subsystemTab = 'models';
     else if (subPath === 'data' || subPath === 'data_explorer') subsystemTab = 'data';
     else if (subPath === 'apis') subsystemTab = 'apis';
+    else if (subPath === 'apps') subsystemTab = 'apps';
     else if (subPath === 'audit-logs' || subPath === 'audit_logs') subsystemTab = 'audit_logs';
     else if (subPath === 'settings') subsystemTab = 'settings';
     else subsystemTab = 'overview';
@@ -47,6 +48,8 @@ export function parseRoute(pathname: string, search: string): RouteState {
   let platformTab: RouteState['platformTab'];
   if (cleanPath === '/admin/systems' || cleanPath === '/systems') {
     platformTab = 'systems';
+  } else if (cleanPath === '/admin/apps' || cleanPath === '/apps') {
+    platformTab = 'apps';
   } else if (cleanPath === '/admin/admins' || cleanPath === '/admins') {
     platformTab = 'admins';
   } else if (

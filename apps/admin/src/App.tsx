@@ -188,7 +188,13 @@ export function App() {
             />
           )}
           {route.subsystemTab === 'apis' && <SubsystemApisPage currentSystem={currentSystem} />}
-          {route.subsystemTab === 'apps' && <ApplicationsPage currentSystem={currentSystem} />}
+          {route.subsystemTab === 'apps' && (
+            <ApplicationsPage
+              currentSystem={currentSystem}
+              systems={systems}
+              onSelectSystem={handleSelectSystem}
+            />
+          )}
           {route.subsystemTab === 'audit_logs' && (
             <AuditLogsPage
               currentSystem={currentSystem}
@@ -235,6 +241,13 @@ export function App() {
                 setCurrentSystem(s);
                 navigateSubsystem(s.slug, 'overview');
               }}
+            />
+          )}
+          {route.platformTab === 'apps' && (
+            <ApplicationsPage
+              currentSystem={currentSystem || systems[0] || null}
+              systems={systems}
+              onSelectSystem={handleSelectSystem}
             />
           )}
           {route.platformTab === 'admins' && <AdminsPage systems={systems} />}
