@@ -80,6 +80,9 @@ enum Commands {
         /// Show current migration status (applied vs pending)
         #[arg(long, short = 's')]
         status: bool,
+        /// Export SQL for only pending (unapplied) migrations to stdout or output file (zero DDL required on app DB connection)
+        #[arg(long, alias = "pending")]
+        pending_sql: bool,
     },
     /// Generate dialect-specific DDL / migration scripts
     #[command(alias = "generate-ddl", alias = "gen-ddl")]
@@ -93,6 +96,9 @@ enum Commands {
             default_value = "postgres"
         )]
         db: String,
+        /// Export specific migration version (e.g. 'v0.2.0') or sequence number (e.g. '0002' or '2')
+        #[arg(long, short = 'v', alias = "version", alias = "ver")]
+        version: Option<String>,
         /// Target output file path (defaults to migrations/init.sql or migrations/init.js, or '-' for stdout)
         #[arg(short, long)]
         output: Option<String>,
@@ -200,6 +206,12 @@ impl DatabaseKind {
     pub fn ddl_content(&self) -> String {
         foundry_storage::Database::get_ddl(self.as_str())
             .unwrap_or_else(|_| self.fallback_ddl().to_string())
+    }
+
+    pub fn migrations(&self) -> Vec<foundry_storage::MigrationItem> {
+        foundry_storage::Database::get_migrations(self.as_str()).unwrap_or_else(|_| {
+            foundry_storage::migrations::get_migrations_for_dialect(self.as_str())
+        })
     }
 
     pub fn default_migration_filename(&self) -> &'static str {
@@ -359,7 +371,62 @@ pub async fn run_cli() -> anyhow::Result<()> {
             output,
             check,
             status,
+            pending_sql,
         } => {
+            if pending_sql {
+                let db_url = database_url.unwrap_or_else(|| {
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                        "postgres://postgres:postgrespassword@localhost:5432/foundry".to_string()
+                    })
+                });
+                let explicit_type = database_type.or_else(|| std::env::var("DATABASE_TYPE").ok());
+                let (all, applied) = foundry_storage::Database::get_migration_status(
+                    &db_url,
+                    explicit_type.as_deref(),
+                )
+                .await?;
+                let applied_set: std::collections::HashSet<u32> = applied.into_iter().collect();
+
+                let pending: Vec<&foundry_storage::MigrationItem> = all
+                    .iter()
+                    .filter(|m| !applied_set.contains(&m.sequence))
+                    .collect();
+
+                if pending.is_empty() {
+                    eprintln!("✅ No pending migrations. Database schema is already up to date.");
+                    return Ok(());
+                }
+
+                let mut combined = String::new();
+                for m in pending {
+                    combined.push_str(&format!(
+                        "-- ============================================================================\n\
+                         -- Sequence: {:04} | Version: {} | Name: {}\n\
+                         -- Description: {}\n\
+                         -- ============================================================================\n\n",
+                        m.sequence, m.version, m.name, m.description
+                    ));
+                    combined.push_str(m.sql);
+                    combined.push_str("\n\n");
+                }
+
+                if let Some(out) = output {
+                    if out == "-" {
+                        print!("{}", combined);
+                    } else {
+                        let out_path = PathBuf::from(&out);
+                        if let Some(parent) = out_path.parent() {
+                            let _ = fs::create_dir_all(parent);
+                        }
+                        fs::write(&out_path, &combined)?;
+                        eprintln!("✅ Exported pending migrations SQL to {:?}", out_path);
+                    }
+                } else {
+                    print!("{}", combined);
+                }
+                return Ok(());
+            }
+
             if status {
                 let db_url = database_url.unwrap_or_else(|| {
                     std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -483,9 +550,54 @@ pub async fn run_cli() -> anyhow::Result<()> {
             sync_subsystem_migrations(&db_url, db_kind, Path::new(".")).await?;
             println!("✅ Database migrations synced successfully.");
         }
-        Commands::Ddl { db, output } => {
+        Commands::Ddl {
+            db,
+            version,
+            output,
+        } => {
             let db_kind = db.parse::<DatabaseKind>()?;
-            if output.as_deref() == Some("-") {
+            if let Some(ver) = version {
+                let trimmed = ver.trim();
+                let migrations = db_kind.migrations();
+                let found = migrations.iter().find(|m| {
+                    m.version.eq_ignore_ascii_case(trimmed)
+                        || m.name.eq_ignore_ascii_case(trimmed)
+                        || format!("{:04}", m.sequence) == trimmed
+                        || m.sequence.to_string() == trimmed
+                        || m.filename.eq_ignore_ascii_case(trimmed)
+                });
+                match found {
+                    Some(m) => {
+                        if output.as_deref() == Some("-") || output.is_none() {
+                            print!("{}", m.sql);
+                        } else if let Some(out) = output {
+                            let out_path = PathBuf::from(out);
+                            if let Some(parent) = out_path.parent() {
+                                let _ = fs::create_dir_all(parent);
+                            }
+                            fs::write(&out_path, m.sql)?;
+                            println!(
+                                "✅ Exported version patch [{}] for {} to {:?}",
+                                m.version,
+                                db_kind.display_name(),
+                                out_path
+                            );
+                        }
+                    }
+                    None => {
+                        let available: Vec<String> = migrations
+                            .iter()
+                            .map(|m| format!("{:04} ({}, {})", m.sequence, m.version, m.name))
+                            .collect();
+                        anyhow::bail!(
+                            "Migration version or sequence '{}' not found for {}.\nAvailable migrations: {}",
+                            trimmed,
+                            db_kind.display_name(),
+                            available.join(", ")
+                        );
+                    }
+                }
+            } else if output.as_deref() == Some("-") {
                 print!("{}", db_kind.ddl_content());
             } else {
                 let path = generate_ddl(Path::new("."), db_kind, output.as_deref().map(Path::new))?;
@@ -550,31 +662,104 @@ pub fn generate_ddl(
                 ));
             }
 
+            let grant_example = match db_kind {
+                DatabaseKind::Postgres => {
+                    "```sql\n\
+                    -- PostgreSQL 生产环境最小权限配置 (无需 DDL 权限，无需 DELETE 权限)\n\
+                    CREATE USER foundry_app WITH PASSWORD 'YourSecurePasswordHere';\n\
+                    GRANT CONNECT ON DATABASE foundry TO foundry_app;\n\
+                    GRANT USAGE ON SCHEMA public TO foundry_app;\n\
+                    GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO foundry_app;\n\
+                    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE ON TABLES TO foundry_app;\n\
+                    ```"
+                }
+                DatabaseKind::MySql => {
+                    "```sql\n\
+                    -- MySQL 生产环境最小权限配置 (无需 DDL 权限，无需 DELETE 权限)\n\
+                    CREATE USER 'foundry_app'@'%' IDENTIFIED BY 'YourSecurePasswordHere';\n\
+                    GRANT SELECT, INSERT, UPDATE ON `foundry`.* TO 'foundry_app'@'%';\n\
+                    FLUSH PRIVILEGES;\n\
+                    ```"
+                }
+                DatabaseKind::MariaDb => {
+                    "```sql\n\
+                    -- MariaDB 生产环境最小权限配置 (无需 DDL 权限，无需 DELETE 权限)\n\
+                    CREATE USER 'foundry_app'@'%' IDENTIFIED BY 'YourSecurePasswordHere';\n\
+                    GRANT SELECT, INSERT, UPDATE ON `foundry`.* TO 'foundry_app'@'%';\n\
+                    FLUSH PRIVILEGES;\n\
+                    ```"
+                }
+                DatabaseKind::MongoDb => {
+                    "```javascript\n\
+                    // MongoDB 生产环境最小权限配置\n\
+                    db.createUser({\n\
+                      user: 'foundry_app',\n\
+                      pwd: 'YourSecurePasswordHere',\n\
+                      roles: [{ role: 'readWrite', db: 'foundry' }]\n\
+                    });\n\
+                    ```"
+                }
+            };
+
             // Write comprehensive migration guide README
             let readme_content = format!(
                 "# Database Migrations (Engine: {})\n\n\
-                ## 1. Migration History & Sequential Upgrade Chain\n\n\
+                ## 1. 迁移版本演进链 (Sequential Upgrade Chain)\n\n\
                 | Sequence | Version | Name | Description | Migration File |\n\
                 | :--- | :--- | :--- | :--- | :--- |\n\
                 {}\n\
-                ## 2. Usage Guide\n\n\
-                ### A. Fresh Database Initialization (全新数据库初始化)\n\
-                For new installations, apply `{}` or execute:\n\
+                ## 2. 生产环境安全与最小权限规范 (Zero DDL & Zero DELETE Security Matrix)\n\n\
+                生产环境中，数据库账号必须实行**严格的最小权限原则**：\n\
+                - **应用服务连接账号 (无需 DDL 权限、无需 DELETE 权限)**：\n\
+                  Foundry 全站严格采用**软删除（Soft-Delete）机制**（基于 `deleted_at` 字段标记），运行时**绝不执行物理 `DELETE FROM` 语句**，更禁止任何运行时 DDL 操作（`CREATE`、`ALTER`、`DROP`）。\n\
+                  因此，生产环境分配给应用的数据库账号**仅需且仅应**授予 `SELECT`, `INSERT`, `UPDATE` 权限。即便应用遭受攻击或注入，底层表结构与物理数据也绝对安全。\n\n\
+                {}\n\n\
+                - **DBA / 升级发布账号**：\n\
+                  仅在版本变更窗口，由 DBA 或 CI/CD 流水线使用具备 DDL 权限的管理账号手动执行版本升级补丁。\n\n\
+                ## 3. DBA 手动执行与审查升级流程 (Manual Execution & DBA Review)\n\n\
+                ### A. 全新数据库初始化 (Fresh Database Installation)\n\
+                全新部署时，由 DBA 手动执行 `{}`，或执行：\n\
                 ```bash\n\
+                # 方式一：DBA 命令行直接导入\n\
+                {}\n\n\
+                # 方式二：CLI 自动执行\n\
                 foundry migrate\n\
                 ```\n\n\
-                ### B. Existing Database Upgrade (已有老数据库跨版本升级)\n\
-                If your existing database is upgrading from an earlier version (e.g. from v0.1.0 to v0.2.0, or jumping directly across multiple versions like 0.1.0 -> 0.5.0):\n\
-                Apply pending numbered migration files in `versions/` in strict sequence, or execute:\n\
+                ### B. 生产环境跨版本安全升级 (Zero-DDL Upgrade Workflow)\n\
+                当系统跨版本升级（例如从 `v0.1.0` 升级到 `v0.2.0`，或跳过多版本直接升级到最新版）：\n\n\
+                1. **只读查看待升级版本 (无需 DDL 权限)**：\n\
                 ```bash\n\
-                # 1. Check status and pending migrations:\n\
-                foundry migrate --status\n\n\
-                # 2. Apply all pending migrations sequentially in order:\n\
+                foundry migrate --status\n\
+                ```\n\
+                状态列表中标记为 `[ ] PENDING` 的即为当前环境缺失的数据库补丁。\n\n\
+                2. **导出或审查待执行的增量 SQL**：\n\
+                - **方式一（直观查看）**：直接打开 `migrations/versions/` 目录中对应的补丁文件（按序号从小到大顺序，如 `0002_*.sql`）。\n\
+                - **方式二（动态导出当前数据库未应用的补丁）**：\n\
+                ```bash\n\
+                foundry migrate --pending-sql > pending_patch.sql\n\
+                ```\n\
+                - **方式三（离线打印指定版本的增量 SQL）**：\n\
+                ```bash\n\
+                foundry ddl -d {} -v v0.2.0\n\
+                ```\n\n\
+                3. **DBA 手工执行增量补丁**：\n\
+                DBA 通过 Navicat、DataGrip、DBeaver 或终端客户端执行补丁文件。\n\
+                > **自记录与幂等性保障 (Self-recording & Idempotency)**：\n\
+                > 每个补丁文件末尾均自带向 `_foundry_migrations` 表插入版本记录的 SQL（带防重更新）。\n\
+                > 因此，**DBA 手动执行完 SQL 的同时，版本元数据已自动入库**，完全无需应用在启动时具有 DDL 权限。\n\n\
+                4. **启动验证**：\n\
+                DBA 执行完毕后，使用 `foundry migrate --status` 或 `foundry migrate --check` 验证。所有项显示 `[✓] applied`，服务即可在 `AUTO_MIGRATE=false` 下秒级安全启动！\n\n\
+                ## 4. 开发与测试环境自动化 (Local Dev / CI)\n\
+                本地开发或测试环境中，如账号具备 DDL 权限，可直接一键执行：\n\
+                ```bash\n\
                 foundry migrate\n\
                 ```\n",
                 db_kind.display_name(),
                 table_rows,
+                grant_example,
                 db_kind.default_migration_filename(),
+                db_kind.dba_migration_hint(),
+                db_kind.as_str(),
             );
             fs::write(dir.join("README.md"), readme_content)?;
 

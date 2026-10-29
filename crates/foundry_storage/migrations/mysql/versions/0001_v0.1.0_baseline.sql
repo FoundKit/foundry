@@ -131,3 +131,18 @@ VALUES (
     'super_admin',
     '["*"]'
 );
+
+-- ============================================================================
+-- Migration Metadata Tracking (Records sequence 1 into _foundry_migrations)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `_foundry_migrations` (
+    `sequence` INT NOT NULL PRIMARY KEY,
+    `version` VARCHAR(32) NOT NULL,
+    `name` VARCHAR(64) NOT NULL,
+    `applied_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `_foundry_migrations` (`sequence`, `version`, `name`, `applied_at`)
+VALUES (1, 'v0.1.0', 'baseline', CURRENT_TIMESTAMP(6))
+ON DUPLICATE KEY UPDATE `applied_at` = CURRENT_TIMESTAMP(6);
+

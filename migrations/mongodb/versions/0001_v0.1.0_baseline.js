@@ -33,3 +33,14 @@ if (!db.admins.findOne({ username: "admin" })) {
 } else {
     print("ℹ️ Default superadmin already exists");
 }
+
+// Migration Metadata Tracking
+if (!db.getCollectionNames().includes("_foundry_migrations")) {
+    db.createCollection("_foundry_migrations");
+}
+db._foundry_migrations.updateOne(
+    { sequence: 1 },
+    { $set: { sequence: 1, version: "v0.1.0", name: "baseline", applied_at: new Date() } },
+    { upsert: true }
+);
+
