@@ -275,6 +275,16 @@ impl Database {
         Ok(provider.default_migration_filename())
     }
 
+    /// Returns the one-off incremental upgrade DDL for a specific version jump (e.g. "v0.2.0")
+    pub fn get_version_patch_ddl(
+        explicit_type: &str,
+        version: &str,
+    ) -> AppResult<Option<&'static str>> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider_by_type(explicit_type)?;
+        Ok(provider.get_version_patch_ddl(version))
+    }
+
     /// Run migrations for the specified database connection, including any code-defined DDL extensions
     pub async fn run_migrations(url: &str, explicit_type: Option<&str>) -> AppResult<()> {
         let registry = StorageRegistry::default_registry();

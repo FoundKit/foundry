@@ -170,4 +170,13 @@ impl StorageDriverProvider for MySqlProvider {
     fn get_baseline_ddl(&self) -> String {
         crate::orm::compile_all_ddl(crate::orm::Dialect::MySql)
     }
+
+    fn get_version_patch_ddl(&self, version: &str) -> Option<&'static str> {
+        match version {
+            "v0.2.0" | "0.2.0" => Some(include_str!(
+                "../../../migrations/mysql/versions/v0.2.0_add_applications.sql"
+            )),
+            _ => None,
+        }
+    }
 }

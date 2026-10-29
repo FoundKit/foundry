@@ -152,7 +152,7 @@ export function Layout({
                   FOUNDRY
                 </span>
                 <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/80 dark:text-emerald-400">
-                  v0.1.0
+                  v0.2.0
                 </span>
               </div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400">

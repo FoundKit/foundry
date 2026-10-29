@@ -31,9 +31,12 @@ enum Commands {
         /// Optional git repository URL (defaults to https://github.com/foundkit/foundry)
         #[arg(long)]
         git: Option<String>,
-        /// Optional git branch (defaults to main)
+        /// Optional git branch (e.g. main)
         #[arg(long)]
         branch: Option<String>,
+        /// Optional git tag (defaults to current framework release tag, e.g. v0.2.0)
+        #[arg(long)]
+        tag: Option<String>,
         /// Optional crates.io version override (e.g. 0.1.0)
         #[arg(long)]
         version: Option<String>,
@@ -66,7 +69,7 @@ enum Commands {
         #[arg(long, short = 'd', alias = "database", env = "DATABASE_TYPE")]
         database_type: Option<String>,
         /// Generate dialect DDL migration file into migrations/ without applying to database
-        #[arg(long, short = 'g', alias = "gen")]
+        #[arg(long, short = 'g', alias = "gen", alias = "sync")]
         generate: bool,
         /// Target output file path when generating DDL (defaults to migrations/init.sql or init.js)
         #[arg(short, long)]
@@ -306,6 +309,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
             path,
             git,
             branch,
+            tag,
             version,
             smtp_host,
             smtp_port,
@@ -319,6 +323,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
                     local_path: path.as_deref(),
                     git: git.as_deref(),
                     branch: branch.as_deref(),
+                    tag: tag.as_deref(),
                     version: version.as_deref(),
                     db: Some(&db),
                     smtp_host: smtp_host.as_deref(),
@@ -453,7 +458,8 @@ pub async fn run_cli() -> anyhow::Result<()> {
 }
 
 /// Generate dialect DDL / migration files into the target project or directory.
-/// When output is None, creates `migrations/` under `base_dir` and writes the dialect script.
+/// When output is None, creates `migrations/` under `base_dir`, synchronizes the complete `init.sql`,
+/// generates versioned one-off upgrade patches into `migrations/versions/`, and generates `migrations/README.md`.
 pub fn generate_ddl(
     base_dir: &Path,
     db_kind: DatabaseKind,
@@ -480,9 +486,53 @@ pub fn generate_ddl(
             fs::create_dir_all(&dir)?;
             let file_path = dir.join(db_kind.default_migration_filename());
             fs::write(&file_path, &content)?;
-            if db_kind == DatabaseKind::MongoDb {
-                let _ = fs::write(dir.join("README.md"), MONGO_README);
+
+            // Generate versioned patch for existing databases (e.g. v0.2.0)
+            let versions_dir = dir.join("versions");
+            fs::create_dir_all(&versions_dir)?;
+            if let Ok(Some(patch)) =
+                foundry_storage::Database::get_version_patch_ddl(db_kind.as_str(), "v0.2.0")
+            {
+                let patch_filename = match db_kind {
+                    DatabaseKind::MongoDb => "v0.2.0_add_applications.js",
+                    _ => "v0.2.0_add_applications.sql",
+                };
+                fs::write(versions_dir.join(patch_filename), patch)?;
             }
+
+            // Write migration guide README
+            let readme_content = if db_kind == DatabaseKind::MongoDb {
+                MONGO_README.to_string()
+            } else {
+                let ext = "sql";
+                format!(
+                    "# Database Migrations (Engine: {})\n\n\
+                    ## 1. Fresh Database Initialization (全新数据库初始化)\n\
+                    For new installations, apply `{}`:\n\
+                    ```bash\n\
+                    # Using Foundry CLI:\n\
+                    foundry migrate\n\
+                    ```\n\n\
+                    ## 2. Existing Database Version Upgrade (已有数据库跨版本升级)\n\
+                    If your existing database was running Foundry v0.1.x and upgrading to v0.2.0:\n\
+                    Apply the one-off version upgrade patch located in `versions/`:\n\
+                    - `versions/v0.2.0_add_applications.{}`\n\n\
+                    ```bash\n\
+                    # Automatic sync (if AUTO_MIGRATE=true):\n\
+                    # Foundry will automatically apply missing tables on startup.\n\n\
+                    # Manual DBA / Strict mode (if AUTO_MIGRATE=false):\n\
+                    # Apply `versions/v0.2.0_add_applications.{}` before starting the application,\n\
+                    # or execute:\n\
+                    foundry migrate\n\
+                    ```\n",
+                    db_kind.display_name(),
+                    db_kind.default_migration_filename(),
+                    ext,
+                    ext,
+                )
+            };
+            fs::write(dir.join("README.md"), readme_content)?;
+
             file_path
         }
     };
@@ -495,6 +545,7 @@ pub struct ProjectOptions<'a> {
     pub local_path: Option<&'a str>,
     pub git: Option<&'a str>,
     pub branch: Option<&'a str>,
+    pub tag: Option<&'a str>,
     pub version: Option<&'a str>,
     pub db: Option<&'a str>,
     pub smtp_host: Option<&'a str>,
@@ -529,15 +580,17 @@ pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<
     fs::create_dir_all(project_dir.join("src/systems/sample/custom_pages"))?;
 
     // 1. Cargo.toml
+    let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
     let foundry_dep = if db_kind == DatabaseKind::Postgres {
         if let Some(p) = opts.local_path {
             format!(r#"foundry = {{ path = "{}" }}"#, p)
         } else if let Some(v) = opts.version {
             format!(r#"foundry = "{}"#, v)
+        } else if let Some(b) = opts.branch {
+            format!(r#"foundry = {{ git = "{}", branch = "{}" }}"#, repo, b)
         } else {
-            let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
-            let branch = opts.branch.unwrap_or("main");
-            format!(r#"foundry = {{ git = "{}", branch = "{}" }}"#, repo, branch)
+            let tag = opts.tag.unwrap_or("v0.2.0");
+            format!(r#"foundry = {{ git = "{}", tag = "{}" }}"#, repo, tag)
         }
     } else {
         let feat = db_kind.as_str();
@@ -551,12 +604,16 @@ pub fn scaffold_project(name: &str, opts: ProjectOptions<'_>) -> anyhow::Result<
                 r#"foundry = {{ version = "{}", default-features = false, features = ["standard", "{}"] }}"#,
                 v, feat
             )
-        } else {
-            let repo = opts.git.unwrap_or("https://github.com/foundkit/foundry");
-            let branch = opts.branch.unwrap_or("main");
+        } else if let Some(b) = opts.branch {
             format!(
                 r#"foundry = {{ git = "{}", branch = "{}", default-features = false, features = ["standard", "{}"] }}"#,
-                repo, branch, feat
+                repo, b, feat
+            )
+        } else {
+            let tag = opts.tag.unwrap_or("v0.2.0");
+            format!(
+                r#"foundry = {{ git = "{}", tag = "{}", default-features = false, features = ["standard", "{}"] }}"#,
+                repo, tag, feat
             )
         }
     };

@@ -313,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "blog_platform"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "chrono",
@@ -959,7 +959,7 @@ dependencies = [
 
 [[package]]
 name = "foundry"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -987,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_auth"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "argon2",
  "chrono",
@@ -1004,7 +1004,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1021,7 +1021,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "chrono",
@@ -1036,7 +1036,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_engine"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "bytes",
@@ -1065,7 +1065,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_extension"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "foundry_core",
@@ -1078,7 +1078,7 @@ dependencies = [
 
 [[package]]
 name = "foundry_storage"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2681,7 +2681,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "foundry",

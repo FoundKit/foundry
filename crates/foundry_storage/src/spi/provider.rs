@@ -91,6 +91,11 @@ pub trait StorageDriverProvider: Send + Sync {
     /// Returns the baseline dialect DDL or initialization script compiled from ORM or embedded in the driver
     fn get_baseline_ddl(&self) -> String;
 
+    /// Returns one-off incremental patch DDL for a given target version if applicable
+    fn get_version_patch_ddl(&self, _version: &str) -> Option<&'static str> {
+        None
+    }
+
     /// Returns default filename for migrations (e.g. "init.sql" for SQL, "init.js" for MongoDB)
     fn default_migration_filename(&self) -> &'static str {
         "init.sql"

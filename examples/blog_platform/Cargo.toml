@@ -1,6 +1,6 @@
 [package]
 name = "blog_platform"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
 authors = ["Blog Platform Team <dev@example.com>"]
 license = "MIT OR Apache-2.0"

@@ -148,6 +148,15 @@ impl StorageDriverProvider for MongoProvider {
         include_str!("../../../migrations/mongodb/init.js").to_string()
     }
 
+    fn get_version_patch_ddl(&self, version: &str) -> Option<&'static str> {
+        match version {
+            "v0.2.0" | "0.2.0" => Some(include_str!(
+                "../../../migrations/mongodb/versions/v0.2.0_add_applications.js"
+            )),
+            _ => None,
+        }
+    }
+
     fn default_migration_filename(&self) -> &'static str {
         "init.js"
     }
