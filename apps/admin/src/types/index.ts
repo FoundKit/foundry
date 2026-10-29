@@ -206,8 +206,7 @@ export interface ApplicationItem {
   id: string;
   system_id: string;
   name: string;
-  app_key: string;
-  app_secret: string;
+  token: string;
   description?: string;
   status: number;
   permissions: ApplicationPermissions;

@@ -233,8 +233,12 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  regenerateAppToken: (systemSlug: string, id: string) =>
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}/regenerate-token`, {
+      method: 'POST',
+    }),
   regenerateAppSecret: (systemSlug: string, id: string) =>
-    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}/regenerate-secret`, {
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}/regenerate-token`, {
       method: 'POST',
     }),
   deleteApplication: (systemSlug: string, id: string) =>

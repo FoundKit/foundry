@@ -9,8 +9,7 @@ if (!db.getCollectionNames().includes("applications")) {
     db.createCollection("applications");
 }
 db.applications.createIndex({ "system_id": 1 });
-db.applications.createIndex({ "app_key": 1 }, { unique: true });
-db.applications.createIndex({ "app_secret": 1 });
+db.applications.createIndex({ "token": 1 }, { unique: true });
 
 // Migration Metadata Tracking
 if (!db.getCollectionNames().includes("_foundry_migrations")) {

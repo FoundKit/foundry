@@ -1422,36 +1422,12 @@ impl ApplicationStoreEngine for MongoApplicationEngine {
             .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))
     }
 
-    async fn get_by_key(&self, app_key: &str) -> AppResult<ApplicationEntity> {
-        let coll = self
-            .db
-            .collection::<mongodb::bson::Document>("applications");
-        let filter = doc! {
-            "app_key": app_key,
-            "deleted_at": { "$exists": false }
-        };
-
-        let doc = coll
-            .find_one(filter)
-            .await
-            .map_err(|e| AppError::Database(format!("Get application by key failed: {}", e)))?
-            .ok_or_else(|| {
-                AppError::NotFound(format!("Application with key '{}' not found", app_key))
-            })?;
-
-        mongodb::bson::from_document(doc)
-            .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))
-    }
-
     async fn find_by_token(&self, token: &str) -> AppResult<Option<ApplicationEntity>> {
         let coll = self
             .db
             .collection::<mongodb::bson::Document>("applications");
         let filter = doc! {
-            "$or": [
-                { "app_secret": token },
-                { "app_key": token }
-            ],
+            "token": token,
             "deleted_at": { "$exists": false }
         };
 
@@ -1496,15 +1472,13 @@ impl ApplicationStoreEngine for MongoApplicationEngine {
             .collection::<mongodb::bson::Document>("applications");
         let now = Utc::now();
         let id = Uuid::now_v7();
-        let app_key = format!("app_{}", Uuid::now_v7().simple());
-        let app_secret = format!("sk_{}", Uuid::now_v7().simple());
+        let token = format!("sk_{}", Uuid::now_v7().simple());
 
         let entity = ApplicationEntity {
             id,
             system_id: system_slug.to_string(),
             name: name.to_string(),
-            app_key,
-            app_secret,
+            token,
             description: description.map(|s| s.to_string()),
             status: 1,
             permissions,
@@ -1574,7 +1548,7 @@ impl ApplicationStoreEngine for MongoApplicationEngine {
         self.get_application_by_id(id).await
     }
 
-    async fn regenerate_secret(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+    async fn regenerate_token(&self, id: Uuid) -> AppResult<ApplicationEntity> {
         let coll = self
             .db
             .collection::<mongodb::bson::Document>("applications");
@@ -1582,10 +1556,10 @@ impl ApplicationStoreEngine for MongoApplicationEngine {
             "id": id.to_string(),
             "deleted_at": { "$exists": false }
         };
-        let new_secret = format!("sk_{}", Uuid::now_v7().simple());
+        let new_token = format!("sk_{}", Uuid::now_v7().simple());
         let update = doc! {
             "$set": {
-                "app_secret": &new_secret,
+                "token": &new_token,
                 "updated_at": mongodb::bson::to_bson(&Utc::now()).unwrap_or(mongodb::bson::Bson::Null)
             }
         };
@@ -1593,7 +1567,7 @@ impl ApplicationStoreEngine for MongoApplicationEngine {
         let res = coll
             .update_one(filter, update)
             .await
-            .map_err(|e| AppError::Database(format!("Regenerate secret failed: {}", e)))?;
+            .map_err(|e| AppError::Database(format!("Regenerate token failed: {}", e)))?;
 
         if res.matched_count == 0 {
             return Err(AppError::NotFound(format!(

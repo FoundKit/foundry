@@ -207,3 +207,18 @@ VALUES (
     'super_admin',
     '["*"]'::jsonb
 ) ON CONFLICT (username) DO NOTHING;
+
+-- ============================================================================
+-- Migration Metadata Tracking (Records sequence 1 into _foundry_migrations)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS _foundry_migrations (
+    sequence INT PRIMARY KEY,
+    version VARCHAR(32) NOT NULL,
+    name VARCHAR(64) NOT NULL,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO _foundry_migrations (sequence, version, name, applied_at)
+VALUES (1, 'v0.1.0', 'baseline', CURRENT_TIMESTAMP)
+ON CONFLICT (sequence) DO UPDATE SET applied_at = CURRENT_TIMESTAMP;
+

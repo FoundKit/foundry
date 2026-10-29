@@ -220,19 +220,16 @@ async fn init_mongodb_indexes(db: &Database) -> AppResult<()> {
         .build();
     let _ = audit.create_index(audit_idx).await;
 
-    // applications: (system_id, app_key unique, app_secret)
+    // applications: (system_id, token unique)
     let apps = db.collection::<mongodb::bson::Document>("applications");
     let app_sys_idx = IndexModel::builder().keys(doc! { "system_id": 1 }).build();
     let _ = apps.create_index(app_sys_idx).await;
 
-    let app_key_idx = IndexModel::builder()
-        .keys(doc! { "app_key": 1 })
+    let app_token_idx = IndexModel::builder()
+        .keys(doc! { "token": 1 })
         .options(IndexOptions::builder().unique(true).build())
         .build();
-    let _ = apps.create_index(app_key_idx).await;
-
-    let app_sec_idx = IndexModel::builder().keys(doc! { "app_secret": 1 }).build();
-    let _ = apps.create_index(app_sec_idx).await;
+    let _ = apps.create_index(app_token_idx).await;
 
     Ok(())
 }

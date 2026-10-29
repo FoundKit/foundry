@@ -11,10 +11,7 @@ pub trait ApplicationStoreEngine: Send + Sync {
     /// Get an application by its UUID
     async fn get_application_by_id(&self, id: Uuid) -> AppResult<ApplicationEntity>;
 
-    /// Get an application by its public app key
-    async fn get_by_key(&self, app_key: &str) -> AppResult<ApplicationEntity>;
-
-    /// Find an active application matching a bearer token (either secret or key)
+    /// Find an active application matching a bearer token
     async fn find_by_token(&self, token: &str) -> AppResult<Option<ApplicationEntity>>;
 
     /// Check if a system has any active applications configured
@@ -39,8 +36,8 @@ pub trait ApplicationStoreEngine: Send + Sync {
         permissions: Option<serde_json::Value>,
     ) -> AppResult<ApplicationEntity>;
 
-    /// Regenerate secret for an application
-    async fn regenerate_secret(&self, id: Uuid) -> AppResult<ApplicationEntity>;
+    /// Regenerate token for an application
+    async fn regenerate_token(&self, id: Uuid) -> AppResult<ApplicationEntity>;
 
     /// Soft-delete an application
     async fn delete_application(&self, id: Uuid) -> AppResult<()>;

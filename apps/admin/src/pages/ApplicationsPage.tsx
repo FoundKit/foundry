@@ -283,17 +283,17 @@ export function ApplicationsPage({
     if (
       !confirm(
         t('apps.regenerate_confirm') ||
-          `确定要重新生成应用 "${app.name}" 的 App Secret 吗？旧的凭证将立即失效，接入方需同步更新！`,
+          `确定要重新生成应用 "${app.name}" 的访问 Token 吗？旧的凭据将立即失效，接入方需同步更新！`,
       )
     ) {
       return;
     }
     try {
-      const updated = await api.regenerateAppSecret(currentSystem.slug, app.id);
+      const updated = await api.regenerateAppToken(currentSystem.slug, app.id);
       setCreatedCredential(updated);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to regenerate secret');
+      alert(err.message || 'Failed to regenerate token');
     }
   };
 
@@ -395,7 +395,7 @@ export function ApplicationsPage({
               <tr>
                 <th className="px-5 py-3">{t('apps.app_name') || '应用名称 / 描述'}</th>
                 <th className="px-5 py-3">
-                  {t('apps.app_credentials') || '应用凭据 (App Key & Secret / Bearer Token)'}
+                  {t('apps.app_credentials') || 'API 访问凭据 (Bearer Token)'}
                 </th>
                 <th className="px-5 py-3">{t('apps.status') || '状态'}</th>
                 <th className="px-5 py-3">{t('apps.permissions_summary') || '已授权接口范围'}</th>
@@ -428,50 +428,32 @@ export function ApplicationsPage({
                     </td>
 
                     <td className="px-5 py-3 font-mono text-xs">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-slate-400 dark:text-slate-500">Key:</span>
-                          <span className="text-slate-700 dark:text-slate-200">{app.app_key}</span>
-                          <button
-                            onClick={() => copyToClipboard(app.app_key, `key_${app.id}`)}
-                            className="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-                            title={t('common.copy')}
-                          >
-                            {copiedKey === `key_${app.id}` ? (
-                              <Check className="h-3 w-3 text-emerald-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-slate-400 dark:text-slate-500">Sec:</span>
-                          <span className="text-slate-700 dark:text-slate-200">
-                            {isSecretRevealed ? app.app_secret : '••••••••••••••••••••••••'}
-                          </span>
-                          <button
-                            onClick={() => toggleRevealSecret(app.id)}
-                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                            title={isSecretRevealed ? 'Hide' : 'Show'}
-                          >
-                            {isSecretRevealed ? (
-                              <EyeOff className="h-3 w-3" />
-                            ) : (
-                              <Eye className="h-3 w-3" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => copyToClipboard(app.app_secret, `sec_${app.id}`)}
-                            className="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-                            title={t('common.copy')}
-                          >
-                            {copiedKey === `sec_${app.id}` ? (
-                              <Check className="h-3 w-3 text-emerald-600" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          {isSecretRevealed ? app.token : `${app.token.slice(0, 5)}••••••••••••••••••••••••`}
+                        </span>
+                        <button
+                          onClick={() => toggleRevealSecret(app.id)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title={isSecretRevealed ? 'Hide' : 'Show'}
+                        >
+                          {isSecretRevealed ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(app.token, `token_${app.id}`)}
+                          className="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                          title={t('common.copy')}
+                        >
+                          {copiedKey === `token_${app.id}` ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
                       </div>
                     </td>
 
@@ -834,12 +816,12 @@ export function ApplicationsPage({
           <div className="space-y-4">
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
               <p className="font-semibold">
-                {t('apps.credential_notice') || '请及时复制并妥善保管您的 App Secret 凭证！'}
+                {t('apps.credential_notice') || '请及时复制并妥善保管您的 API Token 访问凭据！'}
               </p>
               <p className="mt-1">
-                接入端应用（如 Next.js SSR 服务器、API 客户端）向该后端发送请求时，在请求头中携带该 Secret 凭证即可完成 Authorization 鉴权：
+                接入端应用（如 Next.js SSR 服务器、API 客户端）向该后端发送请求时，只需在请求头中携带该 Token：
                 <code className="ml-1 rounded bg-emerald-100 px-1 py-0.5 font-mono text-[11px] text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
-                  Authorization: Bearer &lt;App Secret&gt;
+                  Authorization: Bearer &lt;Token&gt;
                 </code>
                 <span className="ml-1 text-[11px] text-emerald-700 dark:text-emerald-300">
                   （系统支持 <code>Authorization: Bearer &lt;Token&gt;</code> 或直接 <code>Authorization: &lt;Token&gt;</code>）
@@ -849,46 +831,26 @@ export function ApplicationsPage({
 
             <div className="space-y-3 font-mono text-xs">
               <div>
-                <label className="mb-1 block text-slate-500 dark:text-slate-400">App Name</label>
+                <label className="mb-1 block text-slate-500 dark:text-slate-400">App Name (应用名称)</label>
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-sans text-sm font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
                   {createdCredential.name}
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-slate-500 dark:text-slate-400">App Key</label>
-                <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-                  <span className="text-slate-800 dark:text-slate-200">
-                    {createdCredential.app_key}
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(createdCredential.app_key, 'modal_key')}
-                    className="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-                    title={t('common.copy')}
-                  >
-                    {copiedKey === 'modal_key' ? (
-                      <Check className="h-4 w-4 text-emerald-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div>
                 <label className="mb-1 block text-slate-500 dark:text-slate-400">
-                  App Secret (Bearer Token)
+                  API Token (Bearer 凭据)
                 </label>
                 <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                   <span className="break-all font-semibold text-emerald-600 dark:text-emerald-400">
-                    {createdCredential.app_secret}
+                    {createdCredential.token}
                   </span>
                   <button
-                    onClick={() => copyToClipboard(createdCredential.app_secret, 'modal_sec')}
+                    onClick={() => copyToClipboard(createdCredential.token, 'modal_token')}
                     className="ml-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
                     title={t('common.copy')}
                   >
-                    {copiedKey === 'modal_sec' ? (
+                    {copiedKey === 'modal_token' ? (
                       <Check className="h-4 w-4 text-emerald-600" />
                     ) : (
                       <Copy className="h-4 w-4" />
@@ -905,7 +867,7 @@ export function ApplicationsPage({
                   {`// Next.js Server-Side Request Example
 const res = await fetch("http://localhost:8080/api/s/${currentSystem.slug}/configs", {
   headers: {
-    "Authorization": "Bearer ${createdCredential.app_secret}",
+    "Authorization": "Bearer ${createdCredential.token}",
     "Content-Type": "application/json",
   },
 });

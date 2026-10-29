@@ -16,8 +16,7 @@ db.admins.createIndex({ "email": 1 }, { unique: true });
 db.audit_logs.createIndex({ "system_slug": 1 });
 db.audit_logs.createIndex({ "created_at": -1 });
 db.applications.createIndex({ "system_id": 1 });
-db.applications.createIndex({ "app_key": 1 }, { unique: true });
-db.applications.createIndex({ "app_secret": 1 });
+db.applications.createIndex({ "token": 1 }, { unique: true });
 
 // Seed default superadmin if not exists (admin / admin123456)
 if (!db.admins.findOne({ username: "admin" })) {

@@ -124,6 +124,11 @@ pub fn build_router(state: AppState) -> Router {
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
         )
         .route(
+            "/s/{system_slug}/apps/{id}/regenerate-token",
+            post(apps::regenerate_app_secret_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
             "/s/{system_slug}/apps/{id}/regenerate-secret",
             post(apps::regenerate_app_secret_handler)
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),

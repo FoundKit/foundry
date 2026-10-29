@@ -1146,7 +1146,7 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
     async fn list_applications(&self, system_slug: &str) -> AppResult<Vec<ApplicationEntity>> {
         let rows = sqlx::query_as::<_, ApplicationEntity>(
             r#"
-            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            SELECT id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             FROM applications
             WHERE system_id = $1 AND deleted_at IS NULL
             ORDER BY created_at DESC
@@ -1163,7 +1163,7 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
     async fn get_application_by_id(&self, id: Uuid) -> AppResult<ApplicationEntity> {
         let row = sqlx::query_as::<_, ApplicationEntity>(
             r#"
-            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            SELECT id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             FROM applications
             WHERE id = $1 AND deleted_at IS NULL
             "#,
@@ -1177,29 +1177,12 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
         Ok(row)
     }
 
-    async fn get_by_key(&self, app_key: &str) -> AppResult<ApplicationEntity> {
-        let row = sqlx::query_as::<_, ApplicationEntity>(
-            r#"
-            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
-            FROM applications
-            WHERE app_key = $1 AND deleted_at IS NULL
-            "#,
-        )
-        .bind(app_key)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| AppError::Database(format!("Failed to get application by key: {}", e)))?
-        .ok_or_else(|| AppError::NotFound(format!("Application with key '{}' not found", app_key)))?;
-
-        Ok(row)
-    }
-
     async fn find_by_token(&self, token: &str) -> AppResult<Option<ApplicationEntity>> {
         let row = sqlx::query_as::<_, ApplicationEntity>(
             r#"
-            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            SELECT id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             FROM applications
-            WHERE (app_secret = $1 OR app_key = $1) AND deleted_at IS NULL
+            WHERE token = $1 AND deleted_at IS NULL
             LIMIT 1
             "#,
         )
@@ -1233,20 +1216,18 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
         description: Option<&str>,
         permissions: Value,
     ) -> AppResult<ApplicationEntity> {
-        let app_key = format!("app_{}", Uuid::now_v7().simple());
-        let app_secret = format!("sk_{}", Uuid::now_v7().simple());
+        let token = format!("sk_{}", Uuid::now_v7().simple());
 
         let row = sqlx::query_as::<_, ApplicationEntity>(
             r#"
-            INSERT INTO applications (system_id, name, app_key, app_secret, description, status, permissions)
-            VALUES ($1, $2, $3, $4, $5, 1, $6)
-            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            INSERT INTO applications (system_id, name, token, description, status, permissions)
+            VALUES ($1, $2, $3, $4, 1, $5)
+            RETURNING id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             "#,
         )
         .bind(system_slug)
         .bind(name)
-        .bind(app_key)
-        .bind(app_secret)
+        .bind(token)
         .bind(description)
         .bind(permissions)
         .fetch_one(&self.pool)
@@ -1273,7 +1254,7 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
                 permissions = COALESCE($5, permissions),
                 updated_at = NOW()
             WHERE id = $1 AND deleted_at IS NULL
-            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            RETURNING id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             "#,
         )
         .bind(id)
@@ -1289,22 +1270,22 @@ impl ApplicationStoreEngine for PostgresApplicationEngine {
         Ok(row)
     }
 
-    async fn regenerate_secret(&self, id: Uuid) -> AppResult<ApplicationEntity> {
-        let new_secret = format!("sk_{}", Uuid::now_v7().simple());
+    async fn regenerate_token(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+        let new_token = format!("sk_{}", Uuid::now_v7().simple());
         let row = sqlx::query_as::<_, ApplicationEntity>(
             r#"
             UPDATE applications
-            SET app_secret = $2,
+            SET token = $2,
                 updated_at = NOW()
             WHERE id = $1 AND deleted_at IS NULL
-            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            RETURNING id, system_id, name, token, description, status, permissions, created_at, updated_at, deleted_at
             "#,
         )
         .bind(id)
-        .bind(new_secret)
+        .bind(new_token)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Database(format!("Failed to regenerate application secret: {}", e)))?
+        .map_err(|e| AppError::Database(format!("Failed to regenerate application token: {}", e)))?
         .ok_or_else(|| AppError::NotFound(format!("Application '{}' not found", id)))?;
 
         Ok(row)

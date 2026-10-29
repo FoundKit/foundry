@@ -133,7 +133,7 @@ pub async fn regenerate_app_secret_handler(
         )));
     }
 
-    let updated = state.db.apps().regenerate_secret(id).await?;
+    let updated = state.db.apps().regenerate_token(id).await?;
     Ok(Json(ApiResponse::success(updated)))
 }
 

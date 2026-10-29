@@ -608,7 +608,7 @@ mod postgres_tests {
             serde_json::from_slice(&body).unwrap();
         let client_app = res.data;
         assert_eq!(client_app.name, "Next.js SSR App");
-        assert!(client_app.app_secret.starts_with("sk_"));
+        assert!(client_app.token.starts_with("sk_"));
 
         // 8.2 List applications for subsystem
         let req = Request::builder()
@@ -643,21 +643,21 @@ mod postgres_tests {
         let resp = app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
-        // 8.5 AutoCRUD call with valid app secret reading 'tools' (permitted) succeeds
+        // 8.5 AutoCRUD call with valid app token reading 'tools' (permitted) succeeds
         let req = Request::builder()
             .method("GET")
             .uri(format!("/api/s/{}/tools", sys_slug))
-            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Authorization", format!("Bearer {}", client_app.token))
             .body(Body::empty())
             .unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
 
-        // 8.6 AutoCRUD call with valid app secret creating 'tools' (forbidden) rejected with 403
+        // 8.6 AutoCRUD call with valid app token creating 'tools' (forbidden) rejected with 403
         let req = Request::builder()
             .method("POST")
             .uri(format!("/api/s/{}/tools", sys_slug))
-            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Authorization", format!("Bearer {}", client_app.token))
             .header("Content-Type", "application/json")
             .body(Body::from(
                 serde_json::to_vec(&serde_json::json!({
@@ -674,7 +674,7 @@ mod postgres_tests {
         let req = Request::builder()
             .method("GET")
             .uri(format!("/api/s/{}/configs", sys_slug))
-            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Authorization", format!("Bearer {}", client_app.token))
             .body(Body::empty())
             .unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
@@ -684,7 +684,7 @@ mod postgres_tests {
         let req = Request::builder()
             .method("PUT")
             .uri(format!("/api/s/{}/configs", sys_slug))
-            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Authorization", format!("Bearer {}", client_app.token))
             .header("Content-Type", "application/json")
             .body(Body::from(
                 serde_json::to_vec(&serde_json::json!({
@@ -696,11 +696,11 @@ mod postgres_tests {
         let resp = app.clone().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-        // 8.9 Regenerate app secret
+        // 8.9 Regenerate app token
         let req = Request::builder()
             .method("POST")
             .uri(format!(
-                "/api/admin/s/{}/apps/{}/regenerate-secret",
+                "/api/admin/s/{}/apps/{}/regenerate-token",
                 sys_slug, client_app.id
             ))
             .header("Authorization", format!("Bearer {}", token))
@@ -711,13 +711,13 @@ mod postgres_tests {
         let body = resp.into_body().collect().await.unwrap().to_bytes();
         let res: ApiResponse<foundry_storage::ApplicationEntity> =
             serde_json::from_slice(&body).unwrap();
-        assert_ne!(res.data.app_secret, client_app.app_secret);
+        assert_ne!(res.data.token, client_app.token);
 
-        // Old secret now rejected
+        // Old token now rejected
         let req = Request::builder()
             .method("GET")
             .uri(format!("/api/s/{}/tools", sys_slug))
-            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Authorization", format!("Bearer {}", client_app.token))
             .body(Body::empty())
             .unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();

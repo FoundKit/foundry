@@ -199,8 +199,7 @@ pub fn applications_schema() -> EntitySchema {
         .column(ColumnDef::uuid("id").primary_key().default_uuid())
         .column(ColumnDef::varchar("system_id", 32).not_null())
         .column(ColumnDef::varchar("name", 64).not_null())
-        .column(ColumnDef::varchar("app_key", 64).not_null().unique())
-        .column(ColumnDef::varchar("app_secret", 128).not_null())
+        .column(ColumnDef::varchar("token", 128).not_null().unique())
         .column(ColumnDef::varchar("description", 255).nullable())
         .column(
             ColumnDef::smallint("status")
@@ -212,11 +211,7 @@ pub fn applications_schema() -> EntitySchema {
         .column(ColumnDef::datetime("updated_at").default_current_timestamp())
         .column(ColumnDef::datetime("deleted_at").nullable())
         .index(IndexDef::new("idx_applications_system_id", &["system_id"]))
-        .index(IndexDef::new("idx_applications_app_key", &["app_key"]))
-        .index(IndexDef::new(
-            "idx_applications_app_secret",
-            &["app_secret"],
-        ))
+        .index(IndexDef::new("idx_applications_token", &["token"]))
         .comment("Client applications with scoped API and model CRUD permissions")
 }
 
