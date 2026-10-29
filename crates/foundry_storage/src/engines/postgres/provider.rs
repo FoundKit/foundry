@@ -1,7 +1,7 @@
 use crate::engines::postgres::records::PostgresRecordEngine;
 use crate::engines::postgres::stores::{
-    PostgresAdminEngine, PostgresAuditEngine, PostgresConfigEngine, PostgresModelEngine,
-    PostgresSystemEngine,
+    PostgresAdminEngine, PostgresApplicationEngine, PostgresAuditEngine, PostgresConfigEngine,
+    PostgresModelEngine, PostgresSystemEngine,
 };
 use crate::spi::provider::{StorageDriverProvider, StorageEngineSet};
 use async_trait::async_trait;
@@ -54,7 +54,8 @@ impl StorageDriverProvider for PostgresProvider {
             systems: Arc::new(PostgresSystemEngine::new(pool.clone())),
             configs: Arc::new(PostgresConfigEngine::new(pool.clone())),
             admins: Arc::new(PostgresAdminEngine::new(pool.clone())),
-            audit: Arc::new(PostgresAuditEngine::new(pool)),
+            audit: Arc::new(PostgresAuditEngine::new(pool.clone())),
+            apps: Arc::new(PostgresApplicationEngine::new(pool)),
         })
     }
 
@@ -88,6 +89,9 @@ impl StorageDriverProvider for PostgresProvider {
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'admins') THEN
                     ALTER TABLE admins ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'applications') THEN
+                    ALTER TABLE applications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ NULL;
                 END IF;
             END $$;
         "#;

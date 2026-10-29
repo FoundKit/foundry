@@ -1,4 +1,5 @@
 pub mod admins;
+pub mod applications;
 pub mod audit;
 pub mod configs;
 pub mod models;
@@ -6,6 +7,7 @@ pub mod records;
 pub mod systems;
 
 pub use admins::AdminStoreEngine;
+pub use applications::ApplicationStoreEngine;
 pub use audit::{AuditLogInsert, AuditLogQuery, AuditStoreEngine};
 pub use configs::ConfigStoreEngine;
 pub use models::ModelStoreEngine;

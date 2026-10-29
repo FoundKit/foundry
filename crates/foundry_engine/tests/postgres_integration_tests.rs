@@ -579,6 +579,160 @@ mod postgres_tests {
             serde_json::from_slice(&body).unwrap();
         assert!(res.data.iter().any(|m| m.id == tool_model.id));
 
+        // 8. Application Management & Permission Control Tests
+        println!("Testing Application Management & Scoped RBAC...");
+        // 8.1 Create client application
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/apps", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "Next.js SSR App",
+                    "description": "Public Next.js frontend SSR client",
+                    "permissions": {
+                        "configs": { "read": true, "write": false },
+                        "models": {
+                            "tools": { "read": true, "create": false, "update": false, "delete": false }
+                        }
+                    }
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ApplicationEntity> =
+            serde_json::from_slice(&body).unwrap();
+        let client_app = res.data;
+        assert_eq!(client_app.name, "Next.js SSR App");
+        assert!(client_app.app_secret.starts_with("sk_"));
+
+        // 8.2 List applications for subsystem
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/admin/s/{}/apps", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<Vec<foundry_storage::ApplicationEntity>> =
+            serde_json::from_slice(&body).unwrap();
+        assert_eq!(res.data.len(), 1);
+
+        // 8.3 AutoCRUD call without Authorization header now rejected with 401 because apps exist
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/tools", sys_slug))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+        // 8.4 AutoCRUD call with invalid Bearer token rejected with 401
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/tools", sys_slug))
+            .header("Authorization", "Bearer invalid_secret_token_123")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+        // 8.5 AutoCRUD call with valid app secret reading 'tools' (permitted) succeeds
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/tools", sys_slug))
+            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // 8.6 AutoCRUD call with valid app secret creating 'tools' (forbidden) rejected with 403
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/s/{}/tools", sys_slug))
+            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "Drill",
+                    "des": "Power tool"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        // 8.7 Configs read (permitted) succeeds
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/configs", sys_slug))
+            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // 8.8 Configs write (forbidden) rejected with 403
+        let req = Request::builder()
+            .method("PUT")
+            .uri(format!("/api/s/{}/configs", sys_slug))
+            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "site_title": "Hacked Title"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        // 8.9 Regenerate app secret
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/admin/s/{}/apps/{}/regenerate-secret",
+                sys_slug, client_app.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ApplicationEntity> =
+            serde_json::from_slice(&body).unwrap();
+        assert_ne!(res.data.app_secret, client_app.app_secret);
+
+        // Old secret now rejected
+        let req = Request::builder()
+            .method("GET")
+            .uri(format!("/api/s/{}/tools", sys_slug))
+            .header("Authorization", format!("Bearer {}", client_app.app_secret))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+        // 8.10 Delete app
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!("/api/admin/s/{}/apps/{}", sys_slug, client_app.id))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
         println!("PostgreSQL Universal Single-Table E2E integration test succeeded perfectly!");
     }
 }

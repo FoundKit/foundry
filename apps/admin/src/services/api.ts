@@ -1,6 +1,7 @@
 import {
   AdminProfile,
   ApiResponse,
+  ApplicationItem,
   AuditLogItem,
   CustomAdminPageItem,
   ModelFieldItem,
@@ -200,6 +201,8 @@ export const api = {
       `/s/${systemSlug}/${modelSlug}${qs}`,
     );
   },
+  getRecord: (systemSlug: string, modelSlug: string, id: number) =>
+    request<ModelRecordItem>(AUTO_API_BASE, `/s/${systemSlug}/${modelSlug}/${id}`),
   createRecord: (systemSlug: string, modelSlug: string, data: any) =>
     request<ModelRecordItem>(AUTO_API_BASE, `/s/${systemSlug}/${modelSlug}`, {
       method: 'POST',
@@ -212,6 +215,30 @@ export const api = {
     }),
   deleteRecord: (systemSlug: string, modelSlug: string, id: number) =>
     request<void>(AUTO_API_BASE, `/s/${systemSlug}/${modelSlug}/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Subsystem Client Applications
+  listApplications: (systemSlug: string) =>
+    request<ApplicationItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/apps`),
+  getApplication: (systemSlug: string, id: string) =>
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}`),
+  createApplication: (systemSlug: string, data: any) =>
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateApplication: (systemSlug: string, id: string, data: any) =>
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  regenerateAppSecret: (systemSlug: string, id: string) =>
+    request<ApplicationItem>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}/regenerate-secret`, {
+      method: 'POST',
+    }),
+  deleteApplication: (systemSlug: string, id: string) =>
+    request<void>(ADMIN_API_BASE, `/s/${systemSlug}/apps/${id}`, {
       method: 'DELETE',
     }),
 

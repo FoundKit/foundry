@@ -193,7 +193,34 @@ pub fn audit_logs_schema() -> EntitySchema {
         .comment("Admin non-GET request audit log trail")
 }
 
-/// Returns all 7 core platform ORM schemas in dependency order
+/// Returns the schema for `applications` platform table
+pub fn applications_schema() -> EntitySchema {
+    EntitySchema::new("applications")
+        .column(ColumnDef::uuid("id").primary_key().default_uuid())
+        .column(ColumnDef::varchar("system_id", 32).not_null())
+        .column(ColumnDef::varchar("name", 64).not_null())
+        .column(ColumnDef::varchar("app_key", 64).not_null().unique())
+        .column(ColumnDef::varchar("app_secret", 128).not_null())
+        .column(ColumnDef::varchar("description", 255).nullable())
+        .column(
+            ColumnDef::smallint("status")
+                .not_null()
+                .default_val(DefaultValue::SmallInt(1)),
+        )
+        .column(ColumnDef::json("permissions").default_empty_json())
+        .column(ColumnDef::datetime("created_at").default_current_timestamp())
+        .column(ColumnDef::datetime("updated_at").default_current_timestamp())
+        .column(ColumnDef::datetime("deleted_at").nullable())
+        .index(IndexDef::new("idx_applications_system_id", &["system_id"]))
+        .index(IndexDef::new("idx_applications_app_key", &["app_key"]))
+        .index(IndexDef::new(
+            "idx_applications_app_secret",
+            &["app_secret"],
+        ))
+        .comment("Client applications with scoped API and model CRUD permissions")
+}
+
+/// Returns all 8 core platform ORM schemas in dependency order
 pub fn core_platform_models() -> Vec<EntitySchema> {
     vec![
         systems_schema(),
@@ -203,5 +230,6 @@ pub fn core_platform_models() -> Vec<EntitySchema> {
         model_records_schema(),
         admins_schema(),
         audit_logs_schema(),
+        applications_schema(),
     ]
 }

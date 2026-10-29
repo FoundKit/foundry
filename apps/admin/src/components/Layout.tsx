@@ -115,6 +115,7 @@ export function Layout({
     { id: 'models' as const, label: t('nav.models'), icon: Database },
     { id: 'data' as const, label: t('nav.data_explorer'), icon: TableProperties },
     { id: 'apis' as const, label: t('nav.sub_apis'), icon: Code2 },
+    { id: 'apps' as const, label: t('nav.apps'), icon: KeyRound },
     { id: 'audit_logs' as const, label: t('nav.sub_audit'), icon: FileClock },
     { id: 'settings' as const, label: t('nav.sub_settings'), icon: Settings },
   ];

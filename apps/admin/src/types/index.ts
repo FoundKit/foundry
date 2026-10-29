@@ -88,7 +88,15 @@ export interface RouteState {
   platformTab: 'dashboard' | 'systems' | 'admins' | 'audit_logs' | 'settings';
   subsystemSlug: string | null;
   subsystemTab:
-    'overview' | 'configs' | 'models' | 'data' | 'apis' | 'audit_logs' | 'settings' | 'custom';
+    | 'overview'
+    | 'apps'
+    | 'configs'
+    | 'models'
+    | 'data'
+    | 'apis'
+    | 'audit_logs'
+    | 'settings'
+    | 'custom';
   customPageKey?: string | null;
   params: Record<string, string>;
 }
@@ -177,4 +185,33 @@ export interface AuditLogItem {
   status_code?: number;
   duration_ms?: number;
   created_at: string;
+}
+
+export interface ApplicationModelPermissions {
+  create: boolean;
+  read: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
+export interface ApplicationPermissions {
+  configs?: {
+    read?: boolean;
+    write?: boolean;
+  };
+  models?: Record<string, ApplicationModelPermissions>;
+}
+
+export interface ApplicationItem {
+  id: string;
+  system_id: string;
+  name: string;
+  app_key: string;
+  app_secret: string;
+  description?: string;
+  status: number;
+  permissions: ApplicationPermissions;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
 }

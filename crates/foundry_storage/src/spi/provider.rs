@@ -1,6 +1,6 @@
 use crate::traits::{
-    AdminStoreEngine, AuditStoreEngine, ConfigStoreEngine, ModelStoreEngine, RecordStoreEngine,
-    SystemStoreEngine,
+    AdminStoreEngine, ApplicationStoreEngine, AuditStoreEngine, ConfigStoreEngine,
+    ModelStoreEngine, RecordStoreEngine, SystemStoreEngine,
 };
 use async_trait::async_trait;
 use foundry_core::error::AppResult;
@@ -15,6 +15,7 @@ pub struct StorageEngineSet {
     pub configs: Arc<dyn ConfigStoreEngine>,
     pub admins: Arc<dyn AdminStoreEngine>,
     pub audit: Arc<dyn AuditStoreEngine>,
+    pub apps: Arc<dyn ApplicationStoreEngine>,
 }
 
 /// A code-defined DDL extension providing custom schemas or table creation statements

@@ -1,10 +1,10 @@
 use crate::entities::{
-    AdminEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
+    AdminEntity, ApplicationEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
     SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
 };
 use crate::traits::{
-    AdminStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine, ConfigStoreEngine,
-    ModelStoreEngine, SystemQuery, SystemStoreEngine,
+    AdminStoreEngine, ApplicationStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine,
+    ConfigStoreEngine, ModelStoreEngine, SystemQuery, SystemStoreEngine,
 };
 use async_trait::async_trait;
 use foundry_core::error::{AppError, AppResult};
@@ -1124,5 +1124,212 @@ impl AuditStoreEngine for PostgresAuditEngine {
         .map_err(|e| AppError::Database(format!("Audit fetch failed: {}", e)))?;
 
         Ok(PaginatedData::new(logs, page, page_size, total))
+    }
+}
+
+// ============================================================================
+// PostgresApplicationEngine
+// ============================================================================
+
+pub struct PostgresApplicationEngine {
+    pool: PgPool,
+}
+
+impl PostgresApplicationEngine {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl ApplicationStoreEngine for PostgresApplicationEngine {
+    async fn list_applications(&self, system_slug: &str) -> AppResult<Vec<ApplicationEntity>> {
+        let rows = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            FROM applications
+            WHERE system_id = $1 AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            "#,
+        )
+        .bind(system_slug)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to list applications: {}", e)))?;
+
+        Ok(rows)
+    }
+
+    async fn get_application_by_id(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            FROM applications
+            WHERE id = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to get application: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Application '{}' not found", id)))?;
+
+        Ok(row)
+    }
+
+    async fn get_by_key(&self, app_key: &str) -> AppResult<ApplicationEntity> {
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            FROM applications
+            WHERE app_key = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(app_key)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to get application by key: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Application with key '{}' not found", app_key)))?;
+
+        Ok(row)
+    }
+
+    async fn find_by_token(&self, token: &str) -> AppResult<Option<ApplicationEntity>> {
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            SELECT id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            FROM applications
+            WHERE (app_secret = $1 OR app_key = $1) AND deleted_at IS NULL
+            LIMIT 1
+            "#,
+        )
+        .bind(token)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to lookup application by token: {}", e)))?;
+
+        Ok(row)
+    }
+
+    async fn has_applications(&self, system_slug: &str) -> AppResult<bool> {
+        let count_row: (i64,) = sqlx::query_as(
+            r#"
+            SELECT COUNT(*) FROM applications
+            WHERE system_id = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(system_slug)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to check application count: {}", e)))?;
+
+        Ok(count_row.0 > 0)
+    }
+
+    async fn create_application(
+        &self,
+        system_slug: &str,
+        name: &str,
+        description: Option<&str>,
+        permissions: Value,
+    ) -> AppResult<ApplicationEntity> {
+        let app_key = format!("app_{}", Uuid::now_v7().simple());
+        let app_secret = format!("sk_{}", Uuid::now_v7().simple());
+
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            INSERT INTO applications (system_id, name, app_key, app_secret, description, status, permissions)
+            VALUES ($1, $2, $3, $4, $5, 1, $6)
+            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            "#,
+        )
+        .bind(system_slug)
+        .bind(name)
+        .bind(app_key)
+        .bind(app_secret)
+        .bind(description)
+        .bind(permissions)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to create application: {}", e)))?;
+
+        Ok(row)
+    }
+
+    async fn update_application(
+        &self,
+        id: Uuid,
+        name: Option<&str>,
+        description: Option<&str>,
+        status: Option<i16>,
+        permissions: Option<Value>,
+    ) -> AppResult<ApplicationEntity> {
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            UPDATE applications
+            SET name = COALESCE($2, name),
+                description = COALESCE($3, description),
+                status = COALESCE($4, status),
+                permissions = COALESCE($5, permissions),
+                updated_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            "#,
+        )
+        .bind(id)
+        .bind(name)
+        .bind(description)
+        .bind(status)
+        .bind(permissions)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to update application: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Application '{}' not found", id)))?;
+
+        Ok(row)
+    }
+
+    async fn regenerate_secret(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+        let new_secret = format!("sk_{}", Uuid::now_v7().simple());
+        let row = sqlx::query_as::<_, ApplicationEntity>(
+            r#"
+            UPDATE applications
+            SET app_secret = $2,
+                updated_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING id, system_id, name, app_key, app_secret, description, status, permissions, created_at, updated_at, deleted_at
+            "#,
+        )
+        .bind(id)
+        .bind(new_secret)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to regenerate application secret: {}", e)))?
+        .ok_or_else(|| AppError::NotFound(format!("Application '{}' not found", id)))?;
+
+        Ok(row)
+    }
+
+    async fn delete_application(&self, id: Uuid) -> AppResult<()> {
+        let res = sqlx::query(
+            r#"
+            UPDATE applications
+            SET deleted_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to delete application: {}", e)))?;
+
+        if res.rows_affected() == 0 {
+            return Err(AppError::NotFound(format!(
+                "Application '{}' not found",
+                id
+            )));
+        }
+
+        Ok(())
     }
 }

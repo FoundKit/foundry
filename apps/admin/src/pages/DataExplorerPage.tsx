@@ -8,6 +8,7 @@ import {
   Layers,
   AlertTriangle,
   Link as LinkIcon,
+  Search,
 } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge, Pagination } from '../components/UiWidgets';
 import { api } from '../services/api';
@@ -44,6 +45,11 @@ export function DataExplorerPage({
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ModelRecordItem | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [relationSearchId, setRelationSearchId] = useState<Record<string, string>>({});
+  const [relationSearchLoading, setRelationSearchLoading] = useState<Record<string, boolean>>({});
+  const [relationSearchMsg, setRelationSearchMsg] = useState<
+    Record<string, { type: 'success' | 'error'; text: string } | undefined>
+  >({});
 
   const loadModels = async (slug: string) => {
     try {
@@ -70,20 +76,55 @@ export function DataExplorerPage({
     }
   };
 
-  const loadRelationRecords = async (systemSlug: string, modelFields: ModelFieldItem[]) => {
+  const loadRelationRecords = async (
+    systemSlug: string,
+    modelFields: ModelFieldItem[],
+    recordsToInspect: ModelRecordItem[] = [],
+  ) => {
+    const relationFields = modelFields.filter(
+      (f) => f.field_type === 'relation' && f.options?.target_model,
+    );
     const targetSlugs = Array.from(
-      new Set(
-        modelFields
-          .filter((f) => f.field_type === 'relation' && f.options?.target_model)
-          .map((f) => f.options.target_model as string),
-      ),
+      new Set(relationFields.map((f) => f.options.target_model as string)),
     );
 
     for (const tm of targetSlugs) {
       if (!tm) continue;
       try {
-        const res = await api.listRecords(systemSlug, tm, { page: 1, page_size: 100 });
-        setRelationRecords((prev) => ({ ...prev, [tm]: res.items }));
+        // Default render recent 10 records as options
+        const res = await api.listRecords(systemSlug, tm, { page: 1, page_size: 10 });
+        const itemsMap = new Map<number, ModelRecordItem>();
+        res.items.forEach((item) => itemsMap.set(item.id, item));
+
+        // Also check if any displayed record in the current page references an ID not in the recent 10
+        const referencedIds = new Set<number>();
+        relationFields
+          .filter((f) => f.options.target_model === tm)
+          .forEach((f) => {
+            recordsToInspect.forEach((r) => {
+              const val = r.data[f.name];
+              if (val !== undefined && val !== null && val !== '') {
+                const num = Number(val);
+                if (!Number.isNaN(num) && !itemsMap.has(num)) {
+                  referencedIds.add(num);
+                }
+              }
+            });
+          });
+
+        for (const refId of referencedIds) {
+          try {
+            const singleRec = await api.getRecord(systemSlug, tm, refId);
+            itemsMap.set(singleRec.id, singleRec);
+          } catch {
+            // Ignore missing record
+          }
+        }
+
+        setRelationRecords((prev) => ({
+          ...prev,
+          [tm]: Array.from(itemsMap.values()),
+        }));
       } catch (err) {
         console.error(`Failed to prefetch relation records for model ${tm}:`, err);
       }
@@ -101,8 +142,8 @@ export function DataExplorerPage({
       setRecords(recs.items);
       setTotal(recs.pagination.total);
 
-      // Pre-load relation target records for intuitive ID selection & display
-      loadRelationRecords(slug, f);
+      // Pre-load recent 10 relation records + referenced page records for display
+      loadRelationRecords(slug, f, recs.items);
     } catch (err) {
       console.error(err);
       setFields([]);
@@ -169,6 +210,8 @@ export function DataExplorerPage({
 
   const openCreateModal = () => {
     setEditingRecord(null);
+    setRelationSearchId({});
+    setRelationSearchMsg({});
     const initial: Record<string, any> = {};
     fields.forEach((f) => {
       initial[f.name] =
@@ -180,6 +223,8 @@ export function DataExplorerPage({
 
   const openEditModal = (rec: ModelRecordItem) => {
     setEditingRecord(rec);
+    setRelationSearchId({});
+    setRelationSearchMsg({});
     // Initialize formData strictly using current active schema fields.
     // Any obsolete/deleted fields present in rec.data are intentionally omitted so they are purged upon save.
     const initial: Record<string, any> = {};
@@ -192,9 +237,83 @@ export function DataExplorerPage({
             : f.field_type === 'boolean'
               ? false
               : '';
+
+      // If record references a relation ID not present in current relation cache, fetch it
+      if (f.field_type === 'relation' && f.options?.target_model && currentSystem?.slug) {
+        const val = rec.data[f.name];
+        if (val !== undefined && val !== null && val !== '') {
+          const num = Number(val);
+          const cached = relationRecords[f.options.target_model] || [];
+          if (!Number.isNaN(num) && !cached.some((r) => r.id === num)) {
+            api
+              .getRecord(currentSystem.slug, f.options.target_model, num)
+              .then((singleRec) => {
+                setRelationRecords((prev) => ({
+                  ...prev,
+                  [f.options.target_model]: [singleRec, ...(prev[f.options.target_model] || [])],
+                }));
+              })
+              .catch(() => {});
+          }
+        }
+      }
     });
     setFormData(initial);
     setIsRecordModalOpen(true);
+  };
+
+  const handleSearchRelationRecord = async (fieldName: string, targetModel: string) => {
+    if (!currentSystem?.slug) return;
+    const rawId = (relationSearchId[fieldName] || '').trim();
+    if (!rawId) return;
+    const numId = Number(rawId);
+    if (Number.isNaN(numId)) {
+      setRelationSearchMsg((prev) => ({
+        ...prev,
+        [fieldName]: { type: 'error', text: t('explorer.invalid_id') || '请输入有效的记录 ID' },
+      }));
+      return;
+    }
+
+    setRelationSearchLoading((prev) => ({ ...prev, [fieldName]: true }));
+    setRelationSearchMsg((prev) => ({ ...prev, [fieldName]: undefined }));
+
+    try {
+      const rec = await api.getRecord(currentSystem.slug, targetModel, numId);
+      // Add to relationRecords if not already present
+      setRelationRecords((prev) => {
+        const existing = prev[targetModel] || [];
+        if (!existing.some((r) => r.id === rec.id)) {
+          return { ...prev, [targetModel]: [rec, ...existing] };
+        }
+        return prev;
+      });
+      // Set formData
+      setFormData((prev) => ({ ...prev, [fieldName]: rec.id }));
+      const fieldDef = fields.find((f) => f.name === fieldName);
+      const displayField = fieldDef?.options?.display_field;
+      const displayVal =
+        displayField && rec.data[displayField] !== undefined
+          ? rec.data[displayField]
+          : rec.data.title || rec.data.name || rec.data.slug || `#${rec.id}`;
+      setRelationSearchMsg((prev) => ({
+        ...prev,
+        [fieldName]: {
+          type: 'success',
+          text: `${t('explorer.bound_record') || '已绑定记录'}: #${rec.id} (${displayVal})`,
+        },
+      }));
+    } catch {
+      setRelationSearchMsg((prev) => ({
+        ...prev,
+        [fieldName]: {
+          type: 'error',
+          text: `${t('explorer.record_not_found') || '未找到 ID 为'} #${numId} ${t('explorer.of_record') || '的记录'}`,
+        },
+      }));
+    } finally {
+      setRelationSearchLoading((prev) => ({ ...prev, [fieldName]: false }));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -396,15 +515,22 @@ export function DataExplorerPage({
 
                     if (f.field_type === 'relation') {
                       const targetModel = f.options?.target_model;
+                      const displayField = f.options?.display_field;
                       const targetRecord = relationRecords[targetModel]?.find(
                         (r) => r.id === Number(val),
                       );
-                      const targetLabel = targetRecord
-                        ? targetRecord.data.title ||
-                          targetRecord.data.name ||
-                          targetRecord.data.slug ||
-                          `#${val}`
-                        : null;
+                      let targetLabel: string | null = null;
+                      if (targetRecord) {
+                        if (displayField && targetRecord.data[displayField] !== undefined) {
+                          targetLabel = String(targetRecord.data[displayField]);
+                        } else {
+                          targetLabel =
+                            targetRecord.data.title ||
+                            targetRecord.data.name ||
+                            targetRecord.data.slug ||
+                            `#${val}`;
+                        }
+                      }
 
                       return (
                         <td key={f.id} className="max-w-xs truncate px-5 py-3">
@@ -415,7 +541,7 @@ export function DataExplorerPage({
                             <LinkIcon className="h-3 w-3" />#{val}
                             {targetLabel && (
                               <span className="font-sans font-normal text-slate-500">
-                                ({String(targetLabel).slice(0, 15)})
+                                ({targetLabel.slice(0, 20)})
                               </span>
                             )}
                           </span>
@@ -514,7 +640,7 @@ export function DataExplorerPage({
                   onChange={(e) => setFormData({ ...formData, [f.name]: e.target.value })}
                 />
               ) : f.field_type === 'relation' && f.options?.target_model ? (
-                <div>
+                <div className="space-y-2">
                   <select
                     required={f.is_required}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
@@ -532,21 +658,75 @@ export function DataExplorerPage({
                   >
                     <option value="">{t('explorer.select_relation_record')}</option>
                     {(relationRecords[f.options.target_model] || []).map((relRec) => {
-                      const label =
-                        relRec.data.title ||
-                        relRec.data.name ||
-                        relRec.data.slug ||
-                        Object.values(relRec.data)[0] ||
-                        `Record #${relRec.id}`;
+                      const displayField = f.options?.display_field;
+                      const displayVal =
+                        displayField && relRec.data[displayField] !== undefined
+                          ? relRec.data[displayField]
+                          : relRec.data.title ||
+                            relRec.data.name ||
+                            relRec.data.slug ||
+                            Object.values(relRec.data)[0] ||
+                            `Record #${relRec.id}`;
                       return (
                         <option key={relRec.id} value={relRec.id}>
-                          #{relRec.id} - {String(label).slice(0, 45)}
+                          #{relRec.id} - {String(displayVal).slice(0, 45)}
                         </option>
                       );
                     })}
                   </select>
-                  <p className="mt-1 font-mono text-[11px] text-sky-600 dark:text-sky-400">
-                    Target model: {f.options.target_model} (bound by ID)
+
+                  {/* Search history record by ID */}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        placeholder={
+                          t('explorer.search_by_id_placeholder') || '输入历史记录 ID 搜索绑定...'
+                        }
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
+                        value={relationSearchId[f.name] || ''}
+                        onChange={(e) =>
+                          setRelationSearchId({ ...relationSearchId, [f.name]: e.target.value })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSearchRelationRecord(f.name, f.options.target_model);
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={relationSearchLoading[f.name] || !relationSearchId[f.name]}
+                      onClick={() => handleSearchRelationRecord(f.name, f.options.target_model)}
+                      className="gap-1 whitespace-nowrap text-xs"
+                    >
+                      <Search className="h-3 w-3" />
+                      <span>
+                        {relationSearchLoading[f.name] ? t('common.loading') : t('common.search')}
+                      </span>
+                    </Button>
+                  </div>
+
+                  {relationSearchMsg[f.name] && (
+                    <p
+                      className={`text-[11px] ${
+                        relationSearchMsg[f.name]?.type === 'success'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-500 dark:text-rose-400'
+                      }`}
+                    >
+                      {relationSearchMsg[f.name]?.text}
+                    </p>
+                  )}
+
+                  <p className="font-mono text-[11px] text-sky-600 dark:text-sky-400">
+                    Target model: {f.options.target_model}
+                    {f.options.display_field && ` (Display: ${f.options.display_field})`} • Default
+                    top 10
                   </p>
                 </div>
               ) : (

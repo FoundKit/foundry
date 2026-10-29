@@ -54,6 +54,8 @@ export function ModelsPage({
   const [fieldType, setFieldType] = useState('string');
   const [isRequired, setIsRequired] = useState(false);
   const [targetModel, setTargetModel] = useState('');
+  const [targetDisplayField, setTargetDisplayField] = useState('');
+  const [targetFields, setTargetFields] = useState<ModelFieldItem[]>([]);
 
   // Edit Field Modal
   const [isEditFieldOpen, setIsEditFieldOpen] = useState(false);
@@ -63,6 +65,8 @@ export function ModelsPage({
   const [editFieldType, setEditFieldType] = useState('string');
   const [editFieldRequired, setEditFieldRequired] = useState(false);
   const [editFieldTargetModel, setEditFieldTargetModel] = useState('');
+  const [editTargetDisplayField, setEditTargetDisplayField] = useState('');
+  const [editTargetFields, setEditTargetFields] = useState<ModelFieldItem[]>([]);
 
   const loadModels = async (slug: string) => {
     setLoading(true);
@@ -231,6 +235,44 @@ export function ModelsPage({
     }
   };
 
+  const handleTargetModelChange = async (slug: string) => {
+    setTargetModel(slug);
+    setTargetDisplayField('');
+    if (!slug || !currentSystem?.slug) {
+      setTargetFields([]);
+      return;
+    }
+    const tm = models.find((m) => m.slug === slug);
+    if (tm) {
+      try {
+        const fList = await api.listModelFields(currentSystem.slug, tm.id);
+        setTargetFields(fList);
+      } catch (err) {
+        console.error(err);
+        setTargetFields([]);
+      }
+    }
+  };
+
+  const handleEditTargetModelChange = async (slug: string) => {
+    setEditFieldTargetModel(slug);
+    setEditTargetDisplayField('');
+    if (!slug || !currentSystem?.slug) {
+      setEditTargetFields([]);
+      return;
+    }
+    const tm = models.find((m) => m.slug === slug);
+    if (tm) {
+      try {
+        const fList = await api.listModelFields(currentSystem.slug, tm.id);
+        setEditTargetFields(fList);
+      } catch (err) {
+        console.error(err);
+        setEditTargetFields([]);
+      }
+    }
+  };
+
   const handleAddField = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSystem?.slug || !selectedModel) return;
@@ -238,6 +280,9 @@ export function ModelsPage({
       const options: Record<string, any> = {};
       if (fieldType === 'relation' && targetModel) {
         options.target_model = targetModel;
+        if (targetDisplayField) {
+          options.display_field = targetDisplayField;
+        }
       }
 
       await api.addModelField(currentSystem.slug, selectedModel.id, {
@@ -252,6 +297,8 @@ export function ModelsPage({
       setFieldName('');
       setFieldLabel('');
       setTargetModel('');
+      setTargetDisplayField('');
+      setTargetFields([]);
       loadFields(currentSystem.slug, selectedModel.id);
     } catch (err: any) {
       alert(err.message || 'Failed to add field');
@@ -264,7 +311,22 @@ export function ModelsPage({
     setEditFieldLabel(f.label);
     setEditFieldType(f.field_type);
     setEditFieldRequired(f.is_required);
-    setEditFieldTargetModel(f.options?.target_model || '');
+    const tmSlug = f.options?.target_model || '';
+    setEditFieldTargetModel(tmSlug);
+    setEditTargetDisplayField(f.options?.display_field || '');
+    if (f.field_type === 'relation' && tmSlug && currentSystem?.slug) {
+      const tm = models.find((m) => m.slug === tmSlug);
+      if (tm) {
+        api
+          .listModelFields(currentSystem.slug, tm.id)
+          .then(setEditTargetFields)
+          .catch(() => setEditTargetFields([]));
+      } else {
+        setEditTargetFields([]);
+      }
+    } else {
+      setEditTargetFields([]);
+    }
     setIsEditFieldOpen(true);
   };
 
@@ -275,8 +337,14 @@ export function ModelsPage({
       const options: Record<string, any> = { ...(editingField.options || {}) };
       if (editFieldType === 'relation') {
         options.target_model = editFieldTargetModel;
+        if (editTargetDisplayField) {
+          options.display_field = editTargetDisplayField;
+        } else {
+          delete options.display_field;
+        }
       } else {
         delete options.target_model;
+        delete options.display_field;
       }
 
       await api.updateModelField(currentSystem.slug, selectedModel.id, editingField.id, {
@@ -289,6 +357,7 @@ export function ModelsPage({
       });
       setIsEditFieldOpen(false);
       setEditingField(null);
+      setEditTargetFields([]);
       loadFields(currentSystem.slug, selectedModel.id);
     } catch (err: any) {
       alert(err.message || 'Failed to update field');
@@ -542,6 +611,7 @@ export function ModelsPage({
                               <span className="flex items-center gap-1 font-mono text-[11px] text-sky-600 dark:text-sky-400">
                                 <LinkIcon className="h-3 w-3" />
                                 {f.options.target_model}
+                                {f.options.display_field && ` (${f.options.display_field})`}
                               </span>
                             )}
                           </div>
@@ -746,28 +816,53 @@ export function ModelsPage({
           </div>
 
           {fieldType === 'relation' && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                {t('models.target_model')}
-              </label>
-              <select
-                required
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                value={targetModel}
-                onChange={(e) => setTargetModel(e.target.value)}
-              >
-                <option value="">{t('models.select_target_model')}</option>
-                {models
-                  .filter((m) => m.id !== selectedModel?.id)
-                  .map((m) => (
-                    <option key={m.id} value={m.slug}>
-                      {m.name} ({m.slug})
-                    </option>
-                  ))}
-              </select>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                {t('models.target_model_hint')}
-              </p>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('models.target_model')}
+                </label>
+                <select
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  value={targetModel}
+                  onChange={(e) => handleTargetModelChange(e.target.value)}
+                >
+                  <option value="">{t('models.select_target_model')}</option>
+                  {models
+                    .filter((m) => m.id !== selectedModel?.id)
+                    .map((m) => (
+                      <option key={m.id} value={m.slug}>
+                        {m.name} ({m.slug})
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {t('models.target_model_hint')}
+                </p>
+              </div>
+
+              {targetModel && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {t('models.target_display_field')}
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    value={targetDisplayField}
+                    onChange={(e) => setTargetDisplayField(e.target.value)}
+                  >
+                    <option value="">{t('models.select_target_display_field')}</option>
+                    {targetFields.map((tf) => (
+                      <option key={tf.id} value={tf.name}>
+                        {tf.label} ({tf.name})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    {t('models.target_display_field_hint')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -842,28 +937,53 @@ export function ModelsPage({
           </div>
 
           {editFieldType === 'relation' && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                {t('models.target_model')}
-              </label>
-              <select
-                required
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
-                value={editFieldTargetModel}
-                onChange={(e) => setEditFieldTargetModel(e.target.value)}
-              >
-                <option value="">{t('models.select_target_model')}</option>
-                {models
-                  .filter((m) => m.id !== selectedModel?.id)
-                  .map((m) => (
-                    <option key={m.id} value={m.slug}>
-                      {m.name} ({m.slug})
-                    </option>
-                  ))}
-              </select>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                {t('models.target_model_hint')}
-              </p>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('models.target_model')}
+                </label>
+                <select
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                  value={editFieldTargetModel}
+                  onChange={(e) => handleEditTargetModelChange(e.target.value)}
+                >
+                  <option value="">{t('models.select_target_model')}</option>
+                  {models
+                    .filter((m) => m.id !== selectedModel?.id)
+                    .map((m) => (
+                      <option key={m.id} value={m.slug}>
+                        {m.name} ({m.slug})
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {t('models.target_model_hint')}
+                </p>
+              </div>
+
+              {editFieldTargetModel && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {t('models.target_display_field')}
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                    value={editTargetDisplayField}
+                    onChange={(e) => setEditTargetDisplayField(e.target.value)}
+                  >
+                    <option value="">{t('models.select_target_display_field')}</option>
+                    {editTargetFields.map((tf) => (
+                      <option key={tf.id} value={tf.name}>
+                        {tf.label} ({tf.name})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    {t('models.target_display_field_hint')}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

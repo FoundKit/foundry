@@ -1,8 +1,8 @@
 use crate::spi::provider::StorageEngineSet;
 use crate::spi::registry::StorageRegistry;
 use crate::traits::{
-    AdminStoreEngine, AuditStoreEngine, ConfigStoreEngine, ModelStoreEngine, RecordStoreEngine,
-    SystemStoreEngine,
+    AdminStoreEngine, ApplicationStoreEngine, AuditStoreEngine, ConfigStoreEngine,
+    ModelStoreEngine, RecordStoreEngine, SystemStoreEngine,
 };
 use foundry_core::error::AppResult;
 use std::sync::Arc;
@@ -16,6 +16,7 @@ pub struct Database {
     configs: Arc<dyn ConfigStoreEngine>,
     admins: Arc<dyn AdminStoreEngine>,
     audit: Arc<dyn AuditStoreEngine>,
+    apps: Arc<dyn ApplicationStoreEngine>,
 }
 
 impl Database {
@@ -28,6 +29,7 @@ impl Database {
             configs: engines.configs,
             admins: engines.admins,
             audit: engines.audit,
+            apps: engines.apps,
         }
     }
 
@@ -54,8 +56,9 @@ impl Database {
                 pool.clone(),
             )),
             audit: Arc::new(crate::engines::postgres::stores::PostgresAuditEngine::new(
-                pool,
+                pool.clone(),
             )),
+            apps: Arc::new(crate::engines::postgres::stores::PostgresApplicationEngine::new(pool)),
         }
     }
 
@@ -81,7 +84,12 @@ impl Database {
             admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(
                 pool.clone(),
             )),
-            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(pool)),
+            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(
+                pool.clone(),
+            )),
+            apps: Arc::new(crate::engines::mysql::stores::MySqlApplicationEngine::new(
+                pool,
+            )),
         }
     }
 
@@ -107,7 +115,12 @@ impl Database {
             admins: Arc::new(crate::engines::mysql::stores::MySqlAdminEngine::new(
                 pool.clone(),
             )),
-            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(pool)),
+            audit: Arc::new(crate::engines::mysql::stores::MySqlAuditEngine::new(
+                pool.clone(),
+            )),
+            apps: Arc::new(crate::engines::mysql::stores::MySqlApplicationEngine::new(
+                pool,
+            )),
         }
     }
 
@@ -151,7 +164,10 @@ impl Database {
             admins: Arc::new(crate::engines::mongodb::stores::MongoAdminEngine::new(
                 db.clone(),
             )),
-            audit: Arc::new(crate::engines::mongodb::stores::MongoAuditEngine::new(db)),
+            audit: Arc::new(crate::engines::mongodb::stores::MongoAuditEngine::new(
+                db.clone(),
+            )),
+            apps: Arc::new(crate::engines::mongodb::stores::MongoApplicationEngine::new(db)),
         }
     }
 
@@ -316,5 +332,9 @@ impl Database {
 
     pub fn audit(&self) -> &dyn AuditStoreEngine {
         self.audit.as_ref()
+    }
+
+    pub fn apps(&self) -> &dyn ApplicationStoreEngine {
+        self.apps.as_ref()
     }
 }

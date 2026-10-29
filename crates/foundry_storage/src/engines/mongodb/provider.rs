@@ -1,6 +1,7 @@
 use crate::engines::mongodb::records::MongoRecordEngine;
 use crate::engines::mongodb::stores::{
-    MongoAdminEngine, MongoAuditEngine, MongoConfigEngine, MongoModelEngine, MongoSystemEngine,
+    MongoAdminEngine, MongoApplicationEngine, MongoAuditEngine, MongoConfigEngine,
+    MongoModelEngine, MongoSystemEngine,
 };
 use crate::spi::provider::{StorageDriverProvider, StorageEngineSet};
 use async_trait::async_trait;
@@ -48,7 +49,8 @@ impl StorageDriverProvider for MongoProvider {
             systems: Arc::new(MongoSystemEngine::new(db.clone())),
             configs: Arc::new(MongoConfigEngine::new(db.clone())),
             admins: Arc::new(MongoAdminEngine::new(db.clone())),
-            audit: Arc::new(MongoAuditEngine::new(db)),
+            audit: Arc::new(MongoAuditEngine::new(db.clone())),
+            apps: Arc::new(MongoApplicationEngine::new(db)),
         })
     }
 
@@ -208,6 +210,20 @@ async fn init_mongodb_indexes(db: &Database) -> AppResult<()> {
         .keys(doc! { "created_at": -1 })
         .build();
     let _ = audit.create_index(audit_idx).await;
+
+    // applications: (system_id, app_key unique, app_secret)
+    let apps = db.collection::<mongodb::bson::Document>("applications");
+    let app_sys_idx = IndexModel::builder().keys(doc! { "system_id": 1 }).build();
+    let _ = apps.create_index(app_sys_idx).await;
+
+    let app_key_idx = IndexModel::builder()
+        .keys(doc! { "app_key": 1 })
+        .options(IndexOptions::builder().unique(true).build())
+        .build();
+    let _ = apps.create_index(app_key_idx).await;
+
+    let app_sec_idx = IndexModel::builder().keys(doc! { "app_secret": 1 }).build();
+    let _ = apps.create_index(app_sec_idx).await;
 
     Ok(())
 }

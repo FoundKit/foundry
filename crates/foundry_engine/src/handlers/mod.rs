@@ -1,4 +1,5 @@
 pub mod admins;
+pub mod apps;
 pub mod audit;
 pub mod auth;
 pub mod autocrud;

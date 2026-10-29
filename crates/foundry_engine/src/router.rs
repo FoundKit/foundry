@@ -1,6 +1,7 @@
 use crate::handlers::*;
 use crate::middleware::{
-    audit_interceptor, extract_system_context, require_admin_auth, require_topic_access,
+    audit_interceptor, extract_system_context, require_admin_auth,
+    require_subsystem_app_or_admin_auth, require_topic_access,
 };
 use crate::state::AppState;
 use axum::{
@@ -108,6 +109,25 @@ pub fn build_router(state: AppState) -> Router {
             get(systems::list_subsystem_custom_pages_handler)
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
         )
+        // Subsystem Client Applications Management
+        .route(
+            "/s/{system_slug}/apps",
+            get(apps::list_applications_handler)
+                .post(apps::create_application_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/apps/{id}",
+            get(apps::get_application_handler)
+                .put(apps::update_application_handler)
+                .delete(apps::delete_application_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/apps/{id}/regenerate-secret",
+            post(apps::regenerate_app_secret_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
         .route_layer(from_fn_with_state(state.clone(), require_admin_auth));
 
     // Subsystem Admin Management Extension APIs (/api/admin/ext/{slug}/*)
@@ -147,7 +167,11 @@ pub fn build_router(state: AppState) -> Router {
                 .put(autocrud::update_record_handler)
                 .patch(autocrud::update_record_handler)
                 .delete(autocrud::delete_record_handler),
-        );
+        )
+        .route_layer(from_fn_with_state(
+            state.clone(),
+            require_subsystem_app_or_admin_auth,
+        ));
 
     // 3. Custom Sub-system Public Extension APIs (/api/ext/{system_slug}/*)
     let mut custom_ext_public_api = Router::new();

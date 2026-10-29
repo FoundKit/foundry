@@ -152,3 +152,19 @@ pub struct AuditLogEntity {
     pub duration_ms: Option<i32>,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ApplicationEntity {
+    pub id: Uuid,
+    pub system_id: String,
+    pub name: String,
+    pub app_key: String,
+    pub app_secret: String,
+    pub description: Option<String>,
+    pub status: i16,
+    pub permissions: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[sqlx(default)]
+    pub deleted_at: Option<DateTime<Utc>>,
+}

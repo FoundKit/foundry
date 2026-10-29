@@ -10,6 +10,7 @@ import { SubsystemSettingsPage } from './pages/SubsystemSettingsPage';
 import { ConfigsPage } from './pages/ConfigsPage';
 import { ModelsPage } from './pages/ModelsPage';
 import { DataExplorerPage } from './pages/DataExplorerPage';
+import { ApplicationsPage } from './pages/ApplicationsPage';
 import { AdminsPage } from './pages/AdminsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { PlatformSettingsPage } from './pages/PlatformSettingsPage';
@@ -187,6 +188,7 @@ export function App() {
             />
           )}
           {route.subsystemTab === 'apis' && <SubsystemApisPage currentSystem={currentSystem} />}
+          {route.subsystemTab === 'apps' && <ApplicationsPage currentSystem={currentSystem} />}
           {route.subsystemTab === 'audit_logs' && (
             <AuditLogsPage
               currentSystem={currentSystem}

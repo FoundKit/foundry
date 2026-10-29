@@ -1,11 +1,11 @@
 use crate::engines::mongodb::counters::next_id;
 use crate::entities::{
-    AdminEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
+    AdminEntity, ApplicationEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
     SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
 };
 use crate::traits::{
-    AdminStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine, ConfigStoreEngine,
-    ModelStoreEngine, SystemQuery, SystemStoreEngine,
+    AdminStoreEngine, ApplicationStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine,
+    ConfigStoreEngine, ModelStoreEngine, SystemQuery, SystemStoreEngine,
 };
 use async_trait::async_trait;
 use chrono::Utc;
@@ -1350,5 +1350,287 @@ impl AuditStoreEngine for MongoAuditEngine {
         }
 
         Ok(PaginatedData::new(logs, page, page_size, total))
+    }
+}
+
+// ============================================================================
+// MongoApplicationEngine
+// ============================================================================
+
+pub struct MongoApplicationEngine {
+    db: Database,
+}
+
+impl MongoApplicationEngine {
+    pub fn new(db: Database) -> Self {
+        Self { db }
+    }
+}
+
+#[async_trait]
+impl ApplicationStoreEngine for MongoApplicationEngine {
+    async fn list_applications(&self, system_slug: &str) -> AppResult<Vec<ApplicationEntity>> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "system_id": system_slug,
+            "deleted_at": { "$exists": false }
+        };
+        let find_opts = mongodb::options::FindOptions::builder()
+            .sort(doc! { "created_at": -1 })
+            .build();
+
+        let mut cursor = coll
+            .find(filter)
+            .with_options(find_opts)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to list applications: {}", e)))?;
+
+        let mut apps = Vec::new();
+        while cursor
+            .advance()
+            .await
+            .map_err(|e| AppError::Database(format!("Cursor error: {}", e)))?
+        {
+            let doc = cursor
+                .deserialize_current()
+                .map_err(|e| AppError::Database(format!("Deserialize app failed: {}", e)))?;
+            let app: ApplicationEntity = mongodb::bson::from_document(doc)
+                .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))?;
+            apps.push(app);
+        }
+        Ok(apps)
+    }
+
+    async fn get_application_by_id(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "id": id.to_string(),
+            "deleted_at": { "$exists": false }
+        };
+
+        let doc = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Get application failed: {}", e)))?
+            .ok_or_else(|| AppError::NotFound(format!("Application '{}' not found", id)))?;
+
+        mongodb::bson::from_document(doc)
+            .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))
+    }
+
+    async fn get_by_key(&self, app_key: &str) -> AppResult<ApplicationEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "app_key": app_key,
+            "deleted_at": { "$exists": false }
+        };
+
+        let doc = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Get application by key failed: {}", e)))?
+            .ok_or_else(|| {
+                AppError::NotFound(format!("Application with key '{}' not found", app_key))
+            })?;
+
+        mongodb::bson::from_document(doc)
+            .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))
+    }
+
+    async fn find_by_token(&self, token: &str) -> AppResult<Option<ApplicationEntity>> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "$or": [
+                { "app_secret": token },
+                { "app_key": token }
+            ],
+            "deleted_at": { "$exists": false }
+        };
+
+        let doc = coll.find_one(filter).await.map_err(|e| {
+            AppError::Database(format!("Lookup application by token failed: {}", e))
+        })?;
+
+        match doc {
+            Some(d) => {
+                let app: ApplicationEntity = mongodb::bson::from_document(d)
+                    .map_err(|e| AppError::Database(format!("Application mapping error: {}", e)))?;
+                Ok(Some(app))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn has_applications(&self, system_slug: &str) -> AppResult<bool> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "system_id": system_slug,
+            "deleted_at": { "$exists": false }
+        };
+        let count = coll
+            .count_documents(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Count applications failed: {}", e)))?;
+        Ok(count > 0)
+    }
+
+    async fn create_application(
+        &self,
+        system_slug: &str,
+        name: &str,
+        description: Option<&str>,
+        permissions: Value,
+    ) -> AppResult<ApplicationEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let now = Utc::now();
+        let id = Uuid::now_v7();
+        let app_key = format!("app_{}", Uuid::now_v7().simple());
+        let app_secret = format!("sk_{}", Uuid::now_v7().simple());
+
+        let entity = ApplicationEntity {
+            id,
+            system_id: system_slug.to_string(),
+            name: name.to_string(),
+            app_key,
+            app_secret,
+            description: description.map(|s| s.to_string()),
+            status: 1,
+            permissions,
+            created_at: now,
+            updated_at: now,
+            deleted_at: None,
+        };
+
+        let doc = mongodb::bson::to_document(&entity)
+            .map_err(|e| AppError::Database(format!("Serialize application failed: {}", e)))?;
+
+        coll.insert_one(doc)
+            .await
+            .map_err(|e| AppError::Database(format!("Insert application failed: {}", e)))?;
+
+        Ok(entity)
+    }
+
+    async fn update_application(
+        &self,
+        id: Uuid,
+        name: Option<&str>,
+        description: Option<&str>,
+        status: Option<i16>,
+        permissions: Option<Value>,
+    ) -> AppResult<ApplicationEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "id": id.to_string(),
+            "deleted_at": { "$exists": false }
+        };
+
+        let mut set_doc = doc! {
+            "updated_at": mongodb::bson::to_bson(&Utc::now()).unwrap_or(mongodb::bson::Bson::Null)
+        };
+
+        if let Some(n) = name {
+            set_doc.insert("name", n);
+        }
+        if let Some(d) = description {
+            set_doc.insert("description", d);
+        }
+        if let Some(s) = status {
+            set_doc.insert("status", s as i32);
+        }
+        if let Some(p) = permissions {
+            let p_bson = mongodb::bson::to_bson(&p)
+                .map_err(|e| AppError::Database(format!("Serialize permissions failed: {}", e)))?;
+            set_doc.insert("permissions", p_bson);
+        }
+
+        let update = doc! { "$set": set_doc };
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Update application failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!(
+                "Application '{}' not found",
+                id
+            )));
+        }
+
+        self.get_application_by_id(id).await
+    }
+
+    async fn regenerate_secret(&self, id: Uuid) -> AppResult<ApplicationEntity> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "id": id.to_string(),
+            "deleted_at": { "$exists": false }
+        };
+        let new_secret = format!("sk_{}", Uuid::now_v7().simple());
+        let update = doc! {
+            "$set": {
+                "app_secret": &new_secret,
+                "updated_at": mongodb::bson::to_bson(&Utc::now()).unwrap_or(mongodb::bson::Bson::Null)
+            }
+        };
+
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Regenerate secret failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!(
+                "Application '{}' not found",
+                id
+            )));
+        }
+
+        self.get_application_by_id(id).await
+    }
+
+    async fn delete_application(&self, id: Uuid) -> AppResult<()> {
+        let coll = self
+            .db
+            .collection::<mongodb::bson::Document>("applications");
+        let filter = doc! {
+            "id": id.to_string(),
+            "deleted_at": { "$exists": false }
+        };
+        let update = doc! {
+            "$set": {
+                "deleted_at": mongodb::bson::to_bson(&Utc::now()).unwrap_or(mongodb::bson::Bson::Null)
+            }
+        };
+
+        let res = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| AppError::Database(format!("Delete application failed: {}", e)))?;
+
+        if res.matched_count == 0 {
+            return Err(AppError::NotFound(format!(
+                "Application '{}' not found",
+                id
+            )));
+        }
+
+        Ok(())
     }
 }

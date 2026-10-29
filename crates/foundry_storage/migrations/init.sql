@@ -194,6 +194,31 @@ DROP TRIGGER IF EXISTS set_timestamp_admins ON admins;
 CREATE TRIGGER set_timestamp_admins BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
 
 -- ============================================================================
+-- 8. CLIENT APPLICATIONS (子系统接入应用与权限控制表)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    system_id VARCHAR(32) NOT NULL,
+    name VARCHAR(64) NOT NULL,
+    app_key VARCHAR(64) NOT NULL UNIQUE,
+    app_secret VARCHAR(128) NOT NULL,
+    description VARCHAR(255),
+    status SMALLINT NOT NULL DEFAULT 1,
+    permissions JSONB NOT NULL DEFAULT '{"configs":{"read":true,"write":false},"models":{}}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_applications_system_id ON applications(system_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_applications_app_key ON applications(app_key) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_applications_app_secret ON applications(app_secret) WHERE deleted_at IS NULL;
+
+DROP TRIGGER IF EXISTS set_timestamp_applications ON applications;
+CREATE TRIGGER set_timestamp_applications BEFORE UPDATE ON applications FOR EACH ROW EXECUTE FUNCTION trigger_set_timestamp();
+
+-- ============================================================================
 -- 9. DEFAULT INITIAL SEED DATA (系统初始化超级管理员账号: admin / admin123456)
 -- 拥有全量子系统管理权限 (allowed_systems = '["*"]')
 -- Password Hash: Argon2id representation for 'admin123456'

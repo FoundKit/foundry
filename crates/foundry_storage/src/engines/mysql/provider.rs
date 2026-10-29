@@ -1,7 +1,8 @@
 use crate::engines::mysql::connection::{create_mysql_pool, extract_server_url};
 use crate::engines::mysql::records::MySqlRecordEngine;
 use crate::engines::mysql::stores::{
-    MySqlAdminEngine, MySqlAuditEngine, MySqlConfigEngine, MySqlModelEngine, MySqlSystemEngine,
+    MySqlAdminEngine, MySqlApplicationEngine, MySqlAuditEngine, MySqlConfigEngine,
+    MySqlModelEngine, MySqlSystemEngine,
 };
 use crate::spi::provider::{StorageDriverProvider, StorageEngineSet};
 use async_trait::async_trait;
@@ -48,7 +49,8 @@ impl StorageDriverProvider for MySqlProvider {
             systems: Arc::new(MySqlSystemEngine::new(pool.clone())),
             configs: Arc::new(MySqlConfigEngine::new(pool.clone())),
             admins: Arc::new(MySqlAdminEngine::new(pool.clone())),
-            audit: Arc::new(MySqlAuditEngine::new(pool)),
+            audit: Arc::new(MySqlAuditEngine::new(pool.clone())),
+            apps: Arc::new(MySqlApplicationEngine::new(pool)),
         })
     }
 
