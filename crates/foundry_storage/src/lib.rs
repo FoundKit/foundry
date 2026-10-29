@@ -5,6 +5,7 @@ pub mod db;
 pub mod engines;
 pub mod entities;
 pub mod facade;
+pub mod migrations;
 pub mod models;
 pub mod orm;
 pub mod redis_client;
@@ -18,6 +19,7 @@ pub use configs::ConfigStore;
 pub use db::{DbPool, init_db_pool, run_migrations};
 pub use entities::*;
 pub use facade::Database;
+pub use migrations::MigrationItem;
 pub use models::{ModelStore, RecordQuery, RecordStore};
 pub use orm::{
     Dialect, OrmCondition, OrmDelete, OrmInsert, OrmSelect, OrmUpdate, OrmValue,

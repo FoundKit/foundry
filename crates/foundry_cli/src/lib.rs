@@ -77,6 +77,9 @@ enum Commands {
         /// Check whether database schema is complete and synchronized without applying migrations
         #[arg(long, short = 'c')]
         check: bool,
+        /// Show current migration status (applied vs pending)
+        #[arg(long, short = 's')]
+        status: bool,
     },
     /// Generate dialect-specific DDL / migration scripts
     #[command(alias = "generate-ddl", alias = "gen-ddl")]
@@ -160,17 +163,6 @@ impl std::str::FromStr for DatabaseKind {
         }
     }
 }
-
-const MONGO_README: &str = r#"# MongoDB Initialization & Migrations
-
-Foundry adopts a **Zero-DDL Document Architecture** with MongoDB:
-- **No SQL DDL migrations needed**: Dynamic schema models and entity records are stored in native BSON collections.
-- **Automatic Initialization**: When `AUTO_MIGRATE=true` (default), the Foundry server creates all collections, indexes, and the default superadmin user automatically upon startup.
-- **Manual DBA Control**: When `AUTO_MIGRATE=false`, DBA or deployment pipelines can execute the initialization script manually:
-  ```bash
-  mongosh "mongodb://127.0.0.1:27017/foundry" migrations/init.js
-  ```
-"#;
 
 impl DatabaseKind {
     pub fn as_str(&self) -> &'static str {
@@ -366,7 +358,62 @@ pub async fn run_cli() -> anyhow::Result<()> {
             generate,
             output,
             check,
+            status,
         } => {
+            if status {
+                let db_url = database_url.unwrap_or_else(|| {
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+                        "postgres://postgres:postgrespassword@localhost:5432/foundry".to_string()
+                    })
+                });
+                let explicit_type = database_type.or_else(|| std::env::var("DATABASE_TYPE").ok());
+                println!(
+                    "Fetching migration status for {} (type: {:?})...",
+                    db_url,
+                    explicit_type.as_deref().unwrap_or("auto-detect")
+                );
+                let (all, applied) = foundry_storage::Database::get_migration_status(
+                    &db_url,
+                    explicit_type.as_deref(),
+                )
+                .await?;
+                let applied_set: std::collections::HashSet<u32> = applied.into_iter().collect();
+
+                println!("\nPlatform Sequential Migrations Chain:");
+                let mut pending_count = 0;
+                for m in &all {
+                    let is_applied = applied_set.contains(&m.sequence);
+                    let mark = if is_applied {
+                        "[✓]"
+                    } else {
+                        pending_count += 1;
+                        "[ ]"
+                    };
+                    println!(
+                        "  {} {:04} [{}] {}: {} ({})",
+                        mark,
+                        m.sequence,
+                        m.version,
+                        m.name,
+                        m.filename,
+                        if is_applied { "applied" } else { "PENDING" }
+                    );
+                }
+
+                if pending_count == 0 {
+                    println!(
+                        "\n✅ Database is up to date! All {} migration(s) applied.",
+                        all.len()
+                    );
+                } else {
+                    println!(
+                        "\n⚠️ {} migration(s) pending. Run `foundry migrate` to apply in sequence.",
+                        pending_count
+                    );
+                }
+                return Ok(());
+            }
+
             if check {
                 let db_url = database_url.unwrap_or_else(|| {
                     std::env::var("DATABASE_URL").unwrap_or_else(|_| {
@@ -487,50 +534,48 @@ pub fn generate_ddl(
             let file_path = dir.join(db_kind.default_migration_filename());
             fs::write(&file_path, &content)?;
 
-            // Generate versioned patch for existing databases (e.g. v0.2.0)
+            // Generate all sequential versioned migration files in migrations/versions/
             let versions_dir = dir.join("versions");
             fs::create_dir_all(&versions_dir)?;
-            if let Ok(Some(patch)) =
-                foundry_storage::Database::get_version_patch_ddl(db_kind.as_str(), "v0.2.0")
-            {
-                let patch_filename = match db_kind {
-                    DatabaseKind::MongoDb => "v0.2.0_add_applications.js",
-                    _ => "v0.2.0_add_applications.sql",
-                };
-                fs::write(versions_dir.join(patch_filename), patch)?;
+            let migrations =
+                foundry_storage::Database::get_migrations(db_kind.as_str()).unwrap_or_default();
+            let mut table_rows = String::new();
+
+            for m in &migrations {
+                let patch_file = versions_dir.join(m.filename);
+                let _ = fs::write(patch_file, m.sql);
+                table_rows.push_str(&format!(
+                    "| `{:04}` | `{}` | `{}` | {} | `{}` |\n",
+                    m.sequence, m.version, m.name, m.description, m.filename
+                ));
             }
 
-            // Write migration guide README
-            let readme_content = if db_kind == DatabaseKind::MongoDb {
-                MONGO_README.to_string()
-            } else {
-                let ext = "sql";
-                format!(
-                    "# Database Migrations (Engine: {})\n\n\
-                    ## 1. Fresh Database Initialization (全新数据库初始化)\n\
-                    For new installations, apply `{}`:\n\
-                    ```bash\n\
-                    # Using Foundry CLI:\n\
-                    foundry migrate\n\
-                    ```\n\n\
-                    ## 2. Existing Database Version Upgrade (已有数据库跨版本升级)\n\
-                    If your existing database was running Foundry v0.1.x and upgrading to v0.2.0:\n\
-                    Apply the one-off version upgrade patch located in `versions/`:\n\
-                    - `versions/v0.2.0_add_applications.{}`\n\n\
-                    ```bash\n\
-                    # Automatic sync (if AUTO_MIGRATE=true):\n\
-                    # Foundry will automatically apply missing tables on startup.\n\n\
-                    # Manual DBA / Strict mode (if AUTO_MIGRATE=false):\n\
-                    # Apply `versions/v0.2.0_add_applications.{}` before starting the application,\n\
-                    # or execute:\n\
-                    foundry migrate\n\
-                    ```\n",
-                    db_kind.display_name(),
-                    db_kind.default_migration_filename(),
-                    ext,
-                    ext,
-                )
-            };
+            // Write comprehensive migration guide README
+            let readme_content = format!(
+                "# Database Migrations (Engine: {})\n\n\
+                ## 1. Migration History & Sequential Upgrade Chain\n\n\
+                | Sequence | Version | Name | Description | Migration File |\n\
+                | :--- | :--- | :--- | :--- | :--- |\n\
+                {}\n\
+                ## 2. Usage Guide\n\n\
+                ### A. Fresh Database Initialization (全新数据库初始化)\n\
+                For new installations, apply `{}` or execute:\n\
+                ```bash\n\
+                foundry migrate\n\
+                ```\n\n\
+                ### B. Existing Database Upgrade (已有老数据库跨版本升级)\n\
+                If your existing database is upgrading from an earlier version (e.g. from v0.1.0 to v0.2.0, or jumping directly across multiple versions like 0.1.0 -> 0.5.0):\n\
+                Apply pending numbered migration files in `versions/` in strict sequence, or execute:\n\
+                ```bash\n\
+                # 1. Check status and pending migrations:\n\
+                foundry migrate --status\n\n\
+                # 2. Apply all pending migrations sequentially in order:\n\
+                foundry migrate\n\
+                ```\n",
+                db_kind.display_name(),
+                table_rows,
+                db_kind.default_migration_filename(),
+            );
             fs::write(dir.join("README.md"), readme_content)?;
 
             file_path

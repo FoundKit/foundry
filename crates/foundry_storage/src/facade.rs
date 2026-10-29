@@ -285,6 +285,25 @@ impl Database {
         Ok(provider.get_version_patch_ddl(version))
     }
 
+    /// Returns the complete list of ordered version migrations for the given database dialect
+    pub fn get_migrations(explicit_type: &str) -> AppResult<Vec<crate::migrations::MigrationItem>> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider_by_type(explicit_type)?;
+        Ok(provider.get_migrations())
+    }
+
+    /// Returns the migration status: (all migration definitions, applied sequence numbers)
+    pub async fn get_migration_status(
+        url: &str,
+        explicit_type: Option<&str>,
+    ) -> AppResult<(Vec<crate::migrations::MigrationItem>, Vec<u32>)> {
+        let registry = StorageRegistry::default_registry();
+        let provider = registry.find_provider(url, explicit_type)?;
+        let all = provider.get_migrations();
+        let applied = provider.get_applied_migrations(url).await?;
+        Ok((all, applied))
+    }
+
     /// Run migrations for the specified database connection, including any code-defined DDL extensions
     pub async fn run_migrations(url: &str, explicit_type: Option<&str>) -> AppResult<()> {
         let registry = StorageRegistry::default_registry();

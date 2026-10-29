@@ -44,11 +44,10 @@ CREATE TABLE IF NOT EXISTS system_configs (
     sort_order INTEGER NOT NULL DEFAULT 0,         -- Form display order in settings page
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ NULL,
     CONSTRAINT uk_system_configs_key UNIQUE (system_id, key)
 );
 
-CREATE INDEX IF NOT EXISTS idx_system_configs_tenant ON system_configs(system_id, sort_order ASC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_system_configs_tenant ON system_configs(system_id, sort_order ASC);
 
 -- ============================================================================
 -- 3. DYNAMIC DATA MODELS (海量多记录业务数据模型元数据表)
@@ -87,11 +86,10 @@ CREATE TABLE IF NOT EXISTS model_fields (
     sort_order INTEGER NOT NULL DEFAULT 0,         -- Form field display order
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ NULL,
     CONSTRAINT uk_model_fields_model_name UNIQUE (model_id, name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_model_fields_sort ON model_fields(model_id, sort_order ASC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_model_fields_sort ON model_fields(model_id, sort_order ASC);
 
 -- ============================================================================
 -- 5. MODEL RECORDS (数据模型海量记录存储表 - Mode A 多记录实体存储)
@@ -130,14 +128,12 @@ CREATE TABLE IF NOT EXISTS admins (
     allowed_systems JSONB NOT NULL DEFAULT '[]'::jsonb, -- 授权子系统 slug 列表 (超管与普通管理员为 '["*"]'；专题管理员由超管赋予特定专题如 '["carnival_2026", "vip_mall"]')
     status SMALLINT NOT NULL DEFAULT 1,            -- 1: Active, 0: Disabled
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ NULL
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username);
 CREATE INDEX IF NOT EXISTS idx_admins_role ON admins(role);
 CREATE INDEX IF NOT EXISTS idx_admins_status ON admins(status);
-CREATE INDEX IF NOT EXISTS idx_admins_deleted ON admins(deleted_at);
 
 -- ============================================================================
 -- 7. ADMIN NON-GET OPERATION AUDIT LOGS (管理员全量写操作/非GET请求审计日志表)

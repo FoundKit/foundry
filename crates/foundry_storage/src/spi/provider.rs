@@ -72,16 +72,33 @@ pub trait StorageDriverProvider: Send + Sync {
 
         if !missing.is_empty() {
             let db_name = self.driver_name();
-            let migration_file = self.default_migration_filename();
+            let all_migrations = self.get_migrations();
+            let pending_list = if all_migrations.is_empty() {
+                format!("  - `migrations/{}`", self.default_migration_filename())
+            } else {
+                all_migrations
+                    .iter()
+                    .filter(|m| m.sequence > 1)
+                    .map(|m| {
+                        format!(
+                            "  - [{:04}] [{}] `migrations/versions/{}`: {}",
+                            m.sequence, m.version, m.filename, m.description
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            };
+
             return Err(foundry_core::error::AppError::Database(format!(
                 "Database schema verification failed for driver '{}'!\n\
                 The following required table(s) or collection(s) are missing from the database: {:?}.\n\
-                Root cause: AUTO_MIGRATE=false is active, but the baseline database schema DDL has not been synchronized.\n\
+                Root cause: AUTO_MIGRATE=false is active, but database migrations have not been applied.\n\
+                Available Sequential Migration Patches:\n{}\n\
                 Remediation Options:\n\
-                  1. Run platform migrations manually: `foundry migrate`\n\
-                  2. Apply the dialect DDL script directly (e.g. `migrations/{}`)\n\
+                  1. Run migrations automatically in sequence: `foundry migrate`\n\
+                  2. Apply the numbered migration script(s) above in order manually\n\
                   3. Or set AUTO_MIGRATE=true in your .env or environment to allow automatic schema synchronization.",
-                db_name, missing, migration_file
+                db_name, missing, pending_list
             )));
         }
 
@@ -94,6 +111,16 @@ pub trait StorageDriverProvider: Send + Sync {
     /// Returns one-off incremental patch DDL for a given target version if applicable
     fn get_version_patch_ddl(&self, _version: &str) -> Option<&'static str> {
         None
+    }
+
+    /// Returns the complete list of ordered version migrations for this dialect
+    fn get_migrations(&self) -> Vec<crate::migrations::MigrationItem> {
+        crate::migrations::get_migrations_for_dialect(self.driver_name())
+    }
+
+    /// Retrieves all applied migration sequence numbers from `_foundry_migrations`
+    async fn get_applied_migrations(&self, _connection_url: &str) -> AppResult<Vec<u32>> {
+        Ok(Vec::new())
     }
 
     /// Returns default filename for migrations (e.g. "init.sql" for SQL, "init.js" for MongoDB)

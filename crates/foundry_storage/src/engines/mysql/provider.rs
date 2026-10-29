@@ -86,28 +86,86 @@ impl StorageDriverProvider for MySqlProvider {
             }
         };
 
-        let init_sql = self.get_baseline_ddl();
+        // 1. Ensure `_foundry_migrations` tracking table exists
+        let create_meta_sql = "CREATE TABLE IF NOT EXISTS `_foundry_migrations` (\
+            `sequence` INT NOT NULL PRIMARY KEY,\
+            `version` VARCHAR(32) NOT NULL,\
+            `name` VARCHAR(64) NOT NULL,\
+            `applied_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)\
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+        let _ = sqlx::query(create_meta_sql).execute(&pool).await;
 
-        // Split statements by semicolon and execute each statement sequentially
-        let statements = init_sql.split(';');
-        for raw_stmt in statements {
-            let stmt = raw_stmt.trim();
-            if stmt.is_empty() {
+        // 2. Fetch applied migration sequences
+        let applied_rows: Vec<(i32,)> =
+            sqlx::query_as("SELECT sequence FROM `_foundry_migrations` ORDER BY sequence ASC")
+                .fetch_all(&pool)
+                .await
+                .unwrap_or_default();
+        let mut applied_set: std::collections::HashSet<u32> =
+            applied_rows.into_iter().map(|(s,)| s as u32).collect();
+
+        // If _foundry_migrations was just created on an existing legacy database, backfill already existing baseline tables
+        if applied_set.is_empty() {
+            let existing_tables = self
+                .get_existing_tables(connection_url)
+                .await
+                .unwrap_or_default();
+            let table_set: std::collections::HashSet<String> = existing_tables
+                .into_iter()
+                .map(|t| t.to_ascii_lowercase())
+                .collect();
+            if table_set.contains("systems") {
+                let _ = sqlx::query("INSERT IGNORE INTO `_foundry_migrations` (`sequence`, `version`, `name`) VALUES (1, 'v0.1.0', 'baseline')").execute(&pool).await;
+                applied_set.insert(1);
+            }
+            if table_set.contains("applications") {
+                let _ = sqlx::query("INSERT IGNORE INTO `_foundry_migrations` (`sequence`, `version`, `name`) VALUES (2, 'v0.2.0', 'add_applications')").execute(&pool).await;
+                applied_set.insert(2);
+            }
+        }
+
+        // 3. Apply all pending sequential versioned migrations
+        let migrations = self.get_migrations();
+        for m in migrations {
+            if applied_set.contains(&m.sequence) {
                 continue;
             }
 
-            sqlx::query(sqlx::AssertSqlSafe(stmt))
-                .execute(&pool)
-                .await
-                .map_err(|e| {
-                    AppError::Database(format!(
-                        "MySQL migration statement failed [{}]: {}",
-                        stmt, e
-                    ))
-                })?;
+            info!(
+                "Applying MySQL migration {:04} ({}_{})...",
+                m.sequence, m.version, m.name
+            );
+
+            let statements = m.sql.split(';');
+            for raw_stmt in statements {
+                let stmt = raw_stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                sqlx::query(sqlx::AssertSqlSafe(stmt))
+                    .execute(&pool)
+                    .await
+                    .map_err(|e| {
+                        AppError::Database(format!(
+                            "MySQL migration {:04} ({}) failed on statement [{}]: {}",
+                            m.sequence, m.name, stmt, e
+                        ))
+                    })?;
+            }
+
+            let _ = sqlx::query(
+                "INSERT INTO `_foundry_migrations` (`sequence`, `version`, `name`) VALUES (?, ?, ?)"
+            )
+            .bind(m.sequence as i32)
+            .bind(m.version)
+            .bind(m.name)
+            .execute(&pool)
+            .await;
+
+            applied_set.insert(m.sequence);
         }
 
-        // Ensure soft-deletion column exists on any pre-existing tables
+        // 4. Ensure soft-deletion column exists on any pre-existing tables
         let mysql_alters = [
             (
                 "systems",
@@ -140,8 +198,43 @@ impl StorageDriverProvider for MySqlProvider {
             }
         }
 
-        info!("MySQL/MariaDB database migration completed successfully.");
+        // 5. Apply any code-defined DDL extensions registered by subsystems
+        let extensions = crate::spi::registry::get_registered_ddl_extensions(self.driver_name());
+        for ext in extensions {
+            for raw_stmt in ext.content.split(';') {
+                let stmt = raw_stmt.trim();
+                if stmt.is_empty() {
+                    continue;
+                }
+                let _ = sqlx::query(sqlx::AssertSqlSafe(stmt)).execute(&pool).await;
+            }
+        }
+
+        info!("MySQL/MariaDB database migrations completed successfully.");
         Ok(())
+    }
+
+    async fn get_applied_migrations(&self, connection_url: &str) -> AppResult<Vec<u32>> {
+        if connection_url.contains("dummy") {
+            return Ok(Vec::new());
+        }
+        let pool = match create_mysql_pool(
+            connection_url,
+            1,
+            Duration::from_secs(5),
+            "applied migrations",
+        )
+        .await
+        {
+            Ok(p) => p,
+            Err(_) => return Ok(Vec::new()),
+        };
+        let rows: Vec<(i32,)> =
+            sqlx::query_as("SELECT sequence FROM `_foundry_migrations` ORDER BY sequence ASC")
+                .fetch_all(&pool)
+                .await
+                .unwrap_or_default();
+        Ok(rows.into_iter().map(|(s,)| s as u32).collect())
     }
 
     async fn get_existing_tables(&self, connection_url: &str) -> AppResult<Vec<String>> {
