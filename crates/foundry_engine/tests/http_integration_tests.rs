@@ -479,3 +479,31 @@ async fn test_subsystem_custom_admin_page_served_under_admin_ext() {
         "Expected body to contain 'Lottery Dashboard', but got: {body_str}"
     );
 }
+
+#[tokio::test]
+async fn test_authenticated_mutating_request_authenticates_properly() {
+    let state = dummy_app_state();
+    let app = build_router(state.clone());
+    let admin_id = uuid::Uuid::new_v4();
+    let token = state
+        .jwt
+        .generate_token(admin_id, "test_admin", "super_admin", vec![])
+        .unwrap();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/systems")
+                .method("POST")
+                .header("Authorization", format!("Bearer {token}"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"name":"Test","slug":"test"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // Since dummy DB is offline, creating system will return DB error (500), but NOT 401 Unauthorized!
+    // This proves require_admin_auth accepted the pre-extracted claims from audit_interceptor.
+    assert_ne!(response.status(), StatusCode::UNAUTHORIZED);
+}

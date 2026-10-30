@@ -42,13 +42,23 @@ pub async fn require_subsystem_app_or_admin_auth(
         _ => "read",
     };
 
+    // 0. Support pre-extracted AdminClaims
+    if let Some(claims) = req.extensions().get::<foundry_auth::AdminClaims>().cloned() {
+        check_system_access(&claims, system_slug)?;
+        return Ok(next.run(req).await);
+    }
+
     let auth_header = req
         .headers()
         .get(AUTHORIZATION)
         .and_then(|h| h.to_str().ok());
 
     if let Some(header) = auth_header {
-        let token = header.strip_prefix("Bearer ").unwrap_or(header).trim();
+        let token = header
+            .strip_prefix("Bearer ")
+            .or_else(|| header.strip_prefix("bearer "))
+            .unwrap_or(header)
+            .trim();
 
         // 1. Check if token is a valid Admin JWT
         if let Ok(claims) = state.jwt.verify_token(token) {

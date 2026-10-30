@@ -15,17 +15,27 @@ pub async fn require_admin_auth(
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
+    if req.extensions().get::<AdminClaims>().is_some() {
+        return Ok(next.run(req).await);
+    }
+
     let auth_header = req
         .headers()
         .get(AUTHORIZATION)
         .and_then(|h| h.to_str().ok())
         .ok_or_else(|| AppError::Unauthorized("Missing Authorization header".to_string()))?;
 
-    let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
-        AppError::Unauthorized(
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .or_else(|| auth_header.strip_prefix("bearer "))
+        .unwrap_or(auth_header)
+        .trim();
+
+    if token.is_empty() {
+        return Err(AppError::Unauthorized(
             "Invalid Authorization scheme, expected 'Bearer <token>'".to_string(),
-        )
-    })?;
+        ));
+    }
 
     let claims = state.jwt.verify_token(token)?;
     req.extensions_mut().insert(claims);
