@@ -6,7 +6,7 @@ use axum::{
 use foundry_core::context::SystemContext;
 use foundry_core::error::AppResult;
 use foundry_core::response::{ApiResponse, PaginatedData};
-use foundry_storage::{ModelRecordEntity, RecordQuery, validate_record};
+use foundry_storage::{ModelRecordEntity, RecordQuery, coerce_record_data, validate_record};
 use serde_json::Value;
 
 /// GET /api/s/:system_slug/:model_slug (List records with pagination and filters)
@@ -15,18 +15,23 @@ pub async fn list_records_handler(
     Path((system_slug, model_slug)): Path<(String, String)>,
     Query(query): Query<RecordQuery>,
 ) -> AppResult<Json<ApiResponse<PaginatedData<ModelRecordEntity>>>> {
-    // Verify model exists
-    let _model = state
+    let model = state
         .db
         .models()
         .get_model(&system_slug, &model_slug)
         .await?;
+    let fields = state.db.models().list_fields(model.id).await?;
 
-    let records = state
+    let mut records = state
         .db
         .records()
         .list(&system_slug, &model_slug, query)
         .await?;
+
+    for rec in &mut records.items {
+        coerce_record_data(&fields, &mut rec.data);
+    }
+
     Ok(Json(ApiResponse::success(records)))
 }
 
@@ -35,16 +40,20 @@ pub async fn get_record_handler(
     State(state): State<AppState>,
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
 ) -> AppResult<Json<ApiResponse<ModelRecordEntity>>> {
-    let _model = state
+    let model = state
         .db
         .models()
         .get_model(&system_slug, &model_slug)
         .await?;
-    let record = state
+    let fields = state.db.models().list_fields(model.id).await?;
+    let mut record = state
         .db
         .records()
         .get_by_id(&system_slug, &model_slug, id)
         .await?;
+
+    coerce_record_data(&fields, &mut record.data);
+
     Ok(Json(ApiResponse::success(record)))
 }
 
@@ -61,6 +70,9 @@ pub async fn create_record_handler(
         .get_model(&system_slug, &model_slug)
         .await?;
     let fields = state.db.models().list_fields(model.id).await?;
+
+    // Gracefully coerce payload to match target schema when admin/user saves
+    coerce_record_data(&fields, &mut payload);
 
     // In-memory schema validation
     validate_record(&fields, &payload)?;
@@ -106,6 +118,9 @@ pub async fn update_record_handler(
         .get_model(&system_slug, &model_slug)
         .await?;
     let fields = state.db.models().list_fields(model.id).await?;
+
+    // Gracefully coerce payload to match target schema when admin/user saves
+    coerce_record_data(&fields, &mut payload);
 
     // In-memory schema validation
     validate_record(&fields, &payload)?;

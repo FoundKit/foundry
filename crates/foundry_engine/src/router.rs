@@ -77,6 +77,17 @@ pub fn build_router(state: AppState) -> Router {
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
         )
         .route(
+            "/s/{system_slug}/models/export",
+            post(models::export_models_handler)
+                .get(models::export_models_get_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
+            "/s/{system_slug}/models/import",
+            post(models::import_models_handler)
+                .route_layer(from_fn_with_state(state.clone(), require_topic_access)),
+        )
+        .route(
             "/s/{system_slug}/models/trash",
             get(models::list_deleted_models_handler)
                 .route_layer(from_fn_with_state(state.clone(), require_topic_access)),

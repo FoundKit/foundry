@@ -1,7 +1,7 @@
 use crate::engines::mongodb::counters::next_id;
 use crate::entities::{
     AdminEntity, ApplicationEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
-    SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
+    ReferencingFieldInfo, SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
 };
 use crate::traits::{
     AdminStoreEngine, ApplicationStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine,
@@ -139,6 +139,27 @@ impl ModelStoreEngine for MongoModelEngine {
         description: Option<&str>,
         permissions: Option<Value>,
     ) -> AppResult<ModelEntity> {
+        let coll = self.db.collection::<mongodb::bson::Document>("models");
+        let filter = doc! { "system_id": system_slug, "slug": slug };
+        if let Some(existing) = coll
+            .find_one(filter)
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to check model uniqueness: {}", e)))?
+        {
+            let deleted_at = existing.get("deleted_at");
+            if deleted_at.is_none() || deleted_at == Some(&mongodb::bson::Bson::Null) {
+                return Err(AppError::Validation(format!(
+                    "数据模型标识 '{}' 在子系统 '{}' 中已存在，不能重复创建",
+                    slug, system_slug
+                )));
+            } else {
+                return Err(AppError::Validation(format!(
+                    "数据模型标识 '{}' 已存在于子系统 '{}' 的回收站中，请直接在回收站中恢复使用，无需重新创建",
+                    slug, system_slug
+                )));
+            }
+        }
+
         let default_perms = serde_json::json!({
             "public_read": false,
             "public_write": false,
@@ -166,7 +187,6 @@ impl ModelStoreEngine for MongoModelEngine {
         let doc = mongodb::bson::to_document(&entity)
             .map_err(|e| AppError::Database(format!("Failed to serialize model: {}", e)))?;
 
-        let coll = self.db.collection::<mongodb::bson::Document>("models");
         coll.insert_one(doc)
             .await
             .map_err(|e| AppError::Database(format!("Failed to insert model: {}", e)))?;
@@ -185,23 +205,28 @@ impl ModelStoreEngine for MongoModelEngine {
         let current = self.get_model_by_id(model_id).await?;
         let coll = self.db.collection::<mongodb::bson::Document>("models");
 
-        // If slug changed, ensure no other active model conflicts with the new slug
+        // If slug changed, ensure no other model conflicts with the new slug
         if current.slug != slug {
             let conflict_filter = doc! {
                 "system_id": &current.system_id,
                 "slug": slug,
                 "id": { "$ne": model_id },
-                "deleted_at": null,
             };
-            let conflict = coll.find_one(conflict_filter).await.map_err(|e| {
+            if let Some(conflict) = coll.find_one(conflict_filter).await.map_err(|e| {
                 AppError::Database(format!("Failed to check slug uniqueness: {}", e))
-            })?;
-
-            if conflict.is_some() {
-                return Err(AppError::Validation(format!(
-                    "A model with slug '{}' already exists in system '{}'",
-                    slug, current.system_id
-                )));
+            })? {
+                let deleted_at = conflict.get("deleted_at");
+                if deleted_at.is_none() || deleted_at == Some(&mongodb::bson::Bson::Null) {
+                    return Err(AppError::Validation(format!(
+                        "数据模型标识 '{}' 在子系统 '{}' 中已存在",
+                        slug, current.system_id
+                    )));
+                } else {
+                    return Err(AppError::Validation(format!(
+                        "数据模型标识 '{}' 已存在于子系统 '{}' 的回收站中，无法重命名为此标识",
+                        slug, current.system_id
+                    )));
+                }
             }
         }
 
@@ -425,7 +450,100 @@ impl ModelStoreEngine for MongoModelEngine {
         Ok(())
     }
 
+    async fn find_referencing_fields(
+        &self,
+        system_slug: &str,
+        model_slug: &str,
+        exclude_model_id: i64,
+    ) -> AppResult<Vec<ReferencingFieldInfo>> {
+        let models_coll = self.db.collection::<mongodb::bson::Document>("models");
+        let fields_coll = self
+            .db
+            .collection::<mongodb::bson::Document>("model_fields");
+
+        let active_models_filter = doc! {
+            "id": { "$ne": exclude_model_id },
+            "deleted_at": null,
+        };
+        let mut cursor = models_coll.find(active_models_filter).await.map_err(|e| {
+            AppError::Database(format!(
+                "Failed to list active models for reference check: {}",
+                e
+            ))
+        })?;
+
+        let mut referencing = Vec::new();
+        while cursor
+            .advance()
+            .await
+            .map_err(|e| AppError::Database(format!("Failed to advance models cursor: {}", e)))?
+        {
+            let model_doc = cursor
+                .deserialize_current()
+                .map_err(|e| AppError::Database(format!("Failed to deserialize model: {}", e)))?;
+            let m_id = model_doc.get_i64("id").unwrap_or(0);
+            let m_sys = model_doc.get_str("system_id").unwrap_or("");
+            let m_name = model_doc.get_str("name").unwrap_or("");
+            let m_slug = model_doc.get_str("slug").unwrap_or("");
+
+            let fields_filter = doc! {
+                "model_id": m_id,
+                "field_type": "relation",
+                "deleted_at": null,
+            };
+            let mut f_cursor = fields_coll.find(fields_filter).await.map_err(|e| {
+                AppError::Database(format!("Failed to list fields for reference check: {}", e))
+            })?;
+
+            while f_cursor.advance().await.map_err(|e| {
+                AppError::Database(format!("Failed to advance fields cursor: {}", e))
+            })? {
+                let f_doc = f_cursor.deserialize_current().map_err(|e| {
+                    AppError::Database(format!("Failed to deserialize field: {}", e))
+                })?;
+                let f_name = f_doc.get_str("name").unwrap_or("");
+                let f_label = f_doc.get_str("label").unwrap_or("");
+                if let Ok(options_doc) = f_doc.get_document("options") {
+                    let target_model = options_doc.get_str("target_model").unwrap_or("");
+                    let target_system = options_doc.get_str("target_system").unwrap_or("");
+                    let targets_this = target_model == model_slug
+                        && (target_system == system_slug
+                            || (target_system.is_empty() && m_sys == system_slug));
+                    if targets_this {
+                        referencing.push(ReferencingFieldInfo {
+                            system_slug: m_sys.to_string(),
+                            model_name: m_name.to_string(),
+                            model_slug: m_slug.to_string(),
+                            field_label: f_label.to_string(),
+                            field_name: f_name.to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(referencing)
+    }
+
     async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        let model = self.get_model(system_slug, model_slug).await?;
+        let refs = self
+            .find_referencing_fields(&model.system_id, &model.slug, model.id)
+            .await?;
+        if let Some(r) = refs.first() {
+            return Err(AppError::Validation(format!(
+                "无法删除数据模型 '{}'（/{}/{}）：已被数据模型 '{}'（/{}/{}）的字段 '{}'（{}）关联。请先解除关联或修改字段数据类型后，再删除该模型。",
+                model.name,
+                model.system_id,
+                model.slug,
+                r.model_name,
+                r.system_slug,
+                r.model_slug,
+                r.field_label,
+                r.field_name
+            )));
+        }
+
         let coll = self.db.collection::<mongodb::bson::Document>("models");
         let filter = doc! {
             "system_id": system_slug,
@@ -453,6 +571,24 @@ impl ModelStoreEngine for MongoModelEngine {
     }
 
     async fn delete_model_by_id(&self, model_id: i64) -> AppResult<()> {
+        let model = self.get_model_by_id(model_id).await?;
+        let refs = self
+            .find_referencing_fields(&model.system_id, &model.slug, model.id)
+            .await?;
+        if let Some(r) = refs.first() {
+            return Err(AppError::Validation(format!(
+                "无法删除数据模型 '{}'（/{}/{}）：已被数据模型 '{}'（/{}/{}）的字段 '{}'（{}）关联。请先解除关联或修改字段数据类型后，再删除该模型。",
+                model.name,
+                model.system_id,
+                model.slug,
+                r.model_name,
+                r.system_slug,
+                r.model_slug,
+                r.field_label,
+                r.field_name
+            )));
+        }
+
         let coll = self.db.collection::<mongodb::bson::Document>("models");
         let filter = doc! { "id": model_id, "deleted_at": null };
         let update = doc! {

@@ -6,8 +6,8 @@ use axum::{
 use foundry_core::error::{AppError, AppResult};
 use foundry_core::response::ApiResponse;
 use foundry_core::types::is_valid_slug;
-use foundry_storage::{ModelEntity, ModelFieldEntity};
-use serde::Deserialize;
+use foundry_storage::{ModelEntity, ModelExportItem, ModelFieldEntity};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Deserialize)]
@@ -220,4 +220,195 @@ pub async fn delete_model_field_handler(
 ) -> AppResult<Json<ApiResponse<()>>> {
     state.db.models().delete_field(field_id).await?;
     Ok(Json(ApiResponse::success(())))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ExportModelsPayload {
+    pub model_ids: Option<Vec<i64>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ImportModelsResult {
+    pub total: usize,
+    pub created: usize,
+    pub updated: usize,
+    pub restored: usize,
+    pub models: Vec<ModelEntity>,
+}
+
+async fn export_models_impl(
+    state: AppState,
+    system_slug: String,
+    model_ids: Option<Vec<i64>>,
+) -> AppResult<Json<ApiResponse<Vec<ModelExportItem>>>> {
+    let all_models = state.db.models().list_models(&system_slug).await?;
+    let target_models: Vec<ModelEntity> = if let Some(ids) = model_ids {
+        if !ids.is_empty() {
+            let id_set: std::collections::HashSet<i64> = ids.into_iter().collect();
+            all_models
+                .into_iter()
+                .filter(|m| id_set.contains(&m.id))
+                .collect()
+        } else {
+            all_models
+        }
+    } else {
+        all_models
+    };
+
+    let mut export_items = Vec::with_capacity(target_models.len());
+    for model in target_models {
+        let fields = state.db.models().list_fields(model.id).await?;
+        export_items.push(ModelExportItem::from_entity(model, fields));
+    }
+
+    Ok(Json(ApiResponse::success(export_items)))
+}
+
+pub async fn export_models_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+    Json(payload): Json<ExportModelsPayload>,
+) -> AppResult<Json<ApiResponse<Vec<ModelExportItem>>>> {
+    export_models_impl(state, system_slug, payload.model_ids).await
+}
+
+pub async fn export_models_get_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+) -> AppResult<Json<ApiResponse<Vec<ModelExportItem>>>> {
+    export_models_impl(state, system_slug, None).await
+}
+
+pub async fn import_models_handler(
+    State(state): State<AppState>,
+    Path(system_slug): Path<String>,
+    Json(items): Json<Vec<ModelExportItem>>,
+) -> AppResult<Json<ApiResponse<ImportModelsResult>>> {
+    if items.is_empty() {
+        return Err(AppError::Validation(
+            "No models provided for import".to_string(),
+        ));
+    }
+
+    let mut created_count = 0;
+    let mut updated_count = 0;
+    let mut restored_count = 0;
+    let mut result_models = Vec::with_capacity(items.len());
+
+    for item in items {
+        if !is_valid_slug(&item.slug, 48) {
+            return Err(AppError::Validation(format!(
+                "Invalid model slug '{}': must be 2-48 lowercase alphanumeric characters or underscore/hyphen",
+                item.slug
+            )));
+        }
+
+        let existing_active = state.db.models().list_models(&system_slug).await?;
+        let existing_deleted = state.db.models().list_deleted_models(&system_slug).await?;
+
+        let existing_model = existing_active
+            .into_iter()
+            .find(|m| m.slug == item.slug)
+            .or_else(|| existing_deleted.into_iter().find(|m| m.slug == item.slug));
+
+        let model = if let Some(existing) = existing_model {
+            if existing.deleted_at.is_some() {
+                state.db.models().restore_model(existing.id).await?;
+                restored_count += 1;
+            }
+            let updated = state
+                .db
+                .models()
+                .update_model(
+                    existing.id,
+                    &item.slug,
+                    &item.name,
+                    item.description.as_deref(),
+                    Some(item.permissions),
+                )
+                .await?;
+            updated_count += 1;
+            updated
+        } else {
+            let created = state
+                .db
+                .models()
+                .create_model(
+                    &system_slug,
+                    &item.slug,
+                    &item.name,
+                    item.description.as_deref(),
+                    Some(item.permissions),
+                )
+                .await?;
+            created_count += 1;
+            created
+        };
+
+        // Sync fields for this model
+        let current_fields = state.db.models().list_fields(model.id).await?;
+        for field in item.fields {
+            if !is_valid_field_name(&field.name) {
+                continue;
+            }
+
+            let mut options = field.options;
+            // If this is a relation field, rewrite target_system if it pointed to the source system
+            if field.field_type == "relation"
+                && let Some(opt_obj) = options.as_object_mut()
+            {
+                let source_target_sys = opt_obj
+                    .get("target_system")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                if source_target_sys.is_empty() || source_target_sys == item.system_id {
+                    opt_obj.insert("target_system".to_string(), serde_json::json!(&system_slug));
+                }
+            }
+
+            let matched_field = current_fields.iter().find(|f| f.name == field.name);
+            if let Some(existing_f) = matched_field {
+                state
+                    .db
+                    .models()
+                    .update_field(
+                        existing_f.id,
+                        &field.name,
+                        &field.label,
+                        &field.field_type,
+                        field.is_required,
+                        field.default_value,
+                        Some(options),
+                        field.sort_order,
+                    )
+                    .await?;
+            } else {
+                state
+                    .db
+                    .models()
+                    .add_field(
+                        model.id,
+                        &field.name,
+                        &field.label,
+                        &field.field_type,
+                        field.is_required,
+                        field.default_value,
+                        Some(options),
+                        field.sort_order,
+                    )
+                    .await?;
+            }
+        }
+
+        result_models.push(model);
+    }
+
+    Ok(Json(ApiResponse::success(ImportModelsResult {
+        total: result_models.len(),
+        created: created_count,
+        updated: updated_count,
+        restored: restored_count,
+        models: result_models,
+    })))
 }

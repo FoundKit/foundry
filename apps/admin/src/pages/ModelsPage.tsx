@@ -9,10 +9,12 @@ import {
   Edit2,
   RotateCcw,
   Link as LinkIcon,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { Card, Button, Input, Textarea, Badge, Modal } from '../components/UiWidgets';
 import { api } from '../services/api';
-import { ModelFieldItem, ModelItem, SystemItem } from '../types';
+import { ModelExportItem, ModelFieldItem, ModelItem, SystemItem } from '../types';
 
 interface ModelsPageProps {
   currentSystem: SystemItem | null;
@@ -35,6 +37,16 @@ export function ModelsPage({
   const [fields, setFields] = useState<ModelFieldItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Multi-selection state
+  const [selectedModelIds, setSelectedModelIds] = useState<number[]>([]);
+
+  // Import Models Modal
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [importParsedModels, setImportParsedModels] = useState<ModelExportItem[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState('');
+
   // Create Model Modal
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
   const [modelSlug, setModelSlug] = useState('');
@@ -53,6 +65,7 @@ export function ModelsPage({
   const [fieldLabel, setFieldLabel] = useState('');
   const [fieldType, setFieldType] = useState('string');
   const [isRequired, setIsRequired] = useState(false);
+  const [targetSystem, setTargetSystem] = useState('');
   const [targetModel, setTargetModel] = useState('');
   const [targetDisplayField, setTargetDisplayField] = useState('');
   const [targetFields, setTargetFields] = useState<ModelFieldItem[]>([]);
@@ -64,6 +77,7 @@ export function ModelsPage({
   const [editFieldLabel, setEditFieldLabel] = useState('');
   const [editFieldType, setEditFieldType] = useState('string');
   const [editFieldRequired, setEditFieldRequired] = useState(false);
+  const [editFieldTargetSystem, setEditFieldTargetSystem] = useState('');
   const [editFieldTargetModel, setEditFieldTargetModel] = useState('');
   const [editTargetDisplayField, setEditTargetDisplayField] = useState('');
   const [editTargetFields, setEditTargetFields] = useState<ModelFieldItem[]>([]);
@@ -279,6 +293,7 @@ export function ModelsPage({
     try {
       const options: Record<string, any> = {};
       if (fieldType === 'relation' && targetModel) {
+        options.target_system = targetSystem.trim() || currentSystem.slug;
         options.target_model = targetModel;
         if (targetDisplayField) {
           options.display_field = targetDisplayField;
@@ -296,6 +311,7 @@ export function ModelsPage({
       setIsAddFieldOpen(false);
       setFieldName('');
       setFieldLabel('');
+      setTargetSystem('');
       setTargetModel('');
       setTargetDisplayField('');
       setTargetFields([]);
@@ -311,19 +327,27 @@ export function ModelsPage({
     setEditFieldLabel(f.label);
     setEditFieldType(f.field_type);
     setEditFieldRequired(f.is_required);
+    const tmSys = f.options?.target_system || currentSystem?.slug || '';
     const tmSlug = f.options?.target_model || '';
+    setEditFieldTargetSystem(tmSys);
     setEditFieldTargetModel(tmSlug);
     setEditTargetDisplayField(f.options?.display_field || '');
     if (f.field_type === 'relation' && tmSlug && currentSystem?.slug) {
-      const tm = models.find((m) => m.slug === tmSlug);
-      if (tm) {
-        api
-          .listModelFields(currentSystem.slug, tm.id)
-          .then(setEditTargetFields)
-          .catch(() => setEditTargetFields([]));
-      } else {
-        setEditTargetFields([]);
-      }
+      const sysToQuery = tmSys || currentSystem.slug;
+      api
+        .listModels(sysToQuery)
+        .then((mList) => {
+          const tm = mList.find((m) => m.slug === tmSlug);
+          if (tm) {
+            api
+              .listModelFields(sysToQuery, tm.id)
+              .then(setEditTargetFields)
+              .catch(() => setEditTargetFields([]));
+          } else {
+            setEditTargetFields([]);
+          }
+        })
+        .catch(() => setEditTargetFields([]));
     } else {
       setEditTargetFields([]);
     }
@@ -336,6 +360,7 @@ export function ModelsPage({
     try {
       const options: Record<string, any> = { ...(editingField.options || {}) };
       if (editFieldType === 'relation') {
+        options.target_system = editFieldTargetSystem.trim() || currentSystem.slug;
         options.target_model = editFieldTargetModel;
         if (editTargetDisplayField) {
           options.display_field = editTargetDisplayField;
@@ -343,6 +368,7 @@ export function ModelsPage({
           delete options.display_field;
         }
       } else {
+        delete options.target_system;
         delete options.target_model;
         delete options.display_field;
       }
@@ -372,6 +398,91 @@ export function ModelsPage({
       loadFields(currentSystem.slug, selectedModel.id);
     } catch (err: any) {
       alert(err.message || 'Failed to delete field');
+    }
+  };
+
+  const toggleSelectModel = (id: number) => {
+    setSelectedModelIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedModelIds.length === models.length) {
+      setSelectedModelIds([]);
+    } else {
+      setSelectedModelIds(models.map((m) => m.id));
+    }
+  };
+
+  const handleExportModels = async () => {
+    if (!currentSystem?.slug) return;
+    if (models.length === 0) {
+      alert(t('models.export_empty'));
+      return;
+    }
+    try {
+      const exportData = await api.exportModels(
+        currentSystem.slug,
+        selectedModelIds.length > 0 ? selectedModelIds : undefined,
+      );
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentSystem.slug}-models-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to export models');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setImportJsonText(content);
+      parseImportJson(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const parseImportJson = (text: string) => {
+    try {
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed)) {
+        setImportError(t('models.invalid_json'));
+        setImportParsedModels([]);
+        return;
+      }
+      setImportError('');
+      setImportParsedModels(parsed);
+    } catch (err: any) {
+      setImportError(err.message || t('models.invalid_json'));
+      setImportParsedModels([]);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!currentSystem?.slug || importParsedModels.length === 0) return;
+    setImportLoading(true);
+    try {
+      const res = await api.importModels(currentSystem.slug, importParsedModels);
+      setIsImportModalOpen(false);
+      setImportJsonText('');
+      setImportParsedModels([]);
+      await loadModels(currentSystem.slug);
+      alert(t('models.import_success', { count: res.total || importParsedModels.length }));
+    } catch (err: any) {
+      alert(err.message || 'Import failed');
+    } finally {
+      setImportLoading(false);
     }
   };
 
@@ -425,10 +536,37 @@ export function ModelsPage({
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('models.desc')}</p>
         </div>
-        <Button onClick={() => setIsCreateModelOpen(true)}>
-          <Plus className="h-4 w-4" />
-          <span>{t('models.create_model')}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={handleExportModels}
+            title={
+              selectedModelIds.length > 0
+                ? t('models.export_selected', { count: selectedModelIds.length })
+                : t('models.export_models')
+            }
+            className="gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            <span>
+              {selectedModelIds.length > 0
+                ? t('models.export_selected', { count: selectedModelIds.length })
+                : t('models.export_models')}
+            </span>
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsImportModalOpen(true)}
+            className="gap-1.5"
+          >
+            <Upload className="h-4 w-4" />
+            <span>{t('models.import_models')}</span>
+          </Button>
+          <Button onClick={() => setIsCreateModelOpen(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            <span>{t('models.create_model')}</span>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -459,8 +597,30 @@ export function ModelsPage({
 
           {activeTab === 'active' && (
             <div className="space-y-2">
+              {models.length > 0 && (
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
+                  <label className="flex cursor-pointer select-none items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={models.length > 0 && selectedModelIds.length === models.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
+                    />
+                    <span className="font-medium text-slate-600 dark:text-slate-300">
+                      {t('models.select_all')}
+                    </span>
+                  </label>
+                  {selectedModelIds.length > 0 && (
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {t('models.selected_count', { count: selectedModelIds.length })}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {models.map((m) => {
                 const isSelected = selectedModel?.id === m.id;
+                const isChecked = selectedModelIds.includes(m.id);
                 return (
                   <Card
                     key={m.id}
@@ -470,18 +630,28 @@ export function ModelsPage({
                         : 'bg-white hover:border-slate-300 dark:bg-slate-900/40 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div onClick={() => handleSelectModel(m)}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {m.name}
-                        </span>
-                        <Badge variant="info">Zero-DDL</Badge>
+                    <div className="flex items-start gap-3">
+                      <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectModel(m.id)}
+                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
+                        />
                       </div>
-                      <div className="mt-1 font-mono text-xs text-emerald-600 dark:text-emerald-400">
-                        /{m.slug}
-                      </div>
-                      <div className="mt-2 truncate text-[11px] text-slate-500 dark:text-slate-400">
-                        {m.description || 'Auto-CRUD collection'}
+                      <div className="min-w-0 flex-1" onClick={() => handleSelectModel(m)}>
+                        <div className="flex items-center justify-between">
+                          <span className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {m.name}
+                          </span>
+                          <Badge variant="info">Zero-DDL</Badge>
+                        </div>
+                        <div className="mt-1 font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                          /{m.slug}
+                        </div>
+                        <div className="mt-2 truncate text-[11px] text-slate-500 dark:text-slate-400">
+                          {m.description || 'Auto-CRUD collection'}
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -610,7 +780,9 @@ export function ModelsPage({
                             {f.field_type === 'relation' && f.options?.target_model && (
                               <span className="flex items-center gap-1 font-mono text-[11px] text-sky-600 dark:text-sky-400">
                                 <LinkIcon className="h-3 w-3" />
-                                {f.options.target_model}
+                                {f.options.target_system && f.options.target_system !== currentSystem.slug
+                                  ? `${f.options.target_system}/${f.options.target_model}`
+                                  : f.options.target_model}
                                 {f.options.display_field && ` (${f.options.display_field})`}
                               </span>
                             )}
@@ -819,6 +991,20 @@ export function ModelsPage({
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('models.target_system')}
+                </label>
+                <Input
+                  placeholder={currentSystem.slug}
+                  value={targetSystem}
+                  onChange={(e) => setTargetSystem(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {t('models.target_system_hint')}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                   {t('models.target_model')}
                 </label>
                 <select
@@ -940,6 +1126,20 @@ export function ModelsPage({
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {t('models.target_system')}
+                </label>
+                <Input
+                  placeholder={currentSystem.slug}
+                  value={editFieldTargetSystem}
+                  onChange={(e) => setEditFieldTargetSystem(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  {t('models.target_system_hint')}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                   {t('models.target_model')}
                 </label>
                 <select
@@ -1009,6 +1209,113 @@ export function ModelsPage({
             <Button type="submit">{t('common.confirm')}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: Import Models */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => {
+          setIsImportModalOpen(false);
+          setImportJsonText('');
+          setImportParsedModels([]);
+          setImportError('');
+        }}
+        title={t('models.import_modal_title')}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('models.import_modal_desc')}
+          </p>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {t('models.select_json_file')}
+            </label>
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileUpload}
+              className="block w-full text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950/60 dark:file:text-emerald-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {t('models.or_paste_json')}
+            </label>
+            <Textarea
+              rows={6}
+              value={importJsonText}
+              onChange={(e) => {
+                setImportJsonText(e.target.value);
+                parseImportJson(e.target.value);
+              }}
+              placeholder='[ { "slug": "articles", "name": "文章列表", ... } ]'
+              className="font-mono text-xs"
+            />
+          </div>
+
+          {importError && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+              {importError}
+            </div>
+          )}
+
+          {importParsedModels.length > 0 && !importError && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                <Database className="h-4 w-4" />
+                <span>
+                  {t('models.import_preview', { count: importParsedModels.length })}
+                </span>
+              </div>
+              <ul className="mt-2 max-h-36 space-y-1 overflow-y-auto text-[11px] text-slate-600 dark:text-slate-300">
+                {importParsedModels.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-center justify-between border-b border-emerald-100/50 py-0.5 dark:border-emerald-900/40"
+                  >
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {item.name || item.slug}{' '}
+                      <code className="font-mono text-emerald-600 dark:text-emerald-400">
+                        /{item.slug}
+                      </code>
+                    </span>
+                    <span className="text-slate-400">
+                      {item.fields?.length || 0} {t('models.fields_count')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsImportModalOpen(false);
+                setImportJsonText('');
+                setImportParsedModels([]);
+                setImportError('');
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={importLoading || importParsedModels.length === 0 || !!importError}
+              onClick={handleConfirmImport}
+              className="gap-1.5"
+            >
+              {importLoading && (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              )}
+              <span>{t('models.confirm_import')}</span>
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -4,6 +4,8 @@ import {
   ApplicationItem,
   AuditLogItem,
   CustomAdminPageItem,
+  ImportModelsResult,
+  ModelExportItem,
   ModelFieldItem,
   ModelItem,
   ModelRecordItem,
@@ -167,6 +169,18 @@ export const api = {
   restoreModel: (systemSlug: string, modelId: number) =>
     request<ModelItem>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/restore`, {
       method: 'POST',
+    }),
+  exportModels: (systemSlug: string, modelIds?: number[]) =>
+    request<ModelExportItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models/export`, {
+      method: 'POST',
+      body: JSON.stringify({
+        model_ids: modelIds && modelIds.length > 0 ? modelIds : undefined,
+      }),
+    }),
+  importModels: (systemSlug: string, models: ModelExportItem[]) =>
+    request<ImportModelsResult>(ADMIN_API_BASE, `/s/${systemSlug}/models/import`, {
+      method: 'POST',
+      body: JSON.stringify(models),
     }),
   listModelFields: (systemSlug: string, modelId: number) =>
     request<ModelFieldItem[]>(ADMIN_API_BASE, `/s/${systemSlug}/models/${modelId}/fields`),

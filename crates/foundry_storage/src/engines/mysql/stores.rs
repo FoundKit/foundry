@@ -1,6 +1,6 @@
 use crate::entities::{
     AdminEntity, ApplicationEntity, AuditLogEntity, ModelEntity, ModelFieldEntity, PlatformSummary,
-    SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
+    ReferencingFieldInfo, SystemConfigEntity, SystemEntity, SystemItem, SystemStats,
 };
 use crate::traits::{
     AdminStoreEngine, ApplicationStoreEngine, AuditLogInsert, AuditLogQuery, AuditStoreEngine,
@@ -111,6 +111,33 @@ impl ModelStoreEngine for MySqlModelEngine {
         description: Option<&str>,
         permissions: Option<Value>,
     ) -> AppResult<ModelEntity> {
+        let existing: Option<(i64, Option<chrono::DateTime<chrono::Utc>>)> = sqlx::query_as(
+            r#"
+            SELECT id, deleted_at FROM models
+            WHERE system_id = ? AND slug = ?
+            LIMIT 1
+            "#,
+        )
+        .bind(system_slug)
+        .bind(slug)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to check model uniqueness: {}", e)))?;
+
+        if let Some((_, deleted_at)) = existing {
+            if deleted_at.is_none() {
+                return Err(AppError::Validation(format!(
+                    "数据模型标识 '{}' 在子系统 '{}' 中已存在，不能重复创建",
+                    slug, system_slug
+                )));
+            } else {
+                return Err(AppError::Validation(format!(
+                    "数据模型标识 '{}' 已存在于子系统 '{}' 的回收站中，请直接在回收站中恢复使用，无需重新创建",
+                    slug, system_slug
+                )));
+            }
+        }
+
         let default_perms = serde_json::json!({
             "public_read": false,
             "public_write": false,
@@ -171,12 +198,13 @@ impl ModelStoreEngine for MySqlModelEngine {
     ) -> AppResult<ModelEntity> {
         let current = self.get_model_by_id(model_id).await?;
 
-        // If slug changed, ensure no other active model conflicts with the new slug
+        // If slug changed, ensure no other model conflicts with the new slug
         if current.slug != slug {
-            let conflict: Option<(i64,)> = sqlx::query_as(
+            let conflict: Option<(i64, Option<chrono::DateTime<chrono::Utc>>)> = sqlx::query_as(
                 r#"
-                SELECT id FROM models
-                WHERE system_id = ? AND slug = ? AND id != ? AND deleted_at IS NULL
+                SELECT id, deleted_at FROM models
+                WHERE system_id = ? AND slug = ? AND id != ?
+                LIMIT 1
                 "#,
             )
             .bind(&current.system_id)
@@ -186,11 +214,18 @@ impl ModelStoreEngine for MySqlModelEngine {
             .await
             .map_err(|e| AppError::Database(format!("Failed to check slug uniqueness: {}", e)))?;
 
-            if conflict.is_some() {
-                return Err(AppError::Validation(format!(
-                    "A model with slug '{}' already exists in system '{}'",
-                    slug, current.system_id
-                )));
+            if let Some((_, deleted_at)) = conflict {
+                if deleted_at.is_none() {
+                    return Err(AppError::Validation(format!(
+                        "数据模型标识 '{}' 在子系统 '{}' 中已存在",
+                        slug, current.system_id
+                    )));
+                } else {
+                    return Err(AppError::Validation(format!(
+                        "数据模型标识 '{}' 已存在于子系统 '{}' 的回收站中，无法重命名为此标识",
+                        slug, current.system_id
+                    )));
+                }
             }
         }
 
@@ -430,7 +465,86 @@ impl ModelStoreEngine for MySqlModelEngine {
         Ok(())
     }
 
+    async fn find_referencing_fields(
+        &self,
+        system_slug: &str,
+        model_slug: &str,
+        exclude_model_id: i64,
+    ) -> AppResult<Vec<ReferencingFieldInfo>> {
+        #[derive(sqlx::FromRow)]
+        struct RefRow {
+            system_slug: String,
+            model_name: String,
+            model_slug: String,
+            field_label: String,
+            field_name: String,
+        }
+
+        let rows = sqlx::query_as::<_, RefRow>(
+            r#"
+            SELECT
+                m.system_id AS system_slug,
+                m.name AS model_name,
+                m.slug AS model_slug,
+                f.label AS field_label,
+                f.name AS field_name
+            FROM model_fields f
+            JOIN models m ON f.model_id = m.id
+            WHERE f.field_type = 'relation'
+              AND f.deleted_at IS NULL
+              AND m.deleted_at IS NULL
+              AND m.id != ?
+              AND JSON_UNQUOTE(JSON_EXTRACT(f.options, '$.target_model')) = ?
+              AND (
+                JSON_UNQUOTE(JSON_EXTRACT(f.options, '$.target_system')) = ?
+                OR (
+                    (JSON_EXTRACT(f.options, '$.target_system') IS NULL
+                     OR JSON_UNQUOTE(JSON_EXTRACT(f.options, '$.target_system')) = '')
+                    AND m.system_id = ?
+                )
+              )
+            ORDER BY m.name ASC, f.sort_order ASC
+            "#,
+        )
+        .bind(exclude_model_id)
+        .bind(model_slug)
+        .bind(system_slug)
+        .bind(system_slug)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Database(format!("Failed to check model references: {}", e)))?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| ReferencingFieldInfo {
+                system_slug: r.system_slug,
+                model_name: r.model_name,
+                model_slug: r.model_slug,
+                field_label: r.field_label,
+                field_name: r.field_name,
+            })
+            .collect())
+    }
+
     async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()> {
+        let model = self.get_model(system_slug, model_slug).await?;
+        let refs = self
+            .find_referencing_fields(&model.system_id, &model.slug, model.id)
+            .await?;
+        if let Some(r) = refs.first() {
+            return Err(AppError::Validation(format!(
+                "无法删除数据模型 '{}'（/{}/{}）：已被数据模型 '{}'（/{}/{}）的字段 '{}'（{}）关联。请先解除关联或修改字段数据类型后，再删除该模型。",
+                model.name,
+                model.system_id,
+                model.slug,
+                r.model_name,
+                r.system_slug,
+                r.model_slug,
+                r.field_label,
+                r.field_name
+            )));
+        }
+
         let res = sqlx::query(
             r#"
             UPDATE models
@@ -455,6 +569,24 @@ impl ModelStoreEngine for MySqlModelEngine {
     }
 
     async fn delete_model_by_id(&self, model_id: i64) -> AppResult<()> {
+        let model = self.get_model_by_id(model_id).await?;
+        let refs = self
+            .find_referencing_fields(&model.system_id, &model.slug, model.id)
+            .await?;
+        if let Some(r) = refs.first() {
+            return Err(AppError::Validation(format!(
+                "无法删除数据模型 '{}'（/{}/{}）：已被数据模型 '{}'（/{}/{}）的字段 '{}'（{}）关联。请先解除关联或修改字段数据类型后，再删除该模型。",
+                model.name,
+                model.system_id,
+                model.slug,
+                r.model_name,
+                r.system_slug,
+                r.model_slug,
+                r.field_label,
+                r.field_name
+            )));
+        }
+
         let res = sqlx::query(
             r#"
             UPDATE models

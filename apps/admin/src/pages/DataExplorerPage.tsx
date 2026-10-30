@@ -84,49 +84,46 @@ export function DataExplorerPage({
     const relationFields = modelFields.filter(
       (f) => f.field_type === 'relation' && f.options?.target_model,
     );
-    const targetSlugs = Array.from(
-      new Set(relationFields.map((f) => f.options.target_model as string)),
-    );
 
-    for (const tm of targetSlugs) {
+    for (const f of relationFields) {
+      const tm = f.options.target_model as string;
+      const targetSys = (f.options.target_system as string) || systemSlug;
       if (!tm) continue;
       try {
         // Default render recent 10 records as options
-        const res = await api.listRecords(systemSlug, tm, { page: 1, page_size: 10 });
+        const res = await api.listRecords(targetSys, tm, { page: 1, page_size: 10 });
         const itemsMap = new Map<number, ModelRecordItem>();
         res.items.forEach((item) => itemsMap.set(item.id, item));
 
         // Also check if any displayed record in the current page references an ID not in the recent 10
         const referencedIds = new Set<number>();
-        relationFields
-          .filter((f) => f.options.target_model === tm)
-          .forEach((f) => {
-            recordsToInspect.forEach((r) => {
-              const val = r.data[f.name];
-              if (val !== undefined && val !== null && val !== '') {
-                const num = Number(val);
-                if (!Number.isNaN(num) && !itemsMap.has(num)) {
-                  referencedIds.add(num);
-                }
-              }
-            });
-          });
+        recordsToInspect.forEach((r) => {
+          const val = r.data[f.name];
+          if (val !== undefined && val !== null && val !== '') {
+            const num = Number(val);
+            if (!Number.isNaN(num) && !itemsMap.has(num)) {
+              referencedIds.add(num);
+            }
+          }
+        });
 
         for (const refId of referencedIds) {
           try {
-            const singleRec = await api.getRecord(systemSlug, tm, refId);
+            const singleRec = await api.getRecord(targetSys, tm, refId);
             itemsMap.set(singleRec.id, singleRec);
           } catch {
             // Ignore missing record
           }
         }
 
+        const itemsList = Array.from(itemsMap.values());
         setRelationRecords((prev) => ({
           ...prev,
-          [tm]: Array.from(itemsMap.values()),
+          [tm]: itemsList,
+          [`${targetSys}:${tm}`]: itemsList,
         }));
       } catch (err) {
-        console.error(`Failed to prefetch relation records for model ${tm}:`, err);
+        console.error(`Failed to prefetch relation records for model ${targetSys}/${tm}:`, err);
       }
     }
   };
@@ -243,14 +240,19 @@ export function DataExplorerPage({
         const val = rec.data[f.name];
         if (val !== undefined && val !== null && val !== '') {
           const num = Number(val);
+          const targetSys = (f.options.target_system as string) || currentSystem.slug;
           const cached = relationRecords[f.options.target_model] || [];
           if (!Number.isNaN(num) && !cached.some((r) => r.id === num)) {
             api
-              .getRecord(currentSystem.slug, f.options.target_model, num)
+              .getRecord(targetSys, f.options.target_model, num)
               .then((singleRec) => {
                 setRelationRecords((prev) => ({
                   ...prev,
                   [f.options.target_model]: [singleRec, ...(prev[f.options.target_model] || [])],
+                  [`${targetSys}:${f.options.target_model}`]: [
+                    singleRec,
+                    ...(prev[`${targetSys}:${f.options.target_model}`] || []),
+                  ],
                 }));
               })
               .catch(() => {});
@@ -262,8 +264,13 @@ export function DataExplorerPage({
     setIsRecordModalOpen(true);
   };
 
-  const handleSearchRelationRecord = async (fieldName: string, targetModel: string) => {
-    if (!currentSystem?.slug) return;
+  const handleSearchRelationRecord = async (
+    fieldName: string,
+    targetModel: string,
+    targetSystem?: string,
+  ) => {
+    const sys = targetSystem || currentSystem?.slug;
+    if (!sys) return;
     const rawId = (relationSearchId[fieldName] || '').trim();
     if (!rawId) return;
     const numId = Number(rawId);
@@ -279,12 +286,16 @@ export function DataExplorerPage({
     setRelationSearchMsg((prev) => ({ ...prev, [fieldName]: undefined }));
 
     try {
-      const rec = await api.getRecord(currentSystem.slug, targetModel, numId);
+      const rec = await api.getRecord(sys, targetModel, numId);
       // Add to relationRecords if not already present
       setRelationRecords((prev) => {
         const existing = prev[targetModel] || [];
         if (!existing.some((r) => r.id === rec.id)) {
-          return { ...prev, [targetModel]: [rec, ...existing] };
+          return {
+            ...prev,
+            [targetModel]: [rec, ...existing],
+            [`${sys}:${targetModel}`]: [rec, ...existing],
+          };
         }
         return prev;
       });
@@ -691,7 +702,11 @@ export function DataExplorerPage({
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            handleSearchRelationRecord(f.name, f.options.target_model);
+                            handleSearchRelationRecord(
+                              f.name,
+                              f.options.target_model,
+                              f.options.target_system,
+                            );
                           }
                         }}
                       />
@@ -701,7 +716,13 @@ export function DataExplorerPage({
                       size="sm"
                       variant="secondary"
                       disabled={relationSearchLoading[f.name] || !relationSearchId[f.name]}
-                      onClick={() => handleSearchRelationRecord(f.name, f.options.target_model)}
+                      onClick={() =>
+                        handleSearchRelationRecord(
+                          f.name,
+                          f.options.target_model,
+                          f.options.target_system,
+                        )
+                      }
                       className="gap-1 whitespace-nowrap text-xs"
                     >
                       <Search className="h-3 w-3" />
@@ -724,7 +745,10 @@ export function DataExplorerPage({
                   )}
 
                   <p className="font-mono text-[11px] text-sky-600 dark:text-sky-400">
-                    Target model: {f.options.target_model}
+                    Target model:{' '}
+                    {f.options.target_system && f.options.target_system !== currentSystem?.slug
+                      ? `${f.options.target_system}/${f.options.target_model}`
+                      : f.options.target_model}
                     {f.options.display_field && ` (Display: ${f.options.display_field})`} • Default
                     top 10
                   </p>

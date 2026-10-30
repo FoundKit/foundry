@@ -11,5 +11,5 @@ pub use applications::ApplicationStoreEngine;
 pub use audit::{AuditLogInsert, AuditLogQuery, AuditStoreEngine};
 pub use configs::ConfigStoreEngine;
 pub use models::ModelStoreEngine;
-pub use records::{RecordQuery, RecordStoreEngine, validate_record};
+pub use records::{RecordQuery, RecordStoreEngine, coerce_record_data, validate_record};
 pub use systems::{SystemQuery, SystemStoreEngine};

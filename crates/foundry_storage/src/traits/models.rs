@@ -1,4 +1,4 @@
-use crate::entities::{ModelEntity, ModelFieldEntity};
+use crate::entities::{ModelEntity, ModelFieldEntity, ReferencingFieldInfo};
 use async_trait::async_trait;
 use foundry_core::error::AppResult;
 use serde_json::Value;
@@ -63,6 +63,14 @@ pub trait ModelStoreEngine: Send + Sync {
 
     /// Soft delete a field
     async fn delete_field(&self, field_id: i64) -> AppResult<()>;
+
+    /// Check if any active relation field references this model
+    async fn find_referencing_fields(
+        &self,
+        system_slug: &str,
+        model_slug: &str,
+        exclude_model_id: i64,
+    ) -> AppResult<Vec<ReferencingFieldInfo>>;
 
     /// Soft delete a dynamic data model by system_slug and model_slug
     async fn delete_model(&self, system_slug: &str, model_slug: &str) -> AppResult<()>;

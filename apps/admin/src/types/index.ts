@@ -135,6 +135,18 @@ export interface ModelItem {
   deleted_at?: string | null;
 }
 
+export interface ModelExportItem extends ModelItem {
+  fields: ModelFieldItem[];
+}
+
+export interface ImportModelsResult {
+  total: number;
+  created: number;
+  updated: number;
+  restored: number;
+  models: ModelItem[];
+}
+
 export interface ModelFieldItem {
   id: number;
   model_id: number;

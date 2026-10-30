@@ -108,6 +108,52 @@ pub struct ModelFieldEntity {
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
+/// Information about an active relation field in another model referencing this model
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ReferencingFieldInfo {
+    pub system_slug: String,
+    pub model_name: String,
+    pub model_slug: String,
+    pub field_label: String,
+    pub field_name: String,
+}
+
+/// Dynamic model export representation, containing model metadata and its field definitions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelExportItem {
+    pub id: i64,
+    pub system_id: String,
+    pub slug: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_system: bool,
+    pub status: i16,
+    pub permissions: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub fields: Vec<ModelFieldEntity>,
+}
+
+impl ModelExportItem {
+    pub fn from_entity(model: ModelEntity, fields: Vec<ModelFieldEntity>) -> Self {
+        Self {
+            id: model.id,
+            system_id: model.system_id,
+            slug: model.slug,
+            name: model.name,
+            description: model.description,
+            is_system: model.is_system,
+            status: model.status,
+            permissions: model.permissions,
+            created_at: model.created_at,
+            updated_at: model.updated_at,
+            deleted_at: model.deleted_at,
+            fields,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ModelRecordEntity {
     pub id: i64,

@@ -579,6 +579,201 @@ mod postgres_tests {
             serde_json::from_slice(&body).unwrap();
         assert!(res.data.iter().any(|m| m.id == tool_model.id));
 
+        // 7.8 Test Referential Integrity on Model Deletion, Export/Import, and Trash Uniqueness
+        println!("Testing Model Referential Integrity, Trash Uniqueness, and Export/Import...");
+        // Create authors model
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "authors",
+                    "name": "Authors Model"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ModelEntity> = serde_json::from_slice(&body).unwrap();
+        let authors_model = res.data;
+
+        // Create books model
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "books",
+                    "name": "Books Model"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ModelEntity> = serde_json::from_slice(&body).unwrap();
+        let books_model = res.data;
+
+        // Add author_ref relation field to books
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}/fields",
+                sys_slug, books_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "name": "author_ref",
+                    "label": "Author Reference",
+                    "field_type": "relation",
+                    "options": {
+                        "target_system": sys_slug,
+                        "target_model": "authors"
+                    }
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Attempt to delete 'authors' model -> MUST BE INTERCEPTED due to referential integrity!
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}",
+                sys_slug, authors_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let err_text = String::from_utf8_lossy(&body);
+        assert!(
+            err_text.contains("Books Model") && err_text.contains("author_ref"),
+            "Error message should mention referencing model: {}",
+            err_text
+        );
+
+        // Test Uniqueness check for trash bin:
+        // Create a model 'temp_trash', delete it, then try creating 'temp_trash' again
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "temp_trash",
+                    "name": "Temp Trash Model"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<foundry_storage::ModelEntity> = serde_json::from_slice(&body).unwrap();
+        let temp_model = res.data;
+
+        // Delete temp_trash
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(format!(
+                "/api/admin/s/{}/models/{}",
+                sys_slug, temp_model.id
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Try creating temp_trash again -> should fail with trash restore message
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "slug": "temp_trash",
+                    "name": "Temp Trash Duplicate"
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let err_text = String::from_utf8_lossy(&body);
+        assert!(
+            err_text.contains("回收站") || err_text.contains("trash"),
+            "Expected trash restore message, got: {}",
+            err_text
+        );
+
+        // Test Export models
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models/export", sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(
+                serde_json::to_vec(&serde_json::json!({
+                    "model_ids": [authors_model.id, books_model.id]
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = resp.into_body().collect().await.unwrap().to_bytes();
+        let res: ApiResponse<Vec<foundry_storage::ModelExportItem>> =
+            serde_json::from_slice(&body).unwrap();
+        let exported_items = res.data;
+        assert_eq!(exported_items.len(), 2);
+
+        // Test Import models into another subsystem
+        let dest_sys_slug = format!("dest_{}", &uuid::Uuid::new_v4().simple().to_string()[..10]);
+        let _dest_sys = db
+            .systems()
+            .create(&dest_sys_slug, "Destination System", None)
+            .await
+            .expect("Failed to create destination system");
+
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/admin/s/{}/models/import", dest_sys_slug))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("Content-Type", "application/json")
+            .body(Body::from(serde_json::to_vec(&exported_items).unwrap()))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Verify imported models in dest_sys_slug
+        let dest_models = db.models().list_models(&dest_sys_slug).await.unwrap();
+        assert_eq!(dest_models.len(), 2);
+        let dest_books = dest_models.iter().find(|m| m.slug == "books").unwrap();
+        let dest_books_fields = db.models().list_fields(dest_books.id).await.unwrap();
+        let dest_author_ref = dest_books_fields
+            .iter()
+            .find(|f| f.name == "author_ref")
+            .unwrap();
+        assert_eq!(dest_author_ref.options["target_system"], dest_sys_slug);
+
         // 8. Application Management & Permission Control Tests
         println!("Testing Application Management & Scoped RBAC...");
         // 8.1 Create client application
