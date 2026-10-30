@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Code2, ExternalLink, Copy, Check } from 'lucide-react';
+import { Code2, ExternalLink, Copy, Check, KeyRound } from 'lucide-react';
 import { Card, Badge } from '../components/UiWidgets';
 import { api } from '../services/api';
 import { ModelItem, SystemItem } from '../types';
@@ -102,6 +102,23 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
         >
           <ExternalLink className="h-3.5 w-3.5" />
           <span>OpenAPI Docs</span>
+        </a>
+      </div>
+
+      {/* Client Applications Notice Banner */}
+      <div className="flex flex-col justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-xs text-emerald-900 sm:flex-row sm:items-center dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+        <div className="flex items-center gap-2.5">
+          <KeyRound className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span>
+            {t('apps.api_callout') ||
+              '客户端应用（如 Next.js SSR）需携带已授权的 Bearer Token 调用本专题接口。请前往「接入应用管理」分配凭据与权限。'}
+          </span>
+        </div>
+        <a
+          href={`/admin/s/${currentSystem.slug}/apps`}
+          className="shrink-0 self-start rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:self-auto dark:bg-emerald-500 dark:hover:bg-emerald-600"
+        >
+          {t('nav.apps') || '接入应用管理'}
         </a>
       </div>
 

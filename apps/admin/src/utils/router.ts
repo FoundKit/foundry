@@ -45,11 +45,21 @@ export function parseRoute(pathname: string, search: string): RouteState {
   }
 
   // Platform routes: /admin/:tab or /:tab
+  if (cleanPath === '/admin/apps' || cleanPath === '/apps') {
+    // Convenience shortcut to subsystem applications: delegate resolution to active subsystem
+    return {
+      mode: 'subsystem',
+      platformTab: 'systems',
+      subsystemSlug: null,
+      subsystemTab: 'apps',
+      customPageKey: undefined,
+      params,
+    };
+  }
+
   let platformTab: RouteState['platformTab'];
   if (cleanPath === '/admin/systems' || cleanPath === '/systems') {
     platformTab = 'systems';
-  } else if (cleanPath === '/admin/apps' || cleanPath === '/apps') {
-    platformTab = 'apps';
   } else if (cleanPath === '/admin/admins' || cleanPath === '/admins') {
     platformTab = 'admins';
   } else if (

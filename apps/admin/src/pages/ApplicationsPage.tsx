@@ -27,15 +27,11 @@ import {
 } from '../types';
 
 interface ApplicationsPageProps {
-  currentSystem: SystemItem | null;
-  systems?: SystemItem[];
-  onSelectSystem?: (system: SystemItem) => void;
+  currentSystem: SystemItem;
 }
 
 export function ApplicationsPage({
   currentSystem,
-  systems,
-  onSelectSystem,
 }: ApplicationsPageProps) {
   const { t } = useTranslation();
   const [apps, setApps] = useState<ApplicationItem[]>([]);
@@ -353,31 +349,13 @@ export function ApplicationsPage({
               {t('apps.title') || '应用接入与权限管理'}
             </h1>
             <Badge variant="success">/{currentSystem.slug}</Badge>
-
-            {/* Subsystem Switcher if in platform mode with multiple systems */}
-            {systems && systems.length > 1 && onSelectSystem && (
-              <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs dark:border-slate-800 dark:bg-slate-900">
-                <span className="text-[11px] text-slate-400">所属专题:</span>
-                <select
-                  value={currentSystem.slug}
-                  onChange={(e) => {
-                    const matched = systems.find((s) => s.slug === e.target.value);
-                    if (matched) onSelectSystem(matched);
-                  }}
-                  className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none dark:text-slate-200"
-                >
-                  {systems.map((s) => (
-                    <option key={s.id} value={s.slug}>
-                      {s.name} (/{s.slug})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              ({currentSystem.name})
+            </span>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {t('apps.desc') ||
-              '配置接入该后端的客户端应用（如 Next.js SSR），分配独立的 Bearer Token（Authorization 鉴权），控制对系统基础接口及各数据模型的增删改查权限。'}
+              '配置接入当前子系统的客户端应用（如 Next.js SSR），分配独立的 Bearer Token（Authorization 鉴权），控制对系统基础接口及各数据模型的增删改查权限。'}
           </p>
         </div>
 

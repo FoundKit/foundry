@@ -93,7 +93,6 @@ export function Layout({
   const platformNavItems = [
     { id: 'dashboard' as const, label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'systems' as const, label: t('nav.systems'), icon: Layers },
-    { id: 'apps' as const, label: t('nav.apps') || '接入应用管理', icon: KeyRound },
     {
       id: 'audit_logs' as const,
       label: t('nav.audit_logs'),

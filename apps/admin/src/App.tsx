@@ -91,6 +91,30 @@ export function App() {
     }
   }, [route.subsystemSlug, systems, currentSystem]);
 
+  // Auto-redirect shorthand /apps route to active or first subsystem /admin/s/:slug/apps
+  useEffect(() => {
+    if (route.subsystemTab === 'apps' && !route.subsystemSlug && systems.length > 0) {
+      const targetSlug = currentSystem?.slug || systems[0].slug;
+      navigateSubsystem(targetSlug, 'apps', route.params, true);
+    } else if (
+      route.subsystemTab === 'apps' &&
+      !route.subsystemSlug &&
+      systems.length === 0 &&
+      !loading
+    ) {
+      navigatePlatform('systems', undefined, true);
+    }
+  }, [
+    route.subsystemTab,
+    route.subsystemSlug,
+    systems,
+    currentSystem,
+    loading,
+    navigateSubsystem,
+    navigatePlatform,
+    route.params,
+  ]);
+
   // Client-side route guard enforcing 3-tier role permissions
   useEffect(() => {
     if (!admin) return;
@@ -189,11 +213,7 @@ export function App() {
           )}
           {route.subsystemTab === 'apis' && <SubsystemApisPage currentSystem={currentSystem} />}
           {route.subsystemTab === 'apps' && (
-            <ApplicationsPage
-              currentSystem={currentSystem}
-              systems={systems}
-              onSelectSystem={handleSelectSystem}
-            />
+            <ApplicationsPage currentSystem={currentSystem} />
           )}
           {route.subsystemTab === 'audit_logs' && (
             <AuditLogsPage
@@ -241,13 +261,6 @@ export function App() {
                 setCurrentSystem(s);
                 navigateSubsystem(s.slug, 'overview');
               }}
-            />
-          )}
-          {route.platformTab === 'apps' && (
-            <ApplicationsPage
-              currentSystem={currentSystem || systems[0] || null}
-              systems={systems}
-              onSelectSystem={handleSelectSystem}
             />
           )}
           {route.platformTab === 'admins' && <AdminsPage systems={systems} />}
