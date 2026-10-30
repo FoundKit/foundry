@@ -50,7 +50,11 @@ impl StorageDriverProvider for MySqlProvider {
             configs: Arc::new(MySqlConfigEngine::new(pool.clone())),
             admins: Arc::new(MySqlAdminEngine::new(pool.clone())),
             audit: Arc::new(MySqlAuditEngine::new(pool.clone())),
-            apps: Arc::new(MySqlApplicationEngine::new(pool)),
+            apps: Arc::new(MySqlApplicationEngine::new(pool.clone())),
+            #[cfg(feature = "mysql")]
+            mysql_pool: Some(pool),
+            #[cfg(feature = "postgres")]
+            pg_pool: None,
         })
     }
 

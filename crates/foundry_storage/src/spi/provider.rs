@@ -16,6 +16,10 @@ pub struct StorageEngineSet {
     pub admins: Arc<dyn AdminStoreEngine>,
     pub audit: Arc<dyn AuditStoreEngine>,
     pub apps: Arc<dyn ApplicationStoreEngine>,
+    #[cfg(feature = "mysql")]
+    pub mysql_pool: Option<sqlx::MySqlPool>,
+    #[cfg(feature = "postgres")]
+    pub pg_pool: Option<sqlx::PgPool>,
 }
 
 /// A code-defined DDL extension providing custom schemas or table creation statements

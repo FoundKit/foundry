@@ -75,6 +75,7 @@ pub async fn extract_system_context(
     let ctx = SystemContext::with_details(None, &slug, &slug, &locale, client_ip, user_agent);
 
     req.extensions_mut().insert(ctx);
+    req.extensions_mut().insert(_state.clone());
     req.extensions_mut().insert(_state.db.clone());
     if let Some(ref redis) = _state.redis {
         req.extensions_mut().insert(redis.clone());

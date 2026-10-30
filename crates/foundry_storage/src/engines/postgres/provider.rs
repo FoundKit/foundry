@@ -55,7 +55,11 @@ impl StorageDriverProvider for PostgresProvider {
             configs: Arc::new(PostgresConfigEngine::new(pool.clone())),
             admins: Arc::new(PostgresAdminEngine::new(pool.clone())),
             audit: Arc::new(PostgresAuditEngine::new(pool.clone())),
-            apps: Arc::new(PostgresApplicationEngine::new(pool)),
+            apps: Arc::new(PostgresApplicationEngine::new(pool.clone())),
+            #[cfg(feature = "mysql")]
+            mysql_pool: None,
+            #[cfg(feature = "postgres")]
+            pg_pool: Some(pool),
         })
     }
 

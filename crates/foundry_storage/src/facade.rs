@@ -17,6 +17,10 @@ pub struct Database {
     admins: Arc<dyn AdminStoreEngine>,
     audit: Arc<dyn AuditStoreEngine>,
     apps: Arc<dyn ApplicationStoreEngine>,
+    #[cfg(feature = "mysql")]
+    mysql_pool: Option<sqlx::MySqlPool>,
+    #[cfg(feature = "postgres")]
+    pg_pool: Option<sqlx::PgPool>,
 }
 
 impl Database {
@@ -30,6 +34,10 @@ impl Database {
             admins: engines.admins,
             audit: engines.audit,
             apps: engines.apps,
+            #[cfg(feature = "mysql")]
+            mysql_pool: engines.mysql_pool,
+            #[cfg(feature = "postgres")]
+            pg_pool: engines.pg_pool,
         }
     }
 
@@ -58,7 +66,13 @@ impl Database {
             audit: Arc::new(crate::engines::postgres::stores::PostgresAuditEngine::new(
                 pool.clone(),
             )),
-            apps: Arc::new(crate::engines::postgres::stores::PostgresApplicationEngine::new(pool)),
+            apps: Arc::new(
+                crate::engines::postgres::stores::PostgresApplicationEngine::new(pool.clone()),
+            ),
+            #[cfg(feature = "mysql")]
+            mysql_pool: None,
+            #[cfg(feature = "postgres")]
+            pg_pool: Some(pool),
         }
     }
 
@@ -88,8 +102,12 @@ impl Database {
                 pool.clone(),
             )),
             apps: Arc::new(crate::engines::mysql::stores::MySqlApplicationEngine::new(
-                pool,
+                pool.clone(),
             )),
+            #[cfg(feature = "mysql")]
+            mysql_pool: Some(pool),
+            #[cfg(feature = "postgres")]
+            pg_pool: None,
         }
     }
 
@@ -119,8 +137,12 @@ impl Database {
                 pool.clone(),
             )),
             apps: Arc::new(crate::engines::mysql::stores::MySqlApplicationEngine::new(
-                pool,
+                pool.clone(),
             )),
+            #[cfg(feature = "mysql")]
+            mysql_pool: Some(pool),
+            #[cfg(feature = "postgres")]
+            pg_pool: None,
         }
     }
 
@@ -168,6 +190,10 @@ impl Database {
                 db.clone(),
             )),
             apps: Arc::new(crate::engines::mongodb::stores::MongoApplicationEngine::new(db)),
+            #[cfg(feature = "mysql")]
+            mysql_pool: None,
+            #[cfg(feature = "postgres")]
+            pg_pool: None,
         }
     }
 
@@ -365,5 +391,17 @@ impl Database {
 
     pub fn apps(&self) -> &dyn ApplicationStoreEngine {
         self.apps.as_ref()
+    }
+
+    /// Access underlying MySQL connection pool when MySQL feature is enabled
+    #[cfg(feature = "mysql")]
+    pub fn mysql_pool(&self) -> Option<&sqlx::MySqlPool> {
+        self.mysql_pool.as_ref()
+    }
+
+    /// Access underlying PostgreSQL connection pool when Postgres feature is enabled
+    #[cfg(feature = "postgres")]
+    pub fn pg_pool(&self) -> Option<&sqlx::PgPool> {
+        self.pg_pool.as_ref()
     }
 }

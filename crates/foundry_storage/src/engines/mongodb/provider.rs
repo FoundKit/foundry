@@ -51,6 +51,10 @@ impl StorageDriverProvider for MongoProvider {
             admins: Arc::new(MongoAdminEngine::new(db.clone())),
             audit: Arc::new(MongoAuditEngine::new(db.clone())),
             apps: Arc::new(MongoApplicationEngine::new(db)),
+            #[cfg(feature = "mysql")]
+            mysql_pool: None,
+            #[cfg(feature = "postgres")]
+            pg_pool: None,
         })
     }
 
