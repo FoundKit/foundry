@@ -604,7 +604,7 @@ export function ModelsPage({
                       type="checkbox"
                       checked={models.length > 0 && selectedModelIds.length === models.length}
                       onChange={toggleSelectAll}
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
+                      className="cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
                     />
                     <span className="font-medium text-slate-600 dark:text-slate-300">
                       {t('models.select_all')}
@@ -631,12 +631,15 @@ export function ModelsPage({
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex cursor-pointer items-center pt-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSelectModel(m.id)}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
+                          className="cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800"
                         />
                       </div>
                       <div className="min-w-0 flex-1" onClick={() => handleSelectModel(m)}>
@@ -1059,9 +1062,12 @@ export function ModelsPage({
               id="is_required_chk"
               checked={isRequired}
               onChange={(e) => setIsRequired(e.target.checked)}
-              className="rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
+              className="cursor-pointer rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
             />
-            <label htmlFor="is_required_chk" className="text-xs text-slate-700 dark:text-slate-300">
+            <label
+              htmlFor="is_required_chk"
+              className="cursor-pointer text-xs text-slate-700 dark:text-slate-300"
+            >
               {t('models.required')}
             </label>
           </div>
@@ -1194,11 +1200,11 @@ export function ModelsPage({
               id="is_edit_required_chk"
               checked={editFieldRequired}
               onChange={(e) => setEditFieldRequired(e.target.checked)}
-              className="rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
+              className="cursor-pointer rounded border-slate-300 bg-white text-emerald-600 focus:ring-emerald-500 dark:border-slate-800 dark:bg-slate-950"
             />
             <label
               htmlFor="is_edit_required_chk"
-              className="text-xs text-slate-700 dark:text-slate-300"
+              className="cursor-pointer text-xs text-slate-700 dark:text-slate-300"
             >
               {t('models.required')}
             </label>
