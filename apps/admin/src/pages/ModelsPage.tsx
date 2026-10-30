@@ -780,7 +780,8 @@ export function ModelsPage({
                             {f.field_type === 'relation' && f.options?.target_model && (
                               <span className="flex items-center gap-1 font-mono text-[11px] text-sky-600 dark:text-sky-400">
                                 <LinkIcon className="h-3 w-3" />
-                                {f.options.target_system && f.options.target_system !== currentSystem.slug
+                                {f.options.target_system &&
+                                f.options.target_system !== currentSystem.slug
                                   ? `${f.options.target_system}/${f.options.target_model}`
                                   : f.options.target_model}
                                 {f.options.display_field && ` (${f.options.display_field})`}
@@ -1265,9 +1266,7 @@ export function ModelsPage({
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 <Database className="h-4 w-4" />
-                <span>
-                  {t('models.import_preview', { count: importParsedModels.length })}
-                </span>
+                <span>{t('models.import_preview', { count: importParsedModels.length })}</span>
               </div>
               <ul className="mt-2 max-h-36 space-y-1 overflow-y-auto text-[11px] text-slate-600 dark:text-slate-300">
                 {importParsedModels.map((item, idx) => (

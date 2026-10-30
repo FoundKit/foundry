@@ -13,8 +13,8 @@ export function parseRoute(pathname: string, search: string): RouteState {
   // Normalize path
   const cleanPath = pathname.replace(/\/+$/, '') || '/';
 
-  // Subsystem routes: /admin/s/:slug/*
-  const subsystemMatch = cleanPath.match(/^\/admin\/s\/([^/]+)(?:\/(.*))?$/);
+  // Subsystem routes: /admin/s/:slug/* or /s/:slug/*
+  const subsystemMatch = cleanPath.match(/^(?:\/admin)?\/s\/([^/]+)(?:\/(.*))?$/);
   if (subsystemMatch) {
     const slug = subsystemMatch[1];
     const subPath = subsystemMatch[2] || 'overview';
