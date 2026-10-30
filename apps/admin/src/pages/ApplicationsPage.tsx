@@ -30,9 +30,7 @@ interface ApplicationsPageProps {
   currentSystem: SystemItem;
 }
 
-export function ApplicationsPage({
-  currentSystem,
-}: ApplicationsPageProps) {
+export function ApplicationsPage({ currentSystem }: ApplicationsPageProps) {
   const { t } = useTranslation();
   const [apps, setApps] = useState<ApplicationItem[]>([]);
   const [models, setModels] = useState<ModelItem[]>([]);
@@ -408,7 +406,9 @@ export function ApplicationsPage({
                     <td className="px-5 py-3 font-mono text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          {isSecretRevealed ? app.token : `${app.token.slice(0, 5)}••••••••••••••••••••••••`}
+                          {isSecretRevealed
+                            ? app.token
+                            : `${app.token.slice(0, 5)}••••••••••••••••••••••••`}
                         </span>
                         <button
                           onClick={() => toggleRevealSecret(app.id)}
@@ -797,19 +797,23 @@ export function ApplicationsPage({
                 {t('apps.credential_notice') || '请及时复制并妥善保管您的 API Token 访问凭据！'}
               </p>
               <p className="mt-1">
-                接入端应用（如 Next.js SSR 服务器、API 客户端）向该后端发送请求时，只需在请求头中携带该 Token：
+                接入端应用（如 Next.js SSR 服务器、API
+                客户端）向该后端发送请求时，只需在请求头中携带该 Token：
                 <code className="ml-1 rounded bg-emerald-100 px-1 py-0.5 font-mono text-[11px] text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
                   Authorization: Bearer &lt;Token&gt;
                 </code>
                 <span className="ml-1 text-[11px] text-emerald-700 dark:text-emerald-300">
-                  （系统支持 <code>Authorization: Bearer &lt;Token&gt;</code> 或直接 <code>Authorization: &lt;Token&gt;</code>）
+                  （系统支持 <code>Authorization: Bearer &lt;Token&gt;</code> 或直接{' '}
+                  <code>Authorization: &lt;Token&gt;</code>）
                 </span>
               </p>
             </div>
 
             <div className="space-y-3 font-mono text-xs">
               <div>
-                <label className="mb-1 block text-slate-500 dark:text-slate-400">App Name (应用名称)</label>
+                <label className="mb-1 block text-slate-500 dark:text-slate-400">
+                  App Name (应用名称)
+                </label>
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-sans text-sm font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
                   {createdCredential.name}
                 </div>

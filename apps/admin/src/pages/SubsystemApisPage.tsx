@@ -106,7 +106,7 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
       </div>
 
       {/* Client Applications Notice Banner */}
-      <div className="flex flex-col justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-xs text-emerald-900 sm:flex-row sm:items-center dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+      <div className="flex flex-col justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-xs text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2.5">
           <KeyRound className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span>
@@ -116,7 +116,7 @@ export function SubsystemApisPage({ currentSystem }: SubsystemApisPageProps) {
         </div>
         <a
           href={`/admin/s/${currentSystem.slug}/apps`}
-          className="shrink-0 self-start rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 sm:self-auto dark:bg-emerald-500 dark:hover:bg-emerald-600"
+          className="shrink-0 self-start rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 sm:self-auto"
         >
           {t('nav.apps') || '接入应用管理'}
         </a>

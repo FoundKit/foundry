@@ -212,9 +212,7 @@ export function App() {
             />
           )}
           {route.subsystemTab === 'apis' && <SubsystemApisPage currentSystem={currentSystem} />}
-          {route.subsystemTab === 'apps' && (
-            <ApplicationsPage currentSystem={currentSystem} />
-          )}
+          {route.subsystemTab === 'apps' && <ApplicationsPage currentSystem={currentSystem} />}
           {route.subsystemTab === 'audit_logs' && (
             <AuditLogsPage
               currentSystem={currentSystem}
