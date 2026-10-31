@@ -13,6 +13,8 @@ pub struct RecordQuery {
     pub page_size: Option<u64>,
     pub sort_by: Option<String>,
     pub sort_order: Option<String>, // "asc" or "desc"
+    pub fields: Option<String>,
+    pub exclude_fields: Option<String>,
 }
 
 /// In-memory validation of record payload against model fields

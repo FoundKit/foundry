@@ -9,6 +9,13 @@ use foundry_core::response::{ApiResponse, PaginatedData};
 use foundry_storage::{ModelRecordEntity, RecordQuery, coerce_record_data, validate_record};
 use serde_json::Value;
 
+/// Query parameters for retrieving a single record with optional field projection
+#[derive(Debug, Clone, serde::Deserialize, Default)]
+pub struct SingleRecordQuery {
+    pub fields: Option<String>,
+    pub exclude_fields: Option<String>,
+}
+
 /// GET /api/s/:system_slug/:model_slug (List records with pagination and filters)
 pub async fn list_records_handler(
     State(state): State<AppState>,
@@ -22,6 +29,9 @@ pub async fn list_records_handler(
         .await?;
     let fields = state.db.models().list_fields(model.id).await?;
 
+    let query_fields = query.fields.clone();
+    let query_exclude_fields = query.exclude_fields.clone();
+
     let mut records = state
         .db
         .records()
@@ -32,13 +42,41 @@ pub async fn list_records_handler(
         coerce_record_data(&fields, &mut rec.data);
     }
 
+    // Apply custom field projection / filtering
+    if let Some(ref fields_str) = query_fields {
+        let requested_fields: std::collections::HashSet<&str> = fields_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !requested_fields.is_empty() {
+            for rec in &mut records.items {
+                if let Some(obj) = rec.data.as_object_mut() {
+                    obj.retain(|k, _| requested_fields.contains(k.as_str()));
+                }
+            }
+        }
+    } else if let Some(ref exclude_str) = query_exclude_fields {
+        let excluded_fields: std::collections::HashSet<&str> = exclude_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        for rec in &mut records.items {
+            if let Some(obj) = rec.data.as_object_mut() {
+                obj.retain(|k, _| !excluded_fields.contains(k.as_str()));
+            }
+        }
+    }
+
     Ok(Json(ApiResponse::success(records)))
 }
 
-/// GET /api/s/:system_slug/:model_slug/:id (Get single record)
+/// GET /api/s/:system_slug/:model_slug/:id (Get single record with optional field projection)
 pub async fn get_record_handler(
     State(state): State<AppState>,
     Path((system_slug, model_slug, id)): Path<(String, String, i64)>,
+    Query(query): Query<SingleRecordQuery>,
 ) -> AppResult<Json<ApiResponse<ModelRecordEntity>>> {
     let model = state
         .db
@@ -53,6 +91,29 @@ pub async fn get_record_handler(
         .await?;
 
     coerce_record_data(&fields, &mut record.data);
+
+    // Apply custom field projection / filtering
+    if let Some(ref fields_str) = query.fields {
+        let requested_fields: std::collections::HashSet<&str> = fields_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !requested_fields.is_empty()
+            && let Some(obj) = record.data.as_object_mut()
+        {
+            obj.retain(|k, _| requested_fields.contains(k.as_str()));
+        }
+    } else if let Some(ref exclude_str) = query.exclude_fields {
+        let excluded_fields: std::collections::HashSet<&str> = exclude_str
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if let Some(obj) = record.data.as_object_mut() {
+            obj.retain(|k, _| !excluded_fields.contains(k.as_str()));
+        }
+    }
 
     Ok(Json(ApiResponse::success(record)))
 }
