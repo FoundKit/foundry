@@ -186,6 +186,7 @@ mod postgres_tests {
                     page_size: Some(10),
                     sort_by: Some("id".to_string()),
                     sort_order: Some("desc".to_string()),
+                    ..Default::default()
                 },
             )
             .await
